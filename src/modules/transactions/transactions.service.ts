@@ -22,7 +22,7 @@ export class TransactionsService {
     @Inject(forwardRef(() => WalletsRepository))
     private walletsRepository: WalletsRepository,
   ) {
-    console.log('transactionsRepository', this.transactionsRepository);
+    // console.log('transactionsRepository', this.transactionsRepository);
   }
 
   async getTransactionById(

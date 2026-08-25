@@ -25,6 +25,7 @@ import { UserSessionModule } from './modules/user-session/user-session.module';
 import { SocketModule } from './modules/socket/socket.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { CompanyWalletModule } from './modules/company-wallet/company-wallet.module';
+import { PracticeModule } from './modules/practice/practice.module';
 
 @Module({
   imports: [
@@ -139,6 +140,7 @@ import { CompanyWalletModule } from './modules/company-wallet/company-wallet.mod
     SocketModule,
     PlansModule,
     CompanyWalletModule,
+    PracticeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
