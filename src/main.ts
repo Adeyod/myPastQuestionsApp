@@ -81,12 +81,12 @@ async function bootstrap() {
 
   const serverUrl =
     process.env.NODE_ENV === 'production'
-      ? 'https://qanda-backend-1bj1.onrender.com'
+      ? 'https://mypastquestionsapp.onrender.com'
       : `http://localhost:${port}`;
 
   // Enable Swagger Docs
   const config = new DocumentBuilder()
-    .setTitle('Q and A API Documentation')
+    .setTitle('MY Q and A API Documentation')
     .setDescription('API documentation for questions and answers application')
     .setVersion('1.0')
     .addTag('auth', 'Authentication related endpoints.')
