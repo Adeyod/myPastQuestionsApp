@@ -21,9 +21,6 @@ export class PracticeModeRepository implements OnModuleInit {
     await this.seedDefaultPracticeModes();
   }
 
-  /*
-   * CREATE
-   */
   async createPracticeMode(
     data: Partial<PracticeMode>,
   ): Promise<PracticeModeDocument> {
@@ -32,9 +29,6 @@ export class PracticeModeRepository implements OnModuleInit {
     return await practiceMode.save();
   }
 
-  /*
-   * FIND ALL ACTIVE PRACTICE MODES
-   */
   async findAllPracticeModes(): Promise<PracticeModeDocument[]> {
     return await this.practiceModeModel
       .find({
@@ -105,9 +99,6 @@ export class PracticeModeRepository implements OnModuleInit {
       .exec();
   }
 
-  /*
-   * REACTIVATE PRACTICE MODE
-   */
   async activatePracticeMode(
     practiceModeId: string,
   ): Promise<PracticeModeDocument | null> {

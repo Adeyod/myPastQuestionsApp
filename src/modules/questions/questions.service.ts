@@ -8,6 +8,8 @@ import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { PlansService } from '../plans/plans.service';
+import { PracticeModeService } from '../practice/services/practice-mode.service';
+import { PracticeService } from '../practice/services/practice.service';
 import { SubjectsRepository } from '../subjects/repositories/subjects.repository';
 import { WalletsService } from '../wallets/wallets.service';
 import { GetPracticeQuestionsDto } from './dto/get-practice-questions.dto';
@@ -21,6 +23,8 @@ export class QuestionsService {
     private questionsRepository: QuestionsRepository,
     private subjectsRepository: SubjectsRepository,
     private walletService: WalletsService,
+    private practiceModeService: PracticeModeService,
+    private practiceService: PracticeService,
     private plansService: PlansService,
   ) {}
 
@@ -32,6 +36,31 @@ export class QuestionsService {
       user.sub.toString(),
       user,
     );
+
+    const practiceMode = await this.practiceModeService.getPracticeModeByName(
+      getPracticeQuestionsDto.mode,
+    );
+
+    console.log('practiceMode:', practiceMode);
+
+    if (!practiceMode.isActive) {
+      throw new BadRequestException({
+        message: 'This practice mode is currently unavailable.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (
+      practiceMode.timePerQuestion * getPracticeQuestionsDto.questionCount !==
+      getPracticeQuestionsDto.duration
+    ) {
+      throw new BadRequestException({
+        message: 'Invalid duration for the practice.',
+        success: false,
+        status: 400,
+      });
+    }
 
     const plan = await this.plansService.getPlanByExamType(
       getPracticeQuestionsDto.examType,
@@ -74,8 +103,43 @@ export class QuestionsService {
         );
       console.log('response:', response);
 
+      const questionLength = response.questions.length;
+
+      const practiceQuestions = response.questions.map((question) => ({
+        questionId: question._id,
+        selectedOption: null,
+        isSelectedAnswerCorrect: null,
+        marksAwarded: 0,
+        pointsAwarded: 0,
+      }));
+
+      const payload = {
+        subjectId: response.subjectId,
+        examType: getPracticeQuestionsDto.examType,
+        practiceModeId: practiceMode._id.toString(),
+        questionCount: questionLength,
+        questions: practiceQuestions,
+        totalDurationInSeconds: practiceMode.timePerQuestion * questionLength,
+        timePerQuestion: practiceMode.timePerQuestion,
+        awardedPointPerCorrectAnswer: practiceMode.awardedPointPerCorrectAnswer,
+      };
+
+      const practice = await this.practiceService.createPractice(
+        payload,
+        user,
+        session,
+      );
+
       await session.commitTransaction();
-      return response;
+
+      const input = {
+        practiceId: practice._id,
+        practiceMode,
+        ...response,
+      };
+
+      console.log('input:', input);
+      return input;
     } catch (error) {
       await session.abortTransaction();
       throw error;

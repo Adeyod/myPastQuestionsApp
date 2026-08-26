@@ -150,18 +150,21 @@ export class Practice {
 
   @Prop({
     default: null,
+    type: Date,
   })
   startedAt?: Date | null;
 
   @Prop({
     default: null,
+    type: Date,
   })
   submittedAt?: Date | null;
 
   @Prop({
+    type: Number,
     default: 0,
   })
-  durationInSeconds!: number;
+  totalDurationInSeconds!: number;
 }
 
 export const PracticeSchema = SchemaFactory.createForClass(Practice);
