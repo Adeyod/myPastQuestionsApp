@@ -1,9 +1,11 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -25,6 +27,7 @@ import type { JwtUser } from '../../common/types/jwt-user.type';
 import { Role } from '../users/schemas/user.schema';
 import { GetPracticeQuestionsDto } from './dto/get-practice-questions.dto';
 import { GetQuestionsDto } from './dto/get-questions.dto';
+import { SubmitPracticeDto } from './dto/submit-practice.dto';
 import { QuestionsService } from './questions.service';
 
 @Controller('questions')
@@ -285,6 +288,50 @@ export class QuestionsController {
       getPracticeQuestionsDto,
       user,
     );
+
+    return response;
+  }
+  @Patch('mark-practice-session-by-practiceId/:practiceId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: 'device-123456789',
+  })
+  @SuccessMessage('Questions marked successfully')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'marking practice questions using practiceId',
+    description:
+      'This is the endpoint for marking practice questions based on the practiceId.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Questions marked successfully',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to mark questions.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async markPracticeQuestionsByPracticeId(
+    @Param('practiceId') practiceId: string,
+    @Body() submitPracticeDto: SubmitPracticeDto,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response =
+      await this.questionsService.markPracticeQuestionsByPracticeId(
+        practiceId,
+        user,
+        submitPracticeDto,
+      );
 
     return response;
   }

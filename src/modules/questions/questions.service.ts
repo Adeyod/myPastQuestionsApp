@@ -14,6 +14,7 @@ import { SubjectsRepository } from '../subjects/repositories/subjects.repository
 import { WalletsService } from '../wallets/wallets.service';
 import { GetPracticeQuestionsDto } from './dto/get-practice-questions.dto';
 import { GetQuestionsDto } from './dto/get-questions.dto';
+import { SubmitPracticeDto } from './dto/submit-practice.dto';
 import { QuestionsRepository } from './repositories/questions.repository';
 
 @Injectable()
@@ -249,5 +250,146 @@ export class QuestionsService {
     );
     console.log('service questions length:', questions.length);
     return questions;
+  }
+
+  async markPracticeQuestionsByPracticeId(
+    practiceId: string,
+    user: JwtUser,
+    submitPracticeDto: SubmitPracticeDto,
+  ) {
+    const { questions } = submitPracticeDto;
+
+    const findPracticeForMarking =
+      await this.practiceService.findPracticeByIdAndUserIdForMarking(
+        practiceId,
+        user,
+      );
+
+    const practiceMode = await this.practiceModeService.getPracticeModeById(
+      findPracticeForMarking.practiceModeId.toString(),
+    );
+
+    const practiceObjectId = findPracticeForMarking._id;
+
+    const userObjectId = new Types.ObjectId(user.sub.toString());
+
+    let correctAnswers = 0;
+    let wrongAnswers = 0;
+    let unansweredQuestions = 0;
+    let totalPointsAwarded = 0;
+    let totalMarksAwarded = 0;
+
+    const submittedQuestionsMap = new Map(
+      questions.map((question) => [question.questionId.toString(), question]),
+    );
+
+    const markedQuestions = findPracticeForMarking.questions.map(
+      (practiceQuestion) => {
+        /*
+         * questionId is populated with the Question document.
+         */
+        const populatedQuestion = practiceQuestion.questionId as any;
+
+        const questionId = populatedQuestion._id.toString();
+        const submittedQuestion = submittedQuestionsMap.get(questionId);
+
+        const selectedOption = submittedQuestion?.selectedOption ?? null;
+
+        if (!selectedOption) {
+          unansweredQuestions++;
+
+          return {
+            questionId: populatedQuestion._id,
+            selectedOption: null,
+            isSelectedAnswerCorrect: null,
+            marksAwarded: 0,
+            pointsAwarded: 0,
+          };
+        }
+
+        const isCorrect =
+          populatedQuestion.correctAnswers.includes(selectedOption);
+
+        if (isCorrect) {
+          correctAnswers++;
+
+          const marksAwarded = populatedQuestion.marks ?? 1;
+
+          const pointsAwarded = practiceMode.awardedPointPerCorrectAnswer;
+
+          totalMarksAwarded += marksAwarded;
+          totalPointsAwarded += pointsAwarded;
+
+          return {
+            questionId: populatedQuestion._id,
+            selectedOption,
+            isSelectedAnswerCorrect: true,
+            marksAwarded,
+            pointsAwarded,
+          };
+        }
+
+        wrongAnswers++;
+
+        return {
+          questionId: populatedQuestion._id,
+          selectedOption,
+          isSelectedAnswerCorrect: false,
+          marksAwarded: 0,
+          pointsAwarded: 0,
+        };
+      },
+    );
+
+    const totalQuestions = findPracticeForMarking.questions.length;
+
+    const score = totalMarksAwarded;
+
+    const totalAvailableMarks = findPracticeForMarking.questions.reduce(
+      (total, practiceQuestion) => {
+        const populatedQuestion = practiceQuestion.questionId as any;
+
+        return total + (populatedQuestion.marks ?? 1);
+      },
+      0,
+    );
+
+    const percentage =
+      totalAvailableMarks > 0
+        ? Number(((totalMarksAwarded / totalAvailableMarks) * 100).toFixed(2))
+        : 0;
+
+    if (!findPracticeForMarking.startedAt) {
+      throw new BadRequestException({
+        message: 'Practice start time is missing.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const durationInSeconds = Math.floor(
+      (Date.now() - new Date(findPracticeForMarking.startedAt).getTime()) /
+        1000,
+    );
+
+    totalPointsAwarded = Number(totalPointsAwarded.toFixed(6));
+
+    const response = await this.practiceService.completePracticeMarkingProcess(
+      practiceObjectId,
+      userObjectId,
+      {
+        questions: markedQuestions,
+        correctAnswers,
+        wrongAnswers,
+        unansweredQuestions,
+        score,
+        percentage,
+        totalPointsAwarded,
+        durationInSeconds,
+        submittedAt: new Date(),
+      },
+    );
+
+    return response;
   }
 }

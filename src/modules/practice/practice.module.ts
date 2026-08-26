@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { UserSessionModule } from '../user-session/user-session.module';
 import { PracticeModeController } from './controllers/practice-mode.controller';
 import { PracticeController } from './controllers/practice.controller';
 import { PracticeModeRepository } from './repositories/practice-mode.repository';
@@ -18,6 +19,7 @@ import { PracticeService } from './services/practice.service';
       { name: PracticeMode.name, schema: PracticeModeSchema },
       { name: Practice.name, schema: PracticeSchema },
     ]),
+    UserSessionModule,
   ],
   controllers: [PracticeController, PracticeModeController],
   providers: [

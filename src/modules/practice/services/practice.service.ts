@@ -1,12 +1,15 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { ClientSession, Types } from 'mongoose';
+import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import { JwtUser } from '../../../common/types/jwt-user.type';
 import { PracticeStatus } from '../enums/practice-status.enum';
 import { PracticeRepository } from '../repositories/practice.repository';
+import { Practice } from '../schemas/practice.schema';
 
 @Injectable()
 export class PracticeService {
@@ -111,6 +114,61 @@ export class PracticeService {
         status: 404,
       });
     }
+
+    return response;
+  }
+
+  async completePracticeMarkingProcess(
+    practiceId: Types.ObjectId,
+    userId: Types.ObjectId,
+    data: {
+      questions: Practice['questions'];
+      correctAnswers: number;
+      wrongAnswers: number;
+      unansweredQuestions: number;
+      score: number;
+      percentage: number;
+      totalPointsAwarded: number;
+      durationInSeconds: number;
+      submittedAt: Date;
+    },
+  ) {
+    const response = await this.practiceRepo.completePracticeMarkingProcess(
+      practiceId,
+      userId,
+      data,
+    );
+
+    if (!response) {
+      throw new BadRequestException({
+        message: 'Unable to mark practice.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    return response;
+  }
+
+  async getPracticeHistoryForLoggedInUser(
+    user: JwtUser,
+    userId: string,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    const id = new Types.ObjectId(user.sub.toString());
+
+    if (user.sub.toString() !== userId) {
+      throw new ForbiddenException({
+        message: 'You can only view your own practice history.',
+        success: false,
+        status: 403,
+      });
+    }
+
+    const response = await this.practiceRepo.getPracticeHistoryByUserId(
+      id,
+      queryDto,
+    );
 
     return response;
   }

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Types } from 'mongoose';
 import { PracticeModeRepository } from '../repositories/practice-mode.repository';
 
 @Injectable()
@@ -12,6 +13,21 @@ export class PracticeModeService {
 
   async getPracticeModeByName(mode: string) {
     const response = await this.practiceModeRepo.findByName(mode);
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Practice mode not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
+  }
+
+  async getPracticeModeById(practiceModeId: string) {
+    const id = new Types.ObjectId(practiceModeId);
+    const response = await this.practiceModeRepo.findById(id);
 
     if (!response) {
       throw new NotFoundException({
