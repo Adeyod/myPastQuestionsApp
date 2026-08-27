@@ -13,6 +13,7 @@ import {
 } from './schemas/practice-point-transaction.schema';
 
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { Role } from '../users/schemas/user.schema';
 import { PracticePointTransactionRepository } from './repositories/practice-point-transaction.repository';
 import { PracticeWalletRepository } from './repositories/practice-wallet.repository';
 
@@ -32,7 +33,35 @@ export class PracticeWalletService {
     return wallet;
   }
 
-  async getUserPracticeWallet(user: JwtUser, userId: string) {
+  async getPracticeWalletByPracticeWalletId(
+    user: JwtUser,
+    practiceWalletId: string,
+  ) {
+    const id = new Types.ObjectId(practiceWalletId);
+
+    const wallet = await this.practiceWalletRepository.findById(id);
+
+    if (!wallet) {
+      throw new NotFoundException({
+        message: 'Practice wallet not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (user.role !== Role.ADMIN) {
+      if (wallet.userId.toString() !== user.sub.toString()) {
+        throw new ForbiddenException({
+          message: 'You can only access your personal practice wallet.',
+          success: false,
+          status: 403,
+        });
+      }
+    }
+
+    return wallet;
+  }
+  async getMyPracticeWallet(user: JwtUser, userId: string) {
     const id = new Types.ObjectId(user.sub);
 
     if (userId !== user.sub.toString()) {
@@ -43,7 +72,7 @@ export class PracticeWalletService {
       });
     }
 
-    const wallet = await this.practiceWalletRepository.findById(id);
+    const wallet = await this.practiceWalletRepository.findByUserId(id);
 
     if (!wallet) {
       throw new NotFoundException({

@@ -110,19 +110,28 @@ export class DeviceSessionGuard implements CanActivate {
     const userId = new Types.ObjectId(user.sub);
 
     // 1. Find the session for this specific user and device
-    const session = await this.userSessionService.findByUserAndDevice(
+    const session = await this.userSessionService.findActiveSession(
       userId.toString(),
-      deviceId,
     );
 
+    console.log('session:', session);
+
     // 2. Check if session exists AND is marked active
-    if (!session || !session.isActive) {
+    if (!session) {
       throw new UnauthorizedException({
-        message:
-          'Your session has expired or you have logged in on another device.',
+        message: 'Your session has expired. Please log in again.',
         success: false,
         status: 401,
-        action: 'LOGOUT_REQUIRED', // Helpful flag for frontend interceptors
+        action: 'LOGOUT_REQUIRED',
+      });
+    }
+
+    if (session.deviceId !== deviceId) {
+      throw new UnauthorizedException({
+        message: 'You have logged in on another device.',
+        success: false,
+        status: 401,
+        action: 'LOGOUT_REQUIRED',
       });
     }
 

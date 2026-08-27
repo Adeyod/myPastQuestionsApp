@@ -35,7 +35,7 @@ export class WalletsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Wallet fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -74,7 +74,7 @@ export class WalletsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Wallet fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -151,7 +151,7 @@ export class WalletsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Wallet balance fetched successfully.')
   @HttpCode(HttpStatus.OK)

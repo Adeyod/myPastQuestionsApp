@@ -27,6 +27,7 @@ import { UsersModule } from './modules/users/users.module';
 import { WalletsModule } from './modules/wallets/wallets.module';
 import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
 import { PracticeWalletModule } from './modules/practice-wallet/practice-wallet.module';
+import { SolveAndWinModule } from './modules/solve-and-win/solve-and-win.module';
 
 @Module({
   imports: [
@@ -143,6 +144,7 @@ import { PracticeWalletModule } from './modules/practice-wallet/practice-wallet.
     CompanyWalletModule,
     PracticeModule,
     PracticeWalletModule,
+    SolveAndWinModule,
   ],
   controllers: [AppController],
   providers: [AppService],

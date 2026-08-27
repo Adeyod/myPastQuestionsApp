@@ -42,7 +42,7 @@ export class SubjectsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @Post('create-subject')
   @SuccessMessage('Subject created successfully.')
@@ -81,7 +81,7 @@ export class SubjectsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Subjects fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -125,7 +125,7 @@ export class SubjectsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage(
     'Subjects For the selected category(Plan) fetched successfully.',

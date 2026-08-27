@@ -14,7 +14,7 @@ export class UserSessionRepository {
   ) {}
 
   async findActiveSession(userId: Types.ObjectId) {
-    const response = await this.sessionModel.find({
+    const response = await this.sessionModel.findOne({
       userId,
       isActive: true,
     });

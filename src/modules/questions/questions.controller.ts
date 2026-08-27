@@ -42,7 +42,7 @@ export class QuestionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @ApiOperation({
     summary: 'This is the endpoint for fetching a question by the questionId',
@@ -74,7 +74,7 @@ export class QuestionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @ApiOperation({
     summary:
@@ -108,7 +108,7 @@ export class QuestionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage(
     'Question summary fetched successfully for this subject for the year.',
@@ -151,7 +151,7 @@ export class QuestionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Question summary data fetched successfully')
   @HttpCode(HttpStatus.OK)
@@ -189,7 +189,7 @@ export class QuestionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Questions fetched successfully')
   @HttpCode(HttpStatus.OK)
@@ -222,7 +222,7 @@ export class QuestionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Questions fetched successfully')
   @HttpCode(HttpStatus.OK)
@@ -258,7 +258,7 @@ export class QuestionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Questions fetched successfully')
   @HttpCode(HttpStatus.OK)
@@ -299,7 +299,7 @@ export class QuestionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Questions marked successfully')
   @HttpCode(HttpStatus.OK)

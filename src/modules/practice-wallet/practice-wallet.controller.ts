@@ -29,6 +29,52 @@ import { PracticeWalletService } from './practice-wallet.service';
 export class PracticeWalletController {
   constructor(private readonly practiceWalletService: PracticeWalletService) {}
 
+  @Get('get-practice-wallet-by-practice-wallet-id/:practiceWalletId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Practice wallet fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get practice wallet by practice wallet ID.',
+    description:
+      'This is the endpoint for fetching practice wallet by practice wallet ID. This endpoint is expecting accessToken from req.headers and it is also expecting practiceWalletId from req.params.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Practice wallet fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch practice wallet.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getPracticeWalletByPracticeWalletId(
+    @Param('practiceWalletId') practiceWalletId: string,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response =
+      await this.practiceWalletService.getPracticeWalletByPracticeWalletId(
+        user,
+        practiceWalletId,
+      );
+
+    return response;
+  }
   @Get('get-user-practice-wallet/:userId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.USER, Role.ADMIN)
@@ -37,7 +83,7 @@ export class PracticeWalletController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('User practice wallet fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -63,11 +109,11 @@ export class PracticeWalletController {
     status: 429,
     description: 'Too many requests. Rate limit exceeded',
   })
-  async getUserPracticeWallet(
+  async getMyPracticeWallet(
     @Param('userId') userId: string,
     @GetCurrentUser() user: JwtUser,
   ) {
-    const response = await this.practiceWalletService.getUserPracticeWallet(
+    const response = await this.practiceWalletService.getMyPracticeWallet(
       user,
       userId,
     );
@@ -83,7 +129,7 @@ export class PracticeWalletController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('All user practice point transactions fetched successfully.')
   @HttpCode(HttpStatus.OK)

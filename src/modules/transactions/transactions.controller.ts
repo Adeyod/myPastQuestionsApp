@@ -37,7 +37,7 @@ export class TransactionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage("User's Transactions fetched successfully.")
   @HttpCode(HttpStatus.OK)
@@ -86,7 +86,7 @@ export class TransactionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('All Transactions fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -130,7 +130,7 @@ export class TransactionsController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Transaction fetched successfully.')
   @HttpCode(HttpStatus.OK)
