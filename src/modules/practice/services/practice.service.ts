@@ -132,11 +132,13 @@ export class PracticeService {
       durationInSeconds: number;
       submittedAt: Date;
     },
+    session: ClientSession,
   ) {
     const response = await this.practiceRepo.completePracticeMarkingProcess(
       practiceId,
       userId,
       data,
+      session,
     );
 
     if (!response) {

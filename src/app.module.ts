@@ -26,6 +26,7 @@ import { UserSessionModule } from './modules/user-session/user-session.module';
 import { UsersModule } from './modules/users/users.module';
 import { WalletsModule } from './modules/wallets/wallets.module';
 import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
+import { PracticeWalletModule } from './modules/practice-wallet/practice-wallet.module';
 
 @Module({
   imports: [
@@ -141,6 +142,7 @@ import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
     PlansModule,
     CompanyWalletModule,
     PracticeModule,
+    PracticeWalletModule,
   ],
   controllers: [AppController],
   providers: [AppService],

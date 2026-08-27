@@ -8,6 +8,7 @@ import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { PlansService } from '../plans/plans.service';
+import { PracticeWalletService } from '../practice-wallet/practice-wallet.service';
 import { PracticeModeService } from '../practice/services/practice-mode.service';
 import { PracticeService } from '../practice/services/practice.service';
 import { SubjectsRepository } from '../subjects/repositories/subjects.repository';
@@ -26,6 +27,7 @@ export class QuestionsService {
     private walletService: WalletsService,
     private practiceModeService: PracticeModeService,
     private practiceService: PracticeService,
+    private practiceWalletService: PracticeWalletService,
     private plansService: PlansService,
   ) {}
 
@@ -374,22 +376,47 @@ export class QuestionsService {
 
     totalPointsAwarded = Number(totalPointsAwarded.toFixed(6));
 
-    const response = await this.practiceService.completePracticeMarkingProcess(
-      practiceObjectId,
-      userObjectId,
-      {
-        questions: markedQuestions,
-        correctAnswers,
-        wrongAnswers,
-        unansweredQuestions,
-        score,
-        percentage,
-        totalPointsAwarded,
-        durationInSeconds,
-        submittedAt: new Date(),
-      },
-    );
+    const session = await this.connection.startSession();
+    session.startTransaction();
 
-    return response;
+    try {
+      const response =
+        await this.practiceService.completePracticeMarkingProcess(
+          practiceObjectId,
+          userObjectId,
+          {
+            questions: markedQuestions,
+            correctAnswers,
+            wrongAnswers,
+            unansweredQuestions,
+            score,
+            percentage,
+            totalPointsAwarded,
+            durationInSeconds,
+            submittedAt: new Date(),
+          },
+          session,
+        );
+
+      // Add totalPointsAwarded to the solve and win wallet balance
+
+      const description = `Point for practice session with ID: ${practiceId}.`;
+
+      await this.practiceWalletService.creditPracticePoints({
+        userId: user.sub.toString(),
+        points: totalPointsAwarded,
+        practiceId,
+        description,
+        session,
+      });
+
+      await session.commitTransaction();
+      return response;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 }

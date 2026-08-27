@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PlansModule } from '../plans/plans.module';
+import { PracticeWalletModule } from '../practice-wallet/practice-wallet.module';
 import { PracticeModule } from '../practice/practice.module';
 import { SubjectsModule } from '../subjects/subjects.module';
 import { UserSessionModule } from '../user-session/user-session.module';
@@ -20,6 +21,7 @@ import { Question, QuestionSchema } from './schemas/question.schema';
     PlansModule,
     UserSessionModule,
     PracticeModule,
+    PracticeWalletModule,
   ],
   controllers: [QuestionsController],
   providers: [QuestionsService, QuestionsRepository],

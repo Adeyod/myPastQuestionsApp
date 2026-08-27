@@ -150,6 +150,7 @@ export class PracticeRepository {
       durationInSeconds: number;
       submittedAt: Date;
     },
+    session: ClientSession,
   ): Promise<PracticeDocument | null> {
     const response = await this.practiceModel
       .findOneAndUpdate(
@@ -167,6 +168,7 @@ export class PracticeRepository {
         {
           returnDocument: 'after',
           runValidator: true,
+          session,
         },
       )
       .exec();
