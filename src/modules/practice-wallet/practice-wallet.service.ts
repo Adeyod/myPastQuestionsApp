@@ -109,12 +109,16 @@ export class PracticeWalletService {
         session,
       );
 
+    console.log('wallet:', wallet);
+
     if (data.practiceId) {
       const existingTransaction =
         await this.practicePointTransactionRepository.findByPracticeId(
           new Types.ObjectId(data.practiceId),
           session,
         );
+
+      console.log('existingTransaction:', existingTransaction);
 
       if (existingTransaction) {
         throw new BadRequestException({
@@ -131,6 +135,8 @@ export class PracticeWalletService {
       session,
     );
 
+    console.log('updatedWallet:', updatedWallet);
+
     if (!updatedWallet) {
       throw new BadRequestException({
         message: 'Unable to credit practice points.',
@@ -139,19 +145,22 @@ export class PracticeWalletService {
       });
     }
 
-    await this.practicePointTransactionRepository.createWithSession(
-      {
-        practiceWalletId: wallet._id,
-        points: data.points,
-        type: PracticePointTransactionType.CREDIT,
-        category: PracticePointTransactionCategory.PRACTICE_REWARD,
-        description: data.description,
-        practiceId: data.practiceId
-          ? new Types.ObjectId(data.practiceId)
-          : undefined,
-      },
-      session,
-    );
+    const response =
+      await this.practicePointTransactionRepository.createWithSession(
+        {
+          practiceWalletId: wallet._id,
+          points: data.points,
+          type: PracticePointTransactionType.CREDIT,
+          category: PracticePointTransactionCategory.PRACTICE_REWARD,
+          description: data.description,
+          practiceId: data.practiceId
+            ? new Types.ObjectId(data.practiceId)
+            : undefined,
+        },
+        session,
+      );
+
+    console.log('response:', response);
 
     return updatedWallet;
   }

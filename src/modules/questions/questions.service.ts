@@ -267,6 +267,8 @@ export class QuestionsService {
         user,
       );
 
+    console.log('findPracticeForMarking:', findPracticeForMarking);
+
     const practiceMode = await this.practiceModeService.getPracticeModeById(
       findPracticeForMarking.practiceModeId.toString(),
     );
@@ -343,6 +345,8 @@ export class QuestionsService {
       },
     );
 
+    console.log('markedQuestions:', markedQuestions);
+
     const totalQuestions = findPracticeForMarking.questions.length;
 
     const score = totalMarksAwarded;
@@ -397,6 +401,8 @@ export class QuestionsService {
           },
           session,
         );
+
+      console.log('CompletePracticeMarkingProcess response:', response);
 
       // Add totalPointsAwarded to the solve and win wallet balance
 
