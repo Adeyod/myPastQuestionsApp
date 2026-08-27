@@ -85,6 +85,19 @@ export class QuestionsService {
       });
     }
 
+    const response =
+      await this.questionsRepository.getPracticeQuestionBySubjectId(
+        getPracticeQuestionsDto,
+      );
+    console.log('response:', response);
+    if (!response.questions || response.questions.length === 0) {
+      throw new BadRequestException({
+        message: 'No questions found for the specified criteria.',
+        success: false,
+        status: 400,
+      });
+    }
+
     const session = await this.connection.startSession();
     session.startTransaction();
 
@@ -99,12 +112,6 @@ export class QuestionsService {
       });
 
       console.log('chargeWallet:', chargeWallet);
-      const response =
-        await this.questionsRepository.getPracticeQuestionBySubjectId(
-          getPracticeQuestionsDto,
-          session,
-        );
-      console.log('response:', response);
 
       const questionLength = response.questions.length;
 

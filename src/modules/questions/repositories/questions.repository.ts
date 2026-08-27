@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { ClientSession, Model, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import { EXAM_PLAN_MAP } from '../../../common/utils/maps/exam-plan.map';
 import { GetPracticeQuestionsDto } from '../dto/get-practice-questions.dto';
@@ -333,28 +333,25 @@ export class QuestionsRepository {
 
   async getPracticeQuestionBySubjectId(
     getPracticeQuestionsDto: GetPracticeQuestionsDto,
-    session: ClientSession,
   ) {
     const { subjectId, mode, questionCount, duration, examType } =
       getPracticeQuestionsDto;
 
     const subjectObjectId = new Types.ObjectId(subjectId);
 
-    const questions = await this.questionModel
-      .aggregate([
-        {
-          $match: {
-            subject: subjectObjectId,
-            examType,
-          },
+    const questions = await this.questionModel.aggregate([
+      {
+        $match: {
+          subject: subjectObjectId,
+          examType,
         },
-        {
-          $sample: {
-            size: questionCount,
-          },
+      },
+      {
+        $sample: {
+          size: questionCount,
         },
-      ])
-      .session(session);
+      },
+    ]);
 
     return {
       subjectId,
