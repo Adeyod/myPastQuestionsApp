@@ -16,7 +16,7 @@ export class RegisterUserDto {
     example: 'john.doe@example.com',
   })
   @IsNotEmpty({ message: 'Email is required' })
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email address' })
   @IsString({ message: 'Email must be a string' })
   email!: string;
 
@@ -27,6 +27,10 @@ export class RegisterUserDto {
   @IsNotEmpty({ message: 'FIrst name is required.' })
   @IsString({ message: 'First name is a string' })
   @MinLength(2, { message: 'First name must be minimum of 2 characters long.' })
+  @Matches(/^[a-zA-Z\s'-]+$/, {
+    message:
+      'First name can only contain letters, spaces, hyphens, and apostrophes.',
+  })
   firstName!: string;
 
   @ApiProperty({
@@ -36,6 +40,10 @@ export class RegisterUserDto {
   @IsNotEmpty({ message: 'Last name is required.' })
   @IsString({ message: 'Last name is a string' })
   @MinLength(2, { message: 'Last name must be minimum of 2 characters long.' })
+  @Matches(/^[a-zA-Z\s'-]+$/, {
+    message:
+      'Last name can only contain letters, spaces, hyphens, and apostrophes.',
+  })
   lastName!: string;
 
   @ApiProperty({
