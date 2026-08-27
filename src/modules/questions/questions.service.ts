@@ -306,6 +306,8 @@ export class QuestionsService {
 
         const selectedOption = submittedQuestion?.selectedOption ?? null;
 
+        console.log('selectedOption:', selectedOption);
+
         if (!selectedOption) {
           unansweredQuestions++;
 
@@ -414,6 +416,7 @@ export class QuestionsService {
       // Add totalPointsAwarded to the solve and win wallet balance
 
       const description = `Point for practice session with ID: ${practiceId}.`;
+      console.log('questions:', questions);
 
       await this.practiceWalletService.creditPracticePoints({
         userId: user.sub.toString(),
