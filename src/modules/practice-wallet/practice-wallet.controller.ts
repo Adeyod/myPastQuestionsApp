@@ -29,6 +29,46 @@ import { PracticeWalletService } from './practice-wallet.service';
 export class PracticeWalletController {
   constructor(private readonly practiceWalletService: PracticeWalletService) {}
 
+  @Get('get-all-practice-wallets')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Practice wallets fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get practice wallets.',
+    description:
+      'This is the endpoint for fetching all practice wallets. This endpoint is expecting accessToken from req.headers.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Practice wallets fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch practice wallets.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllPracticeWallets(@Query() queryDto: QueryWithPaginationDto) {
+    const response =
+      await this.practiceWalletService.getAllPracticeWallets(queryDto);
+
+    return response;
+  }
   @Get('get-practice-wallet-by-practice-wallet-id/:practiceWalletId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.USER, Role.ADMIN)
@@ -121,6 +161,98 @@ export class PracticeWalletController {
     return response;
   }
 
+  @Get(
+    'get-practice-point-transaction-by-transaction-id/:practicePointTransactionId',
+  )
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Practice point transaction fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get practice point transaction by transaction ID.',
+    description:
+      'This is the endpoint for fetching practice point transaction by transaction ID. This endpoint is expecting accessToken from req.headers and it is also expecting practicePointTransactionId from req.params.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Practice point transaction fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch practice point transaction.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getPracticePointTransactionByTransactionId(
+    @Param('practicePointTransactionId') practicePointTransactionId: string,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response =
+      await this.practiceWalletService.getPracticePointTransactionByTransactionId(
+        practicePointTransactionId,
+        user,
+      );
+
+    return response;
+  }
+  @Get('get-all-practice-point-transactions')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('All practice point transactions fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get all practice point transactions.',
+    description:
+      'This is the endpoint for fetching all practice point transactions. This endpoint is expecting accessToken from req.headers and it is also expecting page, limit and searchParams from req.query.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Practice point transactions fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch practice point transactions.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllPracticePointTransactions(
+    @Query() queryDto: QueryWithPaginationDto,
+  ) {
+    const response =
+      await this.practiceWalletService.getAllPracticePointTransactions(
+        queryDto,
+      );
+
+    return response;
+  }
   @Get('get-user-practice-point-transactions/:userId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.USER, Role.ADMIN)

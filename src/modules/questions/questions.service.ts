@@ -274,8 +274,6 @@ export class QuestionsService {
         user,
       );
 
-    console.log('findPracticeForMarking:', findPracticeForMarking);
-
     const practiceMode = await this.practiceModeService.getPracticeModeById(
       findPracticeForMarking.practiceModeId.toString(),
     );
@@ -305,8 +303,6 @@ export class QuestionsService {
         const submittedQuestion = submittedQuestionsMap.get(questionId);
 
         const selectedOption = submittedQuestion?.selectedOption ?? null;
-
-        console.log('selectedOption:', selectedOption);
 
         if (!selectedOption) {
           unansweredQuestions++;
@@ -353,8 +349,6 @@ export class QuestionsService {
         };
       },
     );
-
-    console.log('markedQuestions:', markedQuestions);
 
     const totalQuestions = findPracticeForMarking.questions.length;
 
@@ -411,12 +405,9 @@ export class QuestionsService {
           session,
         );
 
-      console.log('CompletePracticeMarkingProcess response:', response);
-
       // Add totalPointsAwarded to the solve and win wallet balance
 
       const description = `Point for practice session with ID: ${practiceId}.`;
-      console.log('questions:', questions);
 
       await this.practiceWalletService.creditPracticePoints({
         userId: user.sub.toString(),

@@ -122,4 +122,63 @@ export class PracticePointTransactionRepository {
       .session(session)
       .exec();
   }
+
+  async getAllPracticePointTransactions(
+    queryDto: QueryWithPaginationDto,
+  ): Promise<{
+    totalCount: number;
+    totalPages: number;
+    practicePointTransactionObj: PracticePointTransactionDocument[];
+  }> {
+    const { page, limit, searchParams } = queryDto;
+    let query = this.transactionModel.find();
+
+    if (searchParams) {
+      const regex = new RegExp(searchParams, 'i');
+
+      query = query.where({
+        $or: [
+          { type: { $regex: regex } },
+          { category: { $regex: regex } },
+          { description: { $regex: regex } },
+        ],
+      });
+    }
+
+    const count = await query.clone().countDocuments();
+    let pages = 0;
+
+    if (page !== undefined && limit !== undefined && count !== 0) {
+      const offset = (page - 1) * limit;
+
+      query = query.skip(offset).limit(limit);
+      pages = Math.ceil(count / limit);
+
+      if (page > pages) {
+        throw new NotFoundException({
+          message: 'Page not found.',
+          success: false,
+          status: 404,
+        });
+      }
+    }
+
+    const transactions = await query.sort({ createdAt: -1 });
+
+    if (transactions.length === 0) {
+      throw new NotFoundException({
+        message: 'Practice point transactions not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const response = {
+      totalCount: count,
+      totalPages: pages,
+      practicePointTransactionObj: transactions,
+    };
+
+    return response;
+  }
 }

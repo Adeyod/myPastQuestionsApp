@@ -26,6 +26,14 @@ export class PracticePointTransaction {
   practiceWalletId!: Types.ObjectId;
 
   @Prop({
+    type: Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
+  userId!: Types.ObjectId;
+
+  @Prop({
     required: true,
   })
   points!: number;
@@ -66,3 +74,7 @@ export class PracticePointTransaction {
 export const PracticePointTransactionSchema = SchemaFactory.createForClass(
   PracticePointTransaction,
 );
+PracticePointTransactionSchema.index({
+  userId: 1,
+  createdAt: -1,
+});

@@ -150,6 +150,7 @@ export class PracticeWalletService {
         {
           practiceWalletId: wallet._id,
           points: data.points,
+          userId,
           type: PracticePointTransactionType.CREDIT,
           category: PracticePointTransactionCategory.PRACTICE_REWARD,
           description: data.description,
@@ -248,5 +249,49 @@ export class PracticeWalletService {
       wallet._id,
       queryDto,
     );
+  }
+
+  async getPracticePointTransactionByTransactionId(
+    practicePointTransactionId: string,
+    user: JwtUser,
+  ) {
+    const id = new Types.ObjectId(practicePointTransactionId);
+
+    const response = await this.practicePointTransactionRepository.findById(id);
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Practice point transaction not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (user.role !== Role.ADMIN) {
+      if (user.sub.toString() !== response.userId.toString()) {
+        throw new ForbiddenException({
+          message: 'You can only view your own practice point transactions.',
+          success: false,
+          status: 403,
+        });
+      }
+    }
+
+    return response;
+  }
+  async getAllPracticeWallets(queryDto: QueryWithPaginationDto) {
+    const response =
+      await this.practiceWalletRepository.getAllPracticeWallets(queryDto);
+
+    return response;
+  }
+
+  async getAllPracticePointTransactions(queryDto: QueryWithPaginationDto) {
+    const response =
+      await this.practicePointTransactionRepository.getAllPracticePointTransactions(
+        queryDto,
+      );
+
+    return response;
   }
 }

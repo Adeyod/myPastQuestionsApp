@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
+import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import {
   PracticeWallet,
   PracticeWalletDocument,
@@ -159,5 +160,58 @@ export class PracticeWalletRepository {
         },
       )
       .exec();
+  }
+
+  async getAllPracticeWallets(queryDto: QueryWithPaginationDto): Promise<{
+    totalCount: number;
+    totalPages: number;
+    practiceWalletObj: PracticeWalletDocument[];
+  }> {
+    const { page, limit, searchParams } = queryDto;
+    let query = this.practiceWalletModel.find();
+
+    if (searchParams) {
+      const regex = new RegExp(searchParams, 'i');
+
+      query = query.where({
+        $or: [{ points: { $regex: regex } }],
+      });
+    }
+
+    const count = await query.clone().countDocuments();
+    let pages = 0;
+
+    if (page !== undefined && limit !== undefined && count !== 0) {
+      const offset = (page - 1) * limit;
+
+      query = query.skip(offset).limit(limit);
+      pages = Math.ceil(count / limit);
+
+      if (page > pages) {
+        throw new NotFoundException({
+          message: 'Page not found.',
+          success: false,
+          status: 404,
+        });
+      }
+    }
+
+    const wallets = await query.sort({ createdAt: -1 });
+
+    if (wallets.length === 0) {
+      throw new NotFoundException({
+        message: 'Practice wallets not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const response = {
+      totalCount: count,
+      totalPages: pages,
+      practiceWalletObj: wallets,
+    };
+
+    return response;
   }
 }

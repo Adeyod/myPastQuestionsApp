@@ -7,6 +7,7 @@ import {
 import { ClientSession, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import { JwtUser } from '../../../common/types/jwt-user.type';
+import { Role } from '../../users/schemas/user.schema';
 import { PracticeStatus } from '../enums/practice-status.enum';
 import { PracticeRepository } from '../repositories/practice.repository';
 import { Practice } from '../schemas/practice.schema';
@@ -171,6 +172,36 @@ export class PracticeService {
       id,
       queryDto,
     );
+
+    return response;
+  }
+  async getAllPracticeHistory(queryDto: QueryWithPaginationDto) {
+    const response = await this.practiceRepo.getAllPracticeHistory(queryDto);
+
+    return response;
+  }
+
+  async getSinglePracticeHistory(user: JwtUser, historyId: string) {
+    const id = new Types.ObjectId(historyId);
+    const response = await this.practiceRepo.findPracticeById(id);
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Practice not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (user.role !== Role.ADMIN) {
+      if (response.userId.toString() !== user.sub.toString()) {
+        throw new ForbiddenException({
+          message: 'You can only view your own practice history.',
+          success: false,
+          status: 403,
+        });
+      }
+    }
 
     return response;
   }

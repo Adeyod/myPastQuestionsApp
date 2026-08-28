@@ -300,6 +300,54 @@ export class PracticeRepository {
 
     return response;
   }
+  async getAllPracticeHistory(queryDto: QueryWithPaginationDto) {
+    const { page, limit, searchParams } = queryDto;
+
+    let query = this.practiceModel.find();
+
+    if (searchParams) {
+      const regex = new RegExp(searchParams, 'i');
+
+      query = query.where({
+        $or: [{ status: { $regex: regex } }],
+      });
+    }
+
+    const count = await query.clone().countDocuments();
+    let pages = 0;
+    if (page !== undefined && limit !== undefined && count !== 0) {
+      const offset = (page - 1) * limit;
+
+      query = query.skip(offset).limit(limit);
+      pages = Math.ceil(count / limit);
+
+      if (page > pages) {
+        throw new NotFoundException({
+          message: 'Page not found.',
+          success: false,
+          status: 404,
+        });
+      }
+    }
+
+    const practices = await query.sort({ createdAt: -1 });
+
+    if (practices.length === 0) {
+      throw new NotFoundException({
+        message: 'Practices not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const response = {
+      practiceObj: practices,
+      totalPages: pages,
+      totalCount: count,
+    };
+
+    return response;
+  }
 
   async getDashboardStatsByUserId(userId: Types.ObjectId, examType?: string) {
     const response = await this.practiceModel.aggregate([
