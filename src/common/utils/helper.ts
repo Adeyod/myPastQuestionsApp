@@ -29,8 +29,6 @@ export const generatePaymentReference = (
 ) => {
   const { userId, plan } = payload;
 
-  console.log('payload:', payload);
-
   if (!userId || !plan) {
     throw new BadRequestException({
       message: 'User ID and plan are required.',
