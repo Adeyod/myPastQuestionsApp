@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import { TextStyle } from '../../../common/enums/question-type.enum';
 
 export type SolveAndWinQuestionDocument = HydratedDocument<SolveAndWinQuestion>;
 
@@ -42,7 +43,7 @@ export class SolveAndWinSegment {
     type: [String],
     default: [],
   })
-  styles!: string[];
+  styles?: TextStyle[];
 }
 
 @Schema({ _id: false })
@@ -107,7 +108,7 @@ export class SolveAndWinContentBlock {
     type: [SolveAndWinSegment],
     default: [],
   })
-  segments!: SolveAndWinSegment[];
+  segments?: SolveAndWinSegment[];
 
   /* ---------------- IMAGE ---------------- */
 
@@ -131,7 +132,7 @@ export class SolveAndWinContentBlock {
     type: [[String]],
     default: [],
   })
-  table!: string[][];
+  table?: string[][];
 
   /* ---------------- GRAPH ---------------- */
 
@@ -147,7 +148,7 @@ export class SolveAndWinContentBlock {
     type: [String],
     default: [],
   })
-  items!: string[];
+  items?: string[];
 
   /* ---------------- FLEXIBLE METADATA ---------------- */
 
@@ -155,10 +156,10 @@ export class SolveAndWinContentBlock {
     type: Object,
     default: {},
   })
-  metadata!: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
-@Schema({ _id: false })
+@Schema({ _id: true })
 export class SolveAndWinOption {
   @Prop({
     required: true,
@@ -230,10 +231,10 @@ export class SolveAndWinQuestion {
   })
   questionType!: SolveAndWinQuestionType;
 
-  @Prop({
-    default: '',
-  })
-  answer!: string;
+  // @Prop({
+  //   default: '',
+  // })
+  // answer!: string;
 
   /* =======================================================
      CORRECT ANSWERS
@@ -243,10 +244,10 @@ export class SolveAndWinQuestion {
   ======================================================= */
 
   @Prop({
-    type: [String],
+    type: [Types.ObjectId],
     default: [],
   })
-  correctAnswers!: string[];
+  correctAnswers!: Types.ObjectId[];
 
   /* =======================================================
      MULTIPLE ANSWER FLAG

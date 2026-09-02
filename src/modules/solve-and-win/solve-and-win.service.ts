@@ -377,16 +377,43 @@ export class SolveAndWinService {
     }
 
     const session = await this.connection.startSession();
-    session.startTransaction();
 
     try {
-      // let createdQuestions: SolveAndWinQuestionDocument[];
-      // let updatedContest;
+      session.startTransaction();
+      // const questionsToCreate = dto.questions.map((question) => ({
+      //   ...question,
+      //   subjectId: subjectObjectId,
+      // }));
 
-      const questionsToCreate = dto.questions.map((question) => ({
-        ...question,
-        subjectId: subjectObjectId,
-      }));
+      const questionsToCreate = dto.questions.map((question) => {
+        const options = question.options.map((option) => ({
+          _id: new Types.ObjectId(),
+          label: option.label,
+          value: option.value,
+        }));
+
+        const correctOptions = options.filter((option) =>
+          question.correctAnswers.includes(option.value),
+        );
+
+        if (correctOptions.length !== question.correctAnswers.length) {
+          throw new BadRequestException({
+            message: `One or more correct answers do not exist in the options for question: "${question.question}"`,
+            success: false,
+            status: 400,
+          });
+        }
+
+        const correctAnswers = correctOptions.map((option) => option._id);
+
+        return {
+          ...question,
+          subjectId: subjectObjectId,
+          options,
+          correctAnswers,
+        };
+      });
+
       const createdQuestions =
         await this.solveAndWinQuestionRepo.createManySolveAndWinQuestions(
           questionsToCreate,
@@ -416,6 +443,8 @@ export class SolveAndWinService {
           status: 400,
         });
       }
+
+      await session.commitTransaction();
 
       return {
         message: 'Questions added to contest subject successfully.',

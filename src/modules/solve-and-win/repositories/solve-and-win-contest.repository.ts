@@ -248,12 +248,74 @@ export class SolveAndWinContestRepository {
       )
       .exec();
   }
+  // async addQuestionsToSubjectWithSession(
+  //   contestId: Types.ObjectId,
+  //   subjectId: Types.ObjectId,
+  //   questionIds: Types.ObjectId[],
+  //   session: ClientSession,
+  // ): Promise<SolveAndWinContestDocument | null> {
+  //   return await this.contestModel
+  //     .findOneAndUpdate(
+  //       {
+  //         _id: contestId,
+  //         'subjects.subjectId': subjectId,
+  //       },
+  //       {
+  //         $addToSet: {
+  //           'subjects.$.questions': {
+  //             $each: questionIds.map((questionId) => ({
+  //               questionId,
+  //             })),
+  //           },
+  //         },
+  //       },
+  //       {
+  //         returnDocument: 'after',
+  //         runValidators: true,
+  //         session,
+  //       },
+  //     )
+  //     .exec();
+  // }
+
   async addQuestionsToSubjectWithSession(
     contestId: Types.ObjectId,
     subjectId: Types.ObjectId,
     questionIds: Types.ObjectId[],
-    session: ClientSession,
+    session?: ClientSession,
   ): Promise<SolveAndWinContestDocument | null> {
+    const contest = await this.contestModel
+      .findOne(
+        {
+          _id: contestId,
+          'subjects.subjectId': subjectId,
+        },
+        {
+          subjects: 1,
+        },
+      )
+      .session(session ?? null)
+      .exec();
+
+    if (!contest) {
+      return null;
+    }
+
+    const contestSubject = contest.subjects.find(
+      (subject) => subject.subjectId.toString() === subjectId.toString(),
+    );
+
+    if (!contestSubject) {
+      return null;
+    }
+
+    const currentQuestionCount = contestSubject.questions?.length ?? 0;
+
+    const contestQuestions = questionIds.map((questionId, index) => ({
+      questionId,
+      order: currentQuestionCount + index + 1,
+    }));
+
     return await this.contestModel
       .findOneAndUpdate(
         {
@@ -261,11 +323,9 @@ export class SolveAndWinContestRepository {
           'subjects.subjectId': subjectId,
         },
         {
-          $addToSet: {
+          $push: {
             'subjects.$.questions': {
-              $each: questionIds.map((questionId) => ({
-                questionId,
-              })),
+              $each: contestQuestions,
             },
           },
         },
