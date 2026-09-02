@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
+import { ClientSession } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import {
   SolveAndWinQuestion,
@@ -14,6 +15,17 @@ export class SolveAndWinQuestionRepository {
     @InjectModel(SolveAndWinQuestion.name)
     private readonly questionModel: Model<SolveAndWinQuestionDocument>,
   ) {}
+
+  async createManySolveAndWinQuestions(
+    questions: Partial<SolveAndWinQuestion>[],
+    session?: ClientSession,
+  ): Promise<SolveAndWinQuestionDocument[]> {
+    const response = await this.questionModel.insertMany(questions, {
+      session,
+    });
+
+    return response;
+  }
 
   async createSolveAndWinQuestion(
     data: Partial<SolveAndWinQuestion>,

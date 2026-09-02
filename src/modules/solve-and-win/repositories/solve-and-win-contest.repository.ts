@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
+import { ClientSession } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import {
   SolveAndWinContest,
@@ -243,6 +244,35 @@ export class SolveAndWinContestRepository {
         {
           returnDocument: 'after',
           runValidators: true,
+        },
+      )
+      .exec();
+  }
+  async addQuestionsToSubjectWithSession(
+    contestId: Types.ObjectId,
+    subjectId: Types.ObjectId,
+    questionIds: Types.ObjectId[],
+    session: ClientSession,
+  ): Promise<SolveAndWinContestDocument | null> {
+    return await this.contestModel
+      .findOneAndUpdate(
+        {
+          _id: contestId,
+          'subjects.subjectId': subjectId,
+        },
+        {
+          $addToSet: {
+            'subjects.$.questions': {
+              $each: questionIds.map((questionId) => ({
+                questionId,
+              })),
+            },
+          },
+        },
+        {
+          returnDocument: 'after',
+          runValidators: true,
+          session,
         },
       )
       .exec();

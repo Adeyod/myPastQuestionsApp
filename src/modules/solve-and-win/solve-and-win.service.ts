@@ -4,8 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { AddQuestionsToContestSubjectDto } from './dtos/add-questions-to-contest-subject.dto';
 import { AddQuestionsToContestDto } from './dtos/add-questions-to-contest.dto';
 import { AddSubjectsToContestDto } from './dtos/add-subjects-to-contest.dto';
 import { CreateSolveAndWinContestDto } from './dtos/create-contest.dto';
@@ -22,6 +24,7 @@ import {
 @Injectable()
 export class SolveAndWinService {
   constructor(
+    @InjectConnection() private readonly connection: Connection,
     private readonly contestRepo: SolveAndWinContestRepository,
     private readonly solveAndWinQuestionRepo: SolveAndWinQuestionRepository,
   ) {}
@@ -312,6 +315,123 @@ export class SolveAndWinService {
     }
 
     return response;
+  }
+
+  // async createManyQuestions(dto: )
+  async createQuestionsForASubjectInContest(
+    contestId: string,
+    subjectId: string,
+    dto: AddQuestionsToContestSubjectDto,
+  ) {
+    this.validateObjectId(contestId);
+    this.validateObjectId(subjectId);
+
+    const contestObjectId = new Types.ObjectId(contestId);
+    const subjectObjectId = new Types.ObjectId(subjectId);
+
+    const contest =
+      await this.contestRepo.findSolveAndWinContestById(contestObjectId);
+
+    if (!contest) {
+      throw new NotFoundException({
+        message: 'Solve and Win contest not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (contest.status !== SolveAndWinContestStatus.DRAFT) {
+      throw new BadRequestException({
+        message: 'Questions can only be added to a draft contest.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const contestSubject = contest.subjects?.find(
+      (subject) => subject.subjectId.toString() === subjectId,
+    );
+
+    if (!contestSubject) {
+      throw new BadRequestException({
+        message: 'The selected subject does not belong to this contest.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (!dto.questions?.length) {
+      throw new BadRequestException({
+        message: 'At least one question is required.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (dto.questions.length !== dto.totalNumberOfExpectedQuestions) {
+      throw new ConflictException({
+        message: `The total number of questions expected is ${dto.totalNumberOfExpectedQuestions} but you are sending ${dto.questions.length} questions.`,
+        success: false,
+        status: 409,
+      });
+    }
+
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      // let createdQuestions: SolveAndWinQuestionDocument[];
+      // let updatedContest;
+
+      const questionsToCreate = dto.questions.map((question) => ({
+        ...question,
+        subjectId: subjectObjectId,
+      }));
+      const createdQuestions =
+        await this.solveAndWinQuestionRepo.createManySolveAndWinQuestions(
+          questionsToCreate,
+          session,
+        );
+      if (!createdQuestions.length) {
+        throw new BadRequestException({
+          message: 'Unable to create questions.',
+          success: false,
+          status: 400,
+        });
+      }
+      const questionIds = createdQuestions.map((question) => question._id);
+
+      const updatedContest =
+        await this.contestRepo.addQuestionsToSubjectWithSession(
+          contestObjectId,
+          subjectObjectId,
+          questionIds,
+          session,
+        );
+
+      if (!updatedContest) {
+        throw new BadRequestException({
+          message: 'Unable to attach questions to the contest subject.',
+          success: false,
+          status: 400,
+        });
+      }
+
+      return {
+        message: 'Questions added to contest subject successfully.',
+        success: true,
+        status: 201,
+        data: {
+          contest: updatedContest,
+          questions: createdQuestions,
+        },
+      };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
   }
 
   async removeQuestionsFromContest(

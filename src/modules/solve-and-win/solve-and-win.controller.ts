@@ -25,6 +25,7 @@ import { DeviceSessionGuard } from '../../common/guards/device-session.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../users/schemas/user.schema';
+import { AddQuestionsToContestSubjectDto } from './dtos/add-questions-to-contest-subject.dto';
 import { AddQuestionsToContestDto } from './dtos/add-questions-to-contest.dto';
 import { AddSubjectsToContestDto } from './dtos/add-subjects-to-contest.dto';
 import { CreateSolveAndWinContestDto } from './dtos/create-contest.dto';
@@ -458,6 +459,56 @@ export class SolveAndWinController {
       contestId,
       dto,
     );
+
+    return response;
+  }
+  @Patch('add-questions-to-subject-in-contest/:contestId/:subjectId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Questions added to solve and win contest successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Create questions and add questions IDs to a solve and win contest.',
+    description:
+      'This is the endpoint that is going to be used to add questions to a solve and win contest.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Questions added to solve and win contest successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request. Unable to add questions to a solve and win contest.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async createQuestionsForASubjectInContest(
+    @Param('contestId') contestId: string,
+    @Param('subjectId') subjectId: string,
+    @Body() dto: AddQuestionsToContestSubjectDto,
+  ) {
+    const response =
+      await this.solveAndWinService.createQuestionsForASubjectInContest(
+        contestId,
+        subjectId,
+        dto,
+      );
 
     return response;
   }

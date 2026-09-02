@@ -3,10 +3,6 @@ import { HydratedDocument, Types } from 'mongoose';
 
 export type SolveAndWinQuestionDocument = HydratedDocument<SolveAndWinQuestion>;
 
-/* =========================================================
-   ENUMS
-========================================================= */
-
 export enum SolveAndWinQuestionType {
   MCQ = 'MCQ',
   MULTIPLE_CHOICE = 'MULTIPLE_CHOICE',
