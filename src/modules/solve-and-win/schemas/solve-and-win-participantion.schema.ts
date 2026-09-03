@@ -42,6 +42,11 @@ export class ParticipationQuestion {
     default: 0,
   })
   marksAwarded!: number;
+
+  @Prop({
+    default: 1,
+  })
+  maxMarks!: number;
 }
 
 @Schema({ _id: false })
@@ -154,6 +159,9 @@ export class SolveAndWinParticipation {
 
   @Prop()
   startedAt?: Date;
+
+  @Prop()
+  endsAt?: Date;
 
   @Prop()
   submittedAt?: Date;

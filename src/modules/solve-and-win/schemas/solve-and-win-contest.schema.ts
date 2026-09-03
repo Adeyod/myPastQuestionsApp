@@ -13,6 +13,33 @@ export enum SolveAndWinContestStatus {
 }
 
 @Schema({ _id: false })
+export class DifficultyBreakdown {
+  @Prop({
+    type: Number,
+    required: true,
+    min: 0,
+    default: 0,
+  })
+  easy!: number;
+
+  @Prop({
+    type: Number,
+    required: true,
+    min: 0,
+    default: 0,
+  })
+  medium!: number;
+
+  @Prop({
+    type: Number,
+    required: true,
+    min: 0,
+    default: 0,
+  })
+  hard!: number;
+}
+
+@Schema({ _id: false })
 export class ContestQuestion {
   @Prop({
     type: Types.ObjectId,
@@ -37,10 +64,33 @@ export class ContestSubject {
   subjectId!: Types.ObjectId;
 
   @Prop({
-    type: [ContestQuestion],
-    default: [],
+    type: Number,
   })
-  questions!: ContestQuestion[];
+  expectedNoOfQuestions!: number;
+
+  @Prop({
+    type: Number,
+    required: true,
+    min: 1,
+  })
+  durationInSeconds!: number;
+
+  @Prop({
+    type: DifficultyBreakdown,
+    required: true,
+    default: {
+      easy: 0,
+      medium: 0,
+      hard: 0,
+    },
+  })
+  difficultyBreakdown!: DifficultyBreakdown;
+
+  // @Prop({
+  //   type: [ContestQuestion],
+  //   default: [],
+  // })
+  // questions!: ContestQuestion[];
 }
 
 @Schema({ timestamps: true })
@@ -95,11 +145,21 @@ export class SolveAndWinContest {
   })
   isActive!: boolean;
 
-  @Prop()
+  @Prop({
+    type: Date,
+    required: true,
+  })
   startDate!: Date;
 
-  @Prop()
+  @Prop({ type: Date, required: true })
   endDate!: Date;
+
+  @Prop({
+    type: Number,
+    required: true,
+    min: 1,
+  })
+  windowPeriod!: number;
 }
 
 export const SolveAndWinContestSchema =

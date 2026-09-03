@@ -7,11 +7,10 @@ import {
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { SubjectsService } from '../subjects/subjects.service';
 import { AddQuestionsToContestSubjectDto } from './dtos/add-questions-to-contest-subject.dto';
-import { AddQuestionsToContestDto } from './dtos/add-questions-to-contest.dto';
 import { AddSubjectsToContestDto } from './dtos/add-subjects-to-contest.dto';
 import { CreateSolveAndWinContestDto } from './dtos/create-contest.dto';
-import { RemoveQuestionsFromContestDto } from './dtos/remove-questions-from-contest.dto';
 import { RemoveSubjectsFromContestDto } from './dtos/remove-subjects-from-contest.dto';
 import { UpdateSolveAndWinContestDto } from './dtos/update-contest.dto';
 import { SolveAndWinContestRepository } from './repositories/solve-and-win-contest.repository';
@@ -27,11 +26,15 @@ export class SolveAndWinService {
     @InjectConnection() private readonly connection: Connection,
     private readonly contestRepo: SolveAndWinContestRepository,
     private readonly solveAndWinQuestionRepo: SolveAndWinQuestionRepository,
+
+    private readonly subjectService: SubjectsService,
   ) {}
 
   async createSolveAndWinContest(dto: CreateSolveAndWinContestDto) {
     const startDate = new Date(dto.startDate);
-    const endDate = new Date(dto.endDate);
+    const endDate = new Date(
+      startDate.getTime() + dto.windowPeriod * 24 * 60 * 60 * 1000,
+    );
 
     if (startDate >= endDate) {
       throw new BadRequestException({
@@ -41,7 +44,9 @@ export class SolveAndWinService {
       });
     }
 
-    const subjectIds = dto.subjectIds.map((id) => new Types.ObjectId(id));
+    const subjectIds = dto.subjects.map(
+      (id) => new Types.ObjectId(id.subjectId),
+    );
 
     const uniqueSubjectIds = [
       ...new Map(subjectIds.map((id) => [id.toString(), id])).values(),
@@ -55,6 +60,23 @@ export class SolveAndWinService {
       });
     }
 
+    for (const subject of dto.subjects) {
+      const { expectedNoOfQuestions, difficultyBreakdown } = subject;
+
+      const totalDifficultyQuestions =
+        difficultyBreakdown.easy +
+        difficultyBreakdown.medium +
+        difficultyBreakdown.hard;
+
+      if (totalDifficultyQuestions !== expectedNoOfQuestions) {
+        throw new BadRequestException({
+          message: `The difficulty breakdown for subject ${subject.subjectId} must equal the expected number of questions.`,
+          success: false,
+          status: 400,
+        });
+      }
+    }
+
     const data: Partial<SolveAndWinContest> = {
       title: dto.title.trim(),
       description: dto.description.trim(),
@@ -63,13 +85,16 @@ export class SolveAndWinService {
       entryPoints: dto.entryPoints,
       startDate,
       endDate,
+      windowPeriod: dto.windowPeriod,
 
-      subjects: uniqueSubjectIds.map((subjectId) => ({
-        subjectId,
-        questions: [],
+      subjects: dto.subjects.map((item) => ({
+        subjectId: new Types.ObjectId(item.subjectId),
+        expectedNoOfQuestions: item.expectedNoOfQuestions,
+        difficultyBreakdown: item.difficultyBreakdown,
+        durationInSeconds: item.durationInMinutes * 60,
       })),
 
-      status: SolveAndWinContestStatus.DRAFT,
+      status: dto.status,
     };
 
     const response = await this.contestRepo.createSolveAndWinContest(data);
@@ -184,8 +209,18 @@ export class SolveAndWinService {
       updateData.startDate = new Date(dto.startDate);
     }
 
-    if (dto.endDate !== undefined) {
-      updateData.endDate = new Date(dto.endDate);
+    if (dto.windowPeriod !== undefined) {
+      const windowPeriod = dto.windowPeriod;
+
+      updateData.windowPeriod = windowPeriod;
+
+      const startDate = dto.startDate
+        ? new Date(dto.startDate)
+        : contest.startDate;
+
+      updateData.endDate = new Date(
+        startDate.getTime() + windowPeriod * 24 * 60 * 60 * 1000,
+      );
     }
 
     const finalStartDate = updateData.startDate ?? contest.startDate;
@@ -200,9 +235,9 @@ export class SolveAndWinService {
       });
     }
 
-    if (dto.subjectIds !== undefined) {
-      const subjectIds = dto.subjectIds.map(
-        (subjectId) => new Types.ObjectId(subjectId),
+    if (dto.subjects !== undefined) {
+      const subjectIds = dto.subjects.map(
+        (item) => new Types.ObjectId(item.subjectId),
       );
 
       const uniqueSubjectIds = [
@@ -211,9 +246,11 @@ export class SolveAndWinService {
         ).values(),
       ];
 
-      updateData.subjects = uniqueSubjectIds.map((subjectId) => ({
-        subjectId,
-        questions: [],
+      updateData.subjects = dto.subjects.map((item) => ({
+        subjectId: new Types.ObjectId(item.subjectId),
+        expectedNoOfQuestions: item.expectedNoOfQuestions,
+        difficultyBreakdown: item.difficultyBreakdown,
+        durationInSeconds: item.durationInMinutes * 60,
       }));
     }
 
@@ -233,124 +270,15 @@ export class SolveAndWinService {
     return response;
   }
 
-  async addQuestionsToContest(
-    contestId: string,
-    dto: AddQuestionsToContestDto,
-  ) {
-    this.validateObjectId(contestId);
-    this.validateObjectId(dto.subjectId);
-
-    const contestObjectId = new Types.ObjectId(contestId);
-    const subjectObjectId = new Types.ObjectId(dto.subjectId);
-
-    const contest =
-      await this.contestRepo.findSolveAndWinContestById(contestObjectId);
-
-    if (!contest) {
-      throw new NotFoundException({
-        message: 'Solve and Win contest not found.',
-        success: false,
-        status: 404,
-      });
-    }
-
-    this.ensureDraft(contest);
-
-    const subjectExists = await this.contestRepo.checkSubjectExistInContest(
-      contestObjectId,
-      subjectObjectId,
-    );
-
-    if (!subjectExists) {
-      throw new BadRequestException({
-        message: 'This subject does not belong to the contest.',
-        success: false,
-        status: 400,
-      });
-    }
-
-    const questionIds = dto.questionIds.map((id) => new Types.ObjectId(id));
-
-    for (const questionId of questionIds) {
-      const question =
-        await this.solveAndWinQuestionRepo.findSolveAndWinQuestionById(
-          questionId,
-        );
-
-      if (!question) {
-        throw new NotFoundException({
-          message: `Question ${questionId.toString()} not found.`,
-          success: false,
-          status: 404,
-        });
-      }
-
-      if (question.subjectId.toString() !== subjectObjectId.toString()) {
-        throw new BadRequestException({
-          message: `Question ${questionId.toString()} does not belong to the selected subject.`,
-          success: false,
-          status: 400,
-        });
-      }
-    }
-
-    const uniqueQuestionIds = [
-      ...new Map(
-        questionIds.map((questionId) => [questionId.toString(), questionId]),
-      ).values(),
-    ];
-
-    const response = await this.contestRepo.addQuestionsToSubject(
-      contestObjectId,
-      subjectObjectId,
-      uniqueQuestionIds,
-    );
-
-    if (!response) {
-      throw new BadRequestException({
-        message: 'Unable to add questions to contest.',
-        success: false,
-        status: 400,
-      });
-    }
-
-    return response;
-  }
-
-  // async createManyQuestions(dto: )
-  async createQuestionsForASubjectInContest(
-    contestId: string,
+  async addQuestionsForASubjectInsideSolveAndWinQuestionDatabase(
     subjectId: string,
     dto: AddQuestionsToContestSubjectDto,
   ) {
-    this.validateObjectId(contestId);
     this.validateObjectId(subjectId);
 
-    const contestObjectId = new Types.ObjectId(contestId);
     const subjectObjectId = new Types.ObjectId(subjectId);
 
-    const contest =
-      await this.contestRepo.findSolveAndWinContestById(contestObjectId);
-
-    if (!contest) {
-      throw new NotFoundException({
-        message: 'Solve and Win contest not found.',
-        success: false,
-        status: 404,
-      });
-    }
-
-    if (contest.status !== SolveAndWinContestStatus.DRAFT) {
-      throw new BadRequestException({
-        message: 'Questions can only be added to a draft contest.',
-        success: false,
-        status: 400,
-      });
-    }
-
-    const contestSubject = contest.subjects?.find(
-      (subject) => subject.subjectId.toString() === subjectId,
-    );
+    const contestSubject = await this.subjectService.getSubjectById(subjectId);
 
     if (!contestSubject) {
       throw new BadRequestException({
@@ -368,22 +296,10 @@ export class SolveAndWinService {
       });
     }
 
-    if (dto.questions.length !== dto.totalNumberOfExpectedQuestions) {
-      throw new ConflictException({
-        message: `The total number of questions expected is ${dto.totalNumberOfExpectedQuestions} but you are sending ${dto.questions.length} questions.`,
-        success: false,
-        status: 409,
-      });
-    }
-
     const session = await this.connection.startSession();
 
     try {
       session.startTransaction();
-      // const questionsToCreate = dto.questions.map((question) => ({
-      //   ...question,
-      //   subjectId: subjectObjectId,
-      // }));
 
       const questionsToCreate = dto.questions.map((question) => {
         const options = question.options.map((option) => ({
@@ -426,83 +342,16 @@ export class SolveAndWinService {
           status: 400,
         });
       }
-      const questionIds = createdQuestions.map((question) => question._id);
-
-      const updatedContest =
-        await this.contestRepo.addQuestionsToSubjectWithSession(
-          contestObjectId,
-          subjectObjectId,
-          questionIds,
-          session,
-        );
-
-      if (!updatedContest) {
-        throw new BadRequestException({
-          message: 'Unable to attach questions to the contest subject.',
-          success: false,
-          status: 400,
-        });
-      }
 
       await session.commitTransaction();
 
-      return {
-        message: 'Questions added to contest subject successfully.',
-        success: true,
-        status: 201,
-        data: {
-          contest: updatedContest,
-          questions: createdQuestions,
-        },
-      };
+      return createdQuestions;
     } catch (error) {
       await session.abortTransaction();
       throw error;
     } finally {
       await session.endSession();
     }
-  }
-
-  async removeQuestionsFromContest(
-    contestId: string,
-    dto: RemoveQuestionsFromContestDto,
-  ) {
-    this.validateObjectId(contestId);
-    this.validateObjectId(dto.subjectId);
-
-    const contestObjectId = new Types.ObjectId(contestId);
-    const subjectObjectId = new Types.ObjectId(dto.subjectId);
-
-    const contest =
-      await this.contestRepo.findSolveAndWinContestById(contestObjectId);
-
-    if (!contest) {
-      throw new NotFoundException({
-        message: 'Solve and Win contest not found.',
-        success: false,
-        status: 404,
-      });
-    }
-
-    this.ensureDraft(contest);
-
-    const questionIds = dto.questionIds.map((id) => new Types.ObjectId(id));
-
-    const response = await this.contestRepo.removeQuestionsFromSubject(
-      contestObjectId,
-      subjectObjectId,
-      questionIds,
-    );
-
-    if (!response) {
-      throw new BadRequestException({
-        message: 'Unable to remove questions from contest.',
-        success: false,
-        status: 400,
-      });
-    }
-
-    return response;
   }
 
   async activateContest(contestId: string) {
@@ -536,16 +385,16 @@ export class SolveAndWinService {
       });
     }
 
-    for (const subject of contest.subjects) {
-      if (!subject.questions?.length) {
-        throw new BadRequestException({
-          message:
-            'Every contest subject must have at least one question before activation.',
-          success: false,
-          status: 400,
-        });
-      }
-    }
+    // for (const subject of contest.subjects) {
+    //   if (!subject.questions?.length) {
+    //     throw new BadRequestException({
+    //       message:
+    //         'Every contest subject must have at least one question before activation.',
+    //       success: false,
+    //       status: 400,
+    //     });
+    //   }
+    // }
 
     const now = new Date();
 

@@ -32,6 +32,15 @@ export enum SolveAndWinContentType {
   LIST = 'list',
 }
 
+export const SOLVE_AND_WIN_DIFFICULTY_MARKS: Record<
+  SolveAndWinDifficulty,
+  number
+> = {
+  [SolveAndWinDifficulty.EASY]: 1,
+  [SolveAndWinDifficulty.MEDIUM]: 2,
+  [SolveAndWinDifficulty.HARD]: 3,
+};
+
 @Schema({ _id: false })
 export class SolveAndWinSegment {
   @Prop({
@@ -287,15 +296,6 @@ export class SolveAndWinQuestion {
     default: SolveAndWinDifficulty.EASY,
   })
   difficulty!: SolveAndWinDifficulty;
-
-  /* =======================================================
-     MARKS
-  ======================================================= */
-
-  @Prop({
-    default: 1,
-  })
-  marks!: number;
 
   /* =======================================================
      ACTIVE STATUS

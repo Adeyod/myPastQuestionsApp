@@ -46,7 +46,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Solve and win contest created successfully.')
   @HttpCode(HttpStatus.CREATED)
@@ -462,7 +462,7 @@ export class SolveAndWinController {
 
     return response;
   }
-  @Patch('add-questions-to-subject-in-contest/:contestId/:subjectId')
+  @Patch('add-solve-and-win-contest-questions-to-database/:subjectId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth('JWT-auth')
@@ -472,23 +472,25 @@ export class SolveAndWinController {
     required: true,
     example: '394ir-84736e5362-yw7qy3i38',
   })
-  @SuccessMessage('Questions added to solve and win contest successfully.')
+  @SuccessMessage(
+    'Questions added to solve and win contest databank successfully.',
+  )
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary:
-      'Create questions and add questions IDs to a solve and win contest.',
+    summary: 'Create questions inside solve and win contest databank.',
     description:
-      'This is the endpoint that is going to be used to add questions to a solve and win contest.',
+      'This is the endpoint that is going to be used to add questions to solve and win contest database.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Questions added to solve and win contest successfully.',
+    description:
+      'Questions added to solve and win contest databank successfully.',
     type: ApiResponseDto,
   })
   @ApiResponse({
     status: 400,
     description:
-      'Bad request. Unable to add questions to a solve and win contest.',
+      'Bad request. Unable to add questions to a solve and win contest database.',
   })
   @ApiResponse({
     status: 500,
@@ -498,14 +500,12 @@ export class SolveAndWinController {
     status: 429,
     description: 'Too many requests. Rate limit exceeded',
   })
-  async createQuestionsForASubjectInContest(
-    @Param('contestId') contestId: string,
+  async addQuestionsForASubjectInsideSolveAndWinQuestionDatabase(
     @Param('subjectId') subjectId: string,
     @Body() dto: AddQuestionsToContestSubjectDto,
   ) {
     const response =
-      await this.solveAndWinService.createQuestionsForASubjectInContest(
-        contestId,
+      await this.solveAndWinService.addQuestionsForASubjectInsideSolveAndWinQuestionDatabase(
         subjectId,
         dto,
       );
@@ -550,14 +550,7 @@ export class SolveAndWinController {
   async addQuestionsToContest(
     @Param('contestId') contestId: string,
     @Body() dto: AddQuestionsToContestDto,
-  ) {
-    const response = await this.solveAndWinService.addQuestionsToContest(
-      contestId,
-      dto,
-    );
-
-    return response;
-  }
+  ) {}
   @Patch('remove-questions-from-contest/:contestId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.ADMIN)
@@ -598,14 +591,7 @@ export class SolveAndWinController {
   async removeQuestionsFromContest(
     @Param('contestId') contestId: string,
     @Body() dto: RemoveQuestionsFromContestDto,
-  ) {
-    const response = await this.solveAndWinService.removeQuestionsFromContest(
-      contestId,
-      dto,
-    );
-
-    return response;
-  }
+  ) {}
 
   @Patch('activate-contest/:contestId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)

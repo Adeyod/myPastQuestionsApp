@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
-import { ClientSession } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import {
   SolveAndWinContest,
@@ -217,43 +216,15 @@ export class SolveAndWinContestRepository {
   //     .exec();
   // }
 
-  async addQuestionsToSubject(
-    contestId: Types.ObjectId,
-    subjectId: Types.ObjectId,
-    questionIds: Types.ObjectId[],
-  ): Promise<SolveAndWinContestDocument | null> {
-    if (!questionIds.length) {
-      return await this.findSolveAndWinContestById(contestId);
-    }
-
-    return await this.contestModel
-      .findOneAndUpdate(
-        {
-          _id: contestId,
-          'subjects.subjectId': subjectId,
-        },
-        {
-          $addToSet: {
-            'subjects.$.questions': {
-              $each: questionIds.map((questionId) => ({
-                questionId,
-              })),
-            },
-          },
-        },
-        {
-          returnDocument: 'after',
-          runValidators: true,
-        },
-      )
-      .exec();
-  }
-  // async addQuestionsToSubjectWithSession(
+  // async addQuestionsToSubject(
   //   contestId: Types.ObjectId,
   //   subjectId: Types.ObjectId,
   //   questionIds: Types.ObjectId[],
-  //   session: ClientSession,
   // ): Promise<SolveAndWinContestDocument | null> {
+  //   if (!questionIds.length) {
+  //     return await this.findSolveAndWinContestById(contestId);
+  //   }
+
   //   return await this.contestModel
   //     .findOneAndUpdate(
   //       {
@@ -272,175 +243,174 @@ export class SolveAndWinContestRepository {
   //       {
   //         returnDocument: 'after',
   //         runValidators: true,
+  //       },
+  //     )
+  //     .exec();
+  // }
+
+  // async addQuestionsToSubjectWithSession(
+  //   contestId: Types.ObjectId,
+  //   subjectId: Types.ObjectId,
+  //   questionIds: Types.ObjectId[],
+  //   session?: ClientSession,
+  // ): Promise<SolveAndWinContestDocument | null> {
+  //   const contest = await this.contestModel
+  //     .findOne(
+  //       {
+  //         _id: contestId,
+  //         'subjects.subjectId': subjectId,
+  //       },
+  //       {
+  //         subjects: 1,
+  //       },
+  //     )
+  //     .session(session ?? null)
+  //     .exec();
+
+  //   if (!contest) {
+  //     return null;
+  //   }
+
+  //   const contestSubject = contest.subjects.find(
+  //     (subject) => subject.subjectId.toString() === subjectId.toString(),
+  //   );
+
+  //   if (!contestSubject) {
+  //     return null;
+  //   }
+
+  //   const currentQuestionCount = contestSubject.questions?.length ?? 0;
+
+  //   const contestQuestions = questionIds.map((questionId, index) => ({
+  //     questionId,
+  //     order: currentQuestionCount + index + 1,
+  //   }));
+
+  //   return await this.contestModel
+  //     .findOneAndUpdate(
+  //       {
+  //         _id: contestId,
+  //         'subjects.subjectId': subjectId,
+  //       },
+  //       {
+  //         $push: {
+  //           'subjects.$.questions': {
+  //             $each: contestQuestions,
+  //           },
+  //         },
+  //       },
+  //       {
+  //         returnDocument: 'after',
+  //         runValidators: true,
   //         session,
   //       },
   //     )
   //     .exec();
   // }
 
-  async addQuestionsToSubjectWithSession(
-    contestId: Types.ObjectId,
-    subjectId: Types.ObjectId,
-    questionIds: Types.ObjectId[],
-    session?: ClientSession,
-  ): Promise<SolveAndWinContestDocument | null> {
-    const contest = await this.contestModel
-      .findOne(
-        {
-          _id: contestId,
-          'subjects.subjectId': subjectId,
-        },
-        {
-          subjects: 1,
-        },
-      )
-      .session(session ?? null)
-      .exec();
+  // async addQuestionToSubject(
+  //   contestId: Types.ObjectId,
+  //   subjectId: Types.ObjectId,
+  //   questionId: Types.ObjectId,
+  // ): Promise<SolveAndWinContestDocument | null> {
+  //   return await this.contestModel
+  //     .findOneAndUpdate(
+  //       {
+  //         _id: contestId,
+  //         'subjects.subjectId': subjectId,
+  //       },
+  //       {
+  //         $addToSet: {
+  //           'subjects.$.questions': {
+  //             questionId,
+  //           },
+  //         },
+  //       },
+  //       {
+  //         new: true,
+  //         runValidators: true,
+  //       },
+  //     )
+  //     .exec();
+  // }
 
-    if (!contest) {
-      return null;
-    }
+  // async removeQuestionFromSubject(
+  //   contestId: Types.ObjectId,
+  //   subjectId: Types.ObjectId,
+  //   questionId: Types.ObjectId,
+  // ): Promise<SolveAndWinContestDocument | null> {
+  //   return await this.contestModel
+  //     .findOneAndUpdate(
+  //       {
+  //         _id: contestId,
+  //         'subjects.subjectId': subjectId,
+  //       },
+  //       {
+  //         $pull: {
+  //           'subjects.$.questions': {
+  //             questionId,
+  //           },
+  //         },
+  //       },
+  //       {
+  //         returnDocument: 'after',
+  //         runValidators: true,
+  //       },
+  //     )
+  //     .exec();
+  // }
 
-    const contestSubject = contest.subjects.find(
-      (subject) => subject.subjectId.toString() === subjectId.toString(),
-    );
+  // async removeQuestionsFromSubject(
+  //   contestId: Types.ObjectId,
+  //   subjectId: Types.ObjectId,
+  //   questionIds: Types.ObjectId[],
+  // ): Promise<SolveAndWinContestDocument | null> {
+  //   return await this.contestModel
+  //     .findOneAndUpdate(
+  //       {
+  //         _id: contestId,
+  //         'subjects.subjectId': subjectId,
+  //       },
+  //       {
+  //         $pull: {
+  //           'subjects.$.questions': {
+  //             questionId: {
+  //               $in: questionIds,
+  //             },
+  //           },
+  //         },
+  //       },
+  //       {
+  //         returnDocument: 'after',
+  //         runValidators: true,
+  //       },
+  //     )
+  //     .exec();
+  // }
 
-    if (!contestSubject) {
-      return null;
-    }
+  // async getQuestionIdsBySubject(
+  //   contestId: Types.ObjectId,
+  //   subjectId: Types.ObjectId,
+  // ): Promise<Types.ObjectId[]> {
+  //   const contest = await this.contestModel
+  //     .findOne(
+  //       {
+  //         _id: contestId,
+  //         'subjects.subjectId': subjectId,
+  //       },
+  //       {
+  //         'subjects.$': 1,
+  //       },
+  //     )
+  //     .lean()
+  //     .exec();
 
-    const currentQuestionCount = contestSubject.questions?.length ?? 0;
+  //   if (!contest || !contest.subjects?.length) {
+  //     return [];
+  //   }
 
-    const contestQuestions = questionIds.map((questionId, index) => ({
-      questionId,
-      order: currentQuestionCount + index + 1,
-    }));
-
-    return await this.contestModel
-      .findOneAndUpdate(
-        {
-          _id: contestId,
-          'subjects.subjectId': subjectId,
-        },
-        {
-          $push: {
-            'subjects.$.questions': {
-              $each: contestQuestions,
-            },
-          },
-        },
-        {
-          returnDocument: 'after',
-          runValidators: true,
-          session,
-        },
-      )
-      .exec();
-  }
-
-  async addQuestionToSubject(
-    contestId: Types.ObjectId,
-    subjectId: Types.ObjectId,
-    questionId: Types.ObjectId,
-  ): Promise<SolveAndWinContestDocument | null> {
-    return await this.contestModel
-      .findOneAndUpdate(
-        {
-          _id: contestId,
-          'subjects.subjectId': subjectId,
-        },
-        {
-          $addToSet: {
-            'subjects.$.questions': {
-              questionId,
-            },
-          },
-        },
-        {
-          new: true,
-          runValidators: true,
-        },
-      )
-      .exec();
-  }
-
-  async removeQuestionFromSubject(
-    contestId: Types.ObjectId,
-    subjectId: Types.ObjectId,
-    questionId: Types.ObjectId,
-  ): Promise<SolveAndWinContestDocument | null> {
-    return await this.contestModel
-      .findOneAndUpdate(
-        {
-          _id: contestId,
-          'subjects.subjectId': subjectId,
-        },
-        {
-          $pull: {
-            'subjects.$.questions': {
-              questionId,
-            },
-          },
-        },
-        {
-          returnDocument: 'after',
-          runValidators: true,
-        },
-      )
-      .exec();
-  }
-
-  async removeQuestionsFromSubject(
-    contestId: Types.ObjectId,
-    subjectId: Types.ObjectId,
-    questionIds: Types.ObjectId[],
-  ): Promise<SolveAndWinContestDocument | null> {
-    return await this.contestModel
-      .findOneAndUpdate(
-        {
-          _id: contestId,
-          'subjects.subjectId': subjectId,
-        },
-        {
-          $pull: {
-            'subjects.$.questions': {
-              questionId: {
-                $in: questionIds,
-              },
-            },
-          },
-        },
-        {
-          returnDocument: 'after',
-          runValidators: true,
-        },
-      )
-      .exec();
-  }
-
-  async getQuestionIdsBySubject(
-    contestId: Types.ObjectId,
-    subjectId: Types.ObjectId,
-  ): Promise<Types.ObjectId[]> {
-    const contest = await this.contestModel
-      .findOne(
-        {
-          _id: contestId,
-          'subjects.subjectId': subjectId,
-        },
-        {
-          'subjects.$': 1,
-        },
-      )
-      .lean()
-      .exec();
-
-    if (!contest || !contest.subjects?.length) {
-      return [];
-    }
-
-    return contest.subjects[0].questions.map((question) => question.questionId);
-  }
+  //   return contest.subjects[0].questions.map((question) => question.questionId);
+  // }
 
   async findSubjectInContest(
     contestId: Types.ObjectId,

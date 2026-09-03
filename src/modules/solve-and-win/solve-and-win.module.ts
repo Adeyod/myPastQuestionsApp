@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { SubjectsModule } from '../subjects/subjects.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import { SolveAndWinContestRepository } from './repositories/solve-and-win-contest.repository';
 import { SolveAndWinQuestionRepository } from './repositories/solve-and-win-question.repository';
@@ -21,6 +22,7 @@ import { SolveAndWinService } from './solve-and-win.service';
       { name: SolveAndWinQuestion.name, schema: SolveAndWinQuestionSchema },
     ]),
     UserSessionModule,
+    SubjectsModule,
   ],
   controllers: [SolveAndWinController],
   providers: [

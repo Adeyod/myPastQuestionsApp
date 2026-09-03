@@ -456,13 +456,12 @@ export class CreateSolveAndWinQuestionDto {
   @IsString({ each: true })
   explanationSteps?: string[];
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     enum: SolveAndWinDifficulty,
     example: SolveAndWinDifficulty.EASY,
   })
-  @IsOptional()
   @IsEnum(SolveAndWinDifficulty)
-  difficulty?: SolveAndWinDifficulty;
+  difficulty!: SolveAndWinDifficulty;
 
   @ApiPropertyOptional({
     enum: ExamType,
@@ -485,12 +484,12 @@ export class CreateSolveAndWinQuestionDto {
   @IsBoolean()
   isMultipleAnswer?: boolean;
 
-  @ApiPropertyOptional({
-    example: 1,
-    minimum: 1,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  marks?: number;
+  // @ApiPropertyOptional({
+  //   example: 1,
+  //   minimum: 1,
+  // })
+  // @IsOptional()
+  // @IsInt()
+  // @Min(1)
+  // marks?: number;
 }
