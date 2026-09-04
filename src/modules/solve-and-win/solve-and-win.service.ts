@@ -7,6 +7,8 @@ import {
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { JwtUser } from '../../common/types/jwt-user.type';
+import { PracticeWalletService } from '../practice-wallet/practice-wallet.service';
 import { SubjectsService } from '../subjects/subjects.service';
 import { AddQuestionsToContestSubjectDto } from './dtos/add-questions-to-contest-subject.dto';
 import { AddSubjectsToContestDto } from './dtos/add-subjects-to-contest.dto';
@@ -14,6 +16,7 @@ import { CreateSolveAndWinContestDto } from './dtos/create-contest.dto';
 import { RemoveSubjectsFromContestDto } from './dtos/remove-subjects-from-contest.dto';
 import { UpdateSolveAndWinContestDto } from './dtos/update-contest.dto';
 import { SolveAndWinContestRepository } from './repositories/solve-and-win-contest.repository';
+import { SolveAndWinParticipationRepository } from './repositories/solve-and-win-participant.repository';
 import { SolveAndWinQuestionRepository } from './repositories/solve-and-win-question.repository';
 import {
   SolveAndWinContest,
@@ -25,9 +28,11 @@ export class SolveAndWinService {
   constructor(
     @InjectConnection() private readonly connection: Connection,
     private readonly contestRepo: SolveAndWinContestRepository,
+    private readonly participationRepo: SolveAndWinParticipationRepository,
     private readonly solveAndWinQuestionRepo: SolveAndWinQuestionRepository,
 
     private readonly subjectService: SubjectsService,
+    private readonly practiceWalletService: PracticeWalletService,
   ) {}
 
   async createSolveAndWinContest(dto: CreateSolveAndWinContestDto) {
@@ -153,6 +158,82 @@ export class SolveAndWinService {
     }
 
     return response;
+  }
+
+  async joinSolveAndWinContestById(user: JwtUser, contestId: string) {
+    const id = new Types.ObjectId(contestId);
+    const contest = await this.contestRepo.findSolveAndWinContestById(id);
+
+    if (!contest) {
+      throw new NotFoundException({
+        message: 'Solve and win contest not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const userPracticeWallet =
+      await this.practiceWalletService.getOrCreateUserPracticeWallet(user);
+
+    console.log('userPracticeWallet.points:', userPracticeWallet.points);
+    console.log('contest.entryPoints:', contest.entryPoints);
+
+    if (userPracticeWallet.points < contest.entryPoints) {
+      throw new BadRequestException({
+        message:
+          'Insufficient Practice points. Please practice more of our practice questions to earn more points before participating in this competition.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const userId = new Types.ObjectId(user.sub.toString());
+
+    const alreadyJoinedContest =
+      await this.participationRepo.findSolveAndWinParticipationByIdAndUserId(
+        contest._id,
+        userId,
+      );
+
+    if (alreadyJoinedContest) {
+      throw new ConflictException({
+        message: 'You have joined this contest earlier.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      const payload = {
+        userId: user.sub.toString(),
+        points: contest.entryPoints,
+        description: `Points is to be deducted for ${contest.title} with contest ID: ${contest._id.toString()}.`,
+        contestId: contest._id.toString(),
+        session,
+      };
+
+      const debitContestPoint =
+        await this.practiceWalletService.debitPracticePointsForContest(payload);
+
+      const contestParticipation =
+        await this.participationRepo.createSolveAndWinParticipation(
+          contest._id,
+          userId,
+          contest.entryPoints,
+        );
+
+      await session.commitTransaction();
+
+      return contestParticipation;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
   async findSolveAndWinByStatus(status: SolveAndWinContestStatus) {
@@ -628,6 +709,24 @@ export class SolveAndWinService {
         status: 400,
       });
     }
+
+    return response;
+  }
+
+  async getAllContestParticipations(queryDto: QueryWithPaginationDto) {
+    const response =
+      await this.participationRepo.getAllContestParticipations(queryDto);
+
+    return response;
+  }
+  async getAllContestParticipationsOfLoggedInUser(
+    user: JwtUser,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    const response = await this.participationRepo.getAllMyContestParticipations(
+      new Types.ObjectId(user.sub.toString()),
+      queryDto,
+    );
 
     return response;
   }

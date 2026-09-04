@@ -17,6 +17,7 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+import { GetCurrentUser } from '../../common/decorators/get-current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SuccessMessage } from '../../common/decorators/success-message.decorator';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
@@ -24,6 +25,7 @@ import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { DeviceSessionGuard } from '../../common/guards/device-session.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import type { JwtUser } from '../../common/types/jwt-user.type';
 import { Role } from '../users/schemas/user.schema';
 import { AddQuestionsToContestSubjectDto } from './dtos/add-questions-to-contest-subject.dto';
 import { AddQuestionsToContestDto } from './dtos/add-questions-to-contest.dto';
@@ -418,7 +420,7 @@ export class SolveAndWinController {
 
   @Patch('remove-subjects-from-contest/:contestId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
-  @Roles(Role.USER, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
     name: 'x-device-id',
@@ -429,7 +431,7 @@ export class SolveAndWinController {
   @SuccessMessage('Subjects removed from solve and win contest successfully.')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get all solve and win contests.',
+    summary: 'Remove subject from solve and win contests.',
     description:
       'This is the endpoint that is going to be used to remove subjects from a solve and win contest.',
   })
@@ -629,6 +631,139 @@ export class SolveAndWinController {
   })
   async activateContest(@Param('contestId') contestId: string) {
     const response = await this.solveAndWinService.activateContest(contestId);
+
+    return response;
+  }
+
+  @Post('join-contest-by-id/:contestId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: 'device-123456789',
+  })
+  @SuccessMessage('User joined solve and win contest successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Join solve and win contest.',
+    description:
+      'This is the endpoint that user is going to use to join solve and win contest.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User joined solve and win contest successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to join solve and win contest.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async joinSolveAndWinContestById(
+    @Param('contestId') contestId: string,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response = await this.solveAndWinService.joinSolveAndWinContestById(
+      user,
+      contestId,
+    );
+
+    return response;
+  }
+  @Get('get-all-contest-participations-of-loggedin-user')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: 'device-123456789',
+  })
+  @SuccessMessage('User contest participations fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Logged in user will use this endpoint to get all the contest he has participated in.',
+    description:
+      'This is the endpoint that user is going to use to get all solve and win contest he has participated in.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User contest participations fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch user contest participations.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllContestParticipationsOfLoggedInUser(
+    @GetCurrentUser() user: JwtUser,
+    @Query() dto: QueryWithPaginationDto,
+  ) {
+    const response =
+      await this.solveAndWinService.getAllContestParticipationsOfLoggedInUser(
+        user,
+        dto,
+      );
+
+    return response;
+  }
+  @Get('get-all-contest-participations')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: 'device-123456789',
+  })
+  @SuccessMessage('Contest participations fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get contest participations on the platform for admin.',
+    description:
+      'This is the endpoint that admin is going to use to get all contest participations on the platform.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest participations fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch contest participations.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllContestParticipations(@Query() dto: QueryWithPaginationDto) {
+    const response =
+      await this.solveAndWinService.getAllContestParticipations(dto);
 
     return response;
   }

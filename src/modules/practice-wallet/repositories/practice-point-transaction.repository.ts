@@ -122,6 +122,17 @@ export class PracticePointTransactionRepository {
       .session(session)
       .exec();
   }
+  async findByContestId(
+    contestId: Types.ObjectId,
+    session: ClientSession,
+  ): Promise<PracticePointTransactionDocument | null> {
+    return await this.transactionModel
+      .findOne({
+        contestId,
+      })
+      .session(session)
+      .exec();
+  }
 
   async getAllPracticePointTransactions(
     queryDto: QueryWithPaginationDto,

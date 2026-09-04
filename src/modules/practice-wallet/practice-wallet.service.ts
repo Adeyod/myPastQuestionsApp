@@ -166,13 +166,15 @@ export class PracticeWalletService {
     return updatedWallet;
   }
 
-  async debitPracticePoints(data: {
+  async debitPracticePointsForContest(data: {
     userId: string;
     points: number;
     description: string;
     contestId?: string;
+    session: ClientSession;
   }) {
     const userId = new Types.ObjectId(data.userId);
+    const session = data.session;
 
     if (data.points <= 0) {
       throw new BadRequestException({
@@ -182,7 +184,11 @@ export class PracticeWalletService {
       });
     }
 
-    const wallet = await this.practiceWalletRepository.findByUserId(userId);
+    const wallet =
+      await this.practiceWalletRepository.findOrCreateByUserIdWithSession(
+        userId,
+        session,
+      );
 
     if (!wallet) {
       throw new NotFoundException({
@@ -192,9 +198,26 @@ export class PracticeWalletService {
       });
     }
 
+    if (data.contestId) {
+      const existingTransaction =
+        await this.practicePointTransactionRepository.findByContestId(
+          new Types.ObjectId(data.contestId),
+          session,
+        );
+
+      if (existingTransaction) {
+        throw new BadRequestException({
+          message: 'Points have already been deducted for this contest.',
+          success: false,
+          status: 400,
+        });
+      }
+    }
+
     const updatedWallet = await this.practiceWalletRepository.decrementPoints(
       wallet._id,
       data.points,
+      session,
     );
 
     if (!updatedWallet) {
@@ -205,16 +228,20 @@ export class PracticeWalletService {
       });
     }
 
-    await this.practicePointTransactionRepository.create({
-      practiceWalletId: wallet._id,
-      points: data.points,
-      type: PracticePointTransactionType.DEBIT,
-      category: PracticePointTransactionCategory.SOLVE_AND_WIN_ENTRY,
-      description: data.description,
-      contestId: data.contestId
-        ? new Types.ObjectId(data.contestId)
-        : undefined,
-    });
+    await this.practicePointTransactionRepository.createWithSession(
+      {
+        practiceWalletId: wallet._id,
+        points: data.points,
+        userId,
+        type: PracticePointTransactionType.DEBIT,
+        category: PracticePointTransactionCategory.SOLVE_AND_WIN_ENTRY,
+        description: data.description,
+        contestId: data.contestId
+          ? new Types.ObjectId(data.contestId)
+          : undefined,
+      },
+      session,
+    );
 
     return updatedWallet;
   }

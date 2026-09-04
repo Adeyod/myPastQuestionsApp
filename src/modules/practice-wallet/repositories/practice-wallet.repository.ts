@@ -14,6 +14,11 @@ export class PracticeWalletRepository {
     private readonly practiceWalletModel: Model<PracticeWalletDocument>,
   ) {}
 
+  /**
+   *
+   Is there a need to have practice wallet for the company where points deducted from users will be stored or we should just relly on practice transaction ledger alone to know the points that was deducted for solve and win since points are no money?
+   */
+
   async createPracticeWallet(
     userId: Types.ObjectId,
   ): Promise<PracticeWalletDocument> {
@@ -119,9 +124,33 @@ export class PracticeWalletRepository {
       .exec();
   }
 
+  // async decrementPoints(
+  //   walletId: Types.ObjectId,
+  //   points: number,
+  // ): Promise<PracticeWalletDocument | null> {
+  //   return await this.practiceWalletModel
+  //     .findOneAndUpdate(
+  //       {
+  //         _id: walletId,
+  //         points: { $gte: points },
+  //       },
+  //       {
+  //         $inc: {
+  //           points: -points,
+  //         },
+  //       },
+  //       {
+  //         returnDocument: 'after',
+  //         runValidators: true,
+  //       },
+  //     )
+  //     .exec();
+  // }
+
   async decrementPoints(
     walletId: Types.ObjectId,
     points: number,
+    session: ClientSession,
   ): Promise<PracticeWalletDocument | null> {
     return await this.practiceWalletModel
       .findOneAndUpdate(
@@ -129,16 +158,22 @@ export class PracticeWalletRepository {
           _id: walletId,
           points: { $gte: points },
         },
-        {
-          $inc: {
-            points: -points,
+        [
+          {
+            $set: {
+              points: {
+                $round: [{ $subtract: ['$points', points] }, 4],
+              },
+            },
           },
-        },
+        ],
         {
           returnDocument: 'after',
           runValidators: true,
+          updatePipeline: true, // Resolves the error while preserving $round
         },
       )
+      .session(session)
       .exec();
   }
 
