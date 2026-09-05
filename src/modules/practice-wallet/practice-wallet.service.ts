@@ -72,15 +72,7 @@ export class PracticeWalletService {
       });
     }
 
-    const wallet = await this.practiceWalletRepository.findByUserId(id);
-
-    if (!wallet) {
-      throw new NotFoundException({
-        message: 'Practice wallet not found.',
-        success: false,
-        status: 404,
-      });
-    }
+    const wallet = await this.practiceWalletRepository.findOrCreateByUserId(id);
 
     return wallet;
   }
