@@ -85,12 +85,6 @@ export class ContestSubject {
     },
   })
   difficultyBreakdown!: DifficultyBreakdown;
-
-  // @Prop({
-  //   type: [ContestQuestion],
-  //   default: [],
-  // })
-  // questions!: ContestQuestion[];
 }
 
 @Schema({ timestamps: true })

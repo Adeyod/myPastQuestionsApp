@@ -240,11 +240,6 @@ export class SolveAndWinQuestion {
   })
   questionType!: SolveAndWinQuestionType;
 
-  // @Prop({
-  //   default: '',
-  // })
-  // answer!: string;
-
   /* =======================================================
      CORRECT ANSWERS
 

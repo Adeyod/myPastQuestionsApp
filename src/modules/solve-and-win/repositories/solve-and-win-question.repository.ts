@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { ClientSession } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
+import { DifficultyBreakdown } from '../schemas/solve-and-win-contest.schema';
 import {
   SolveAndWinQuestion,
   SolveAndWinQuestionDocument,
@@ -314,5 +319,224 @@ export class SolveAndWinQuestionRepository {
     questionId: Types.ObjectId,
   ): Promise<SolveAndWinQuestionDocument | null> {
     return await this.questionModel.findByIdAndDelete(questionId).exec();
+  }
+
+  // async findRandomQuestionsBySubjectId(
+  //   subjectId: Types.ObjectId,
+  //   difficultyBreakdown: DifficultyBreakdown,
+  // ): Promise<SolveAndWinQuestionDocument[]> {
+
+  //   const { easy, medium, hard } = difficultyBreakdown;
+  //   const response = await this.questionModel
+  //     .aggregate([
+  //       {
+  //         $match: {
+  //           subjectId,
+  //           isActive: true,
+  //           difficulty: {
+  //             $in: ['easy', 'medium', 'hard'],
+  //           },
+  //         },
+  //       },
+
+  //       {
+  //         $facet: {
+  //           easy: [
+  //             {
+  //               $match: {
+  //                 difficulty: 'easy',
+  //               },
+  //             },
+  //             {
+  //               $sample: {
+  //                 size: easy,
+  //               },
+  //             },
+  //           ],
+
+  //           medium: [
+  //             {
+  //               $match: {
+  //                 difficulty: 'medium',
+  //               },
+  //             },
+  //             {
+  //               $sample: {
+  //                 size: medium,
+  //               },
+  //             },
+  //           ],
+
+  //           hard: [
+  //             {
+  //               $match: {
+  //                 difficulty: 'hard',
+  //               },
+  //             },
+  //             {
+  //               $sample: {
+  //                 size: hard,
+  //               },
+  //             },
+  //           ],
+  //         },
+  //       },
+
+  //       {
+  //         $project: {
+  //           questions: {
+  //             $concatArrays: ['$easy', '$medium', '$hard'],
+  //           },
+  //         },
+  //       },
+
+  //       {
+  //         $unwind: '$questions',
+  //       },
+
+  //       {
+  //         $replaceRoot: {
+  //           newRoot: '$questions',
+  //         },
+  //       },
+
+  //       {
+  //         $project: {
+  //           correctAnswers: 0,
+  //           answer: 0,
+  //           explanation: 0,
+  //           explanationSteps: 0,
+  //         },
+  //       },
+  //     ])
+  //     .exec();
+
+  //   return response;
+  // }
+
+  async findRandomQuestionsByContestSubject(
+    subjectId: Types.ObjectId,
+    difficultyBreakdown: DifficultyBreakdown,
+  ): Promise<SolveAndWinQuestionDocument[]> {
+    const { easy, medium, hard } = difficultyBreakdown;
+
+    const response = await this.questionModel
+      .aggregate([
+        {
+          $facet: {
+            easy: [
+              {
+                $match: {
+                  subjectId,
+                  isActive: true,
+                  difficulty: 'easy',
+                },
+              },
+              {
+                $sample: {
+                  size: easy,
+                },
+              },
+            ],
+
+            medium: [
+              {
+                $match: {
+                  subjectId,
+                  isActive: true,
+                  difficulty: 'medium',
+                },
+              },
+              {
+                $sample: {
+                  size: medium,
+                },
+              },
+            ],
+
+            hard: [
+              {
+                $match: {
+                  subjectId,
+                  isActive: true,
+                  difficulty: 'hard',
+                },
+              },
+              {
+                $sample: {
+                  size: hard,
+                },
+              },
+            ],
+          },
+        },
+
+        {
+          $project: {
+            questions: {
+              $concatArrays: ['$easy', '$medium', '$hard'],
+            },
+
+            easyCount: {
+              $size: '$easy',
+            },
+
+            mediumCount: {
+              $size: '$medium',
+            },
+
+            hardCount: {
+              $size: '$hard',
+            },
+          },
+        },
+      ])
+      .exec();
+
+    const result = response[0];
+
+    if (!result) {
+      throw new BadRequestException({
+        message: 'Unable to generate contest questions.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (result.easyCount !== easy) {
+      throw new BadRequestException({
+        message: `Not enough easy questions available for the selected subject. Required: ${easy}, Available: ${result.easyCount}.`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (result.mediumCount !== medium) {
+      throw new BadRequestException({
+        message: `Not enough medium questions available for the selected subject. Required: ${medium}, Available: ${result.mediumCount}.`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (result.hardCount !== hard) {
+      throw new BadRequestException({
+        message: `Not enough hard questions available for the selected subject. Required: ${hard}, Available: ${result.hardCount}.`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    return result.questions.map((question: SolveAndWinQuestionDocument) => {
+      const {
+        correctAnswers,
+        answer,
+        explanation,
+        explanationSteps,
+        ...safeQuestion
+      } = question as any;
+
+      return safeQuestion;
+    });
   }
 }

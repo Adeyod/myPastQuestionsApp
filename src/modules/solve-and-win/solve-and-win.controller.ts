@@ -767,4 +767,49 @@ export class SolveAndWinController {
 
     return response;
   }
+  @Get('start-solve-and-win-contest/:contestId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: 'device-123456789',
+  })
+  @SuccessMessage('Contest started successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Start solve and win contest.',
+    description:
+      'This is the endpoint that user can use to start solve and win contest.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest started successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to start solve and win contest.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async startSolveAndWinContest(
+    @Param('contestId') contestId: string,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response = await this.solveAndWinService.startSolveAndWinContest(
+      contestId,
+      user,
+    );
+
+    return response;
+  }
 }

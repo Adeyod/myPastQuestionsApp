@@ -22,6 +22,12 @@ import {
   SolveAndWinContest,
   SolveAndWinContestStatus,
 } from './schemas/solve-and-win-contest.schema';
+import {
+  ParticipationQuestion,
+  ParticipationSubject,
+  SolveAndWinParticipationDocument,
+} from './schemas/solve-and-win-participantion.schema';
+import { SOLVE_AND_WIN_DIFFICULTY_MARKS } from './schemas/solve-and-win-question.schema';
 
 @Injectable()
 export class SolveAndWinService {
@@ -731,6 +737,139 @@ export class SolveAndWinService {
     return response;
   }
 
+  async startSolveAndWinContest(contestId: string, user: JwtUser) {
+    const id = new Types.ObjectId(contestId);
+    const userId = new Types.ObjectId(user.sub.toString());
+
+    const participationDoc =
+      await this.participationRepo.findSolveAndWinParticipationByIdAndUserId(
+        id,
+        userId,
+      );
+
+    if (!participationDoc) {
+      throw new NotFoundException({
+        message: `You did not put in for the solve and win contest with ID: ${contestId}.`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (participationDoc.subjects.length > 0) {
+      return participationDoc;
+    }
+
+    const contest = await this.contestRepo.findSolveAndWinContestById(id);
+
+    if (!contest) {
+      throw new NotFoundException({
+        message: `Contest with ID: ${contestId} is not found.`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    const subjects: ParticipationSubject[] = [];
+
+    for (const contestSubject of contest.subjects) {
+      const difficultyTotal =
+        contestSubject.difficultyBreakdown.easy +
+        contestSubject.difficultyBreakdown.medium +
+        contestSubject.difficultyBreakdown.hard;
+
+      if (difficultyTotal !== contestSubject.expectedNoOfQuestions) {
+        throw new BadRequestException({
+          message: `Difficulty breakdown does not match expected number of questions.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      const questions =
+        await this.solveAndWinQuestionRepo.findRandomQuestionsByContestSubject(
+          contestSubject.subjectId,
+          contestSubject.difficultyBreakdown,
+        );
+
+      if (questions.length !== contestSubject.expectedNoOfQuestions) {
+        throw new BadRequestException({
+          message: `There are not enough questions available for one of the contest subjects.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      const questionSnapshots: ParticipationQuestion[] = questions.map(
+        (question) => ({
+          questionId: question._id,
+
+          question: question.question,
+
+          instruction: question.instruction,
+
+          content: question.content,
+
+          media: question.media,
+
+          options: this.shuffleArray(question.options),
+
+          section: question.section,
+
+          questionType: question.questionType,
+
+          correctAnswers: question.correctAnswers,
+
+          isMultipleAnswer: question.isMultipleAnswer,
+
+          explanation: question.explanation,
+
+          explanationSteps: question.explanationSteps,
+
+          difficulty: question.difficulty,
+
+          marks: SOLVE_AND_WIN_DIFFICULTY_MARKS[question.difficulty],
+
+          selectedOption: null,
+
+          isCorrect: null,
+
+          marksAwarded: 0,
+        }),
+      );
+
+      subjects.push({
+        subjectId: contestSubject.subjectId,
+        questions: questionSnapshots,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        unansweredQuestions: questionSnapshots.length,
+        score: 0,
+        durationInSeconds: contestSubject.durationInSeconds,
+        startedAt: null,
+        endsAt: null,
+        submittedAt: null,
+      });
+    }
+
+    const updatedParticipation =
+      await this.participationRepo.updateParticipationSubjects(
+        participationDoc._id,
+        subjects,
+      );
+
+    if (!updatedParticipation) {
+      throw new BadRequestException({
+        message: 'Unable to save the generated contest questions.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const response = this.sanitizeParticipation(updatedParticipation);
+
+    return response;
+  }
+
   private validateObjectId(id: string): void {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException({
@@ -750,5 +889,42 @@ export class SolveAndWinService {
         status: 400,
       });
     }
+  }
+
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    return shuffled;
+  }
+
+  private sanitizeParticipation(
+    participation: SolveAndWinParticipationDocument,
+  ) {
+    const data = participation.toObject();
+
+    return {
+      ...data,
+
+      subjects: data.subjects.map((subject) => ({
+        ...subject,
+
+        questions: subject.questions.map((question) => {
+          const {
+            correctAnswers,
+            explanation,
+            explanationSteps,
+            ...safeQuestion
+          } = question;
+
+          return safeQuestion;
+        }),
+      })),
+    };
   }
 }

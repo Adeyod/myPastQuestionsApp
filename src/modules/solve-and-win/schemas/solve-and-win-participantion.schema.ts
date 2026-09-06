@@ -1,5 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import {
+  SolveAndWinContentBlock,
+  SolveAndWinDifficulty,
+  SolveAndWinExamSection,
+  SolveAndWinOption,
+  SolveAndWinQuestionType,
+} from './solve-and-win-question.schema';
 
 export type SolveAndWinParticipationDocument =
   HydratedDocument<SolveAndWinParticipation>;
@@ -9,6 +16,51 @@ export enum SolveAndWinParticipationStatus {
   COMPLETED = 'COMPLETED',
   DISQUALIFIED = 'DISQUALIFIED',
 }
+
+// @Schema({ _id: false })
+// export class ParticipationQuestion {
+//   @Prop({
+//     type: Types.ObjectId,
+//     ref: 'SolveAndWinQuestion',
+//     required: true,
+//   })
+//   questionId!: Types.ObjectId;
+
+//   @Prop({
+//     type: Types.ObjectId,
+//     ref: 'Subject',
+//     required: true,
+//   })
+//   subjectId!: Types.ObjectId;
+
+//   @Prop({
+//     type: String,
+//     default: null,
+//   })
+//   selectedAnswer?: string | null;
+
+//   @Prop({
+//     type: Boolean,
+//     default: null,
+//   })
+//   isCorrect?: boolean | null;
+
+//   @Prop({
+//     type: [Types.ObjectId],
+//     default: [],
+//   })
+//   correctAnswers!: Types.ObjectId[];
+
+//   @Prop({
+//     default: 0,
+//   })
+//   marksAwarded!: number;
+
+//   @Prop({
+//     default: 1,
+//   })
+//   maxMarks!: number;
+// }
 
 @Schema({ _id: false })
 export class ParticipationQuestion {
@@ -20,17 +72,82 @@ export class ParticipationQuestion {
   questionId!: Types.ObjectId;
 
   @Prop({
-    type: Types.ObjectId,
-    ref: 'Subject',
     required: true,
   })
-  subjectId!: Types.ObjectId;
+  question!: string;
+
+  @Prop()
+  instruction?: string;
+
+  @Prop({
+    type: [SolveAndWinContentBlock],
+    default: [],
+  })
+  content!: SolveAndWinContentBlock[];
+
+  @Prop({
+    type: SolveAndWinContentBlock,
+    default: null,
+  })
+  media?: SolveAndWinContentBlock;
+
+  @Prop({
+    type: [SolveAndWinOption],
+    default: [],
+  })
+  options!: SolveAndWinOption[];
 
   @Prop({
     type: String,
+    enum: SolveAndWinExamSection,
+  })
+  section!: SolveAndWinExamSection;
+
+  @Prop({
+    type: String,
+    enum: SolveAndWinQuestionType,
+  })
+  questionType!: SolveAndWinQuestionType;
+
+  @Prop({
+    type: [Types.ObjectId],
+    default: [],
+  })
+  correctAnswers!: Types.ObjectId[];
+
+  @Prop({
+    default: false,
+  })
+  isMultipleAnswer!: boolean;
+
+  @Prop({
+    default: '',
+  })
+  explanation!: string;
+
+  @Prop({
+    type: [String],
+    default: [],
+  })
+  explanationSteps!: string[];
+
+  @Prop({
+    type: String,
+    enum: SolveAndWinDifficulty,
+  })
+  difficulty!: SolveAndWinDifficulty;
+
+  @Prop({
+    default: 1,
+  })
+  marks!: number;
+
+  // Participant's answer
+  @Prop({
+    type: Types.ObjectId,
     default: null,
   })
-  selectedAnswer?: string | null;
+  selectedOption?: Types.ObjectId | null;
 
   @Prop({
     type: Boolean,
@@ -42,11 +159,6 @@ export class ParticipationQuestion {
     default: 0,
   })
   marksAwarded!: number;
-
-  @Prop({
-    default: 1,
-  })
-  maxMarks!: number;
 }
 
 @Schema({ _id: false })
@@ -83,6 +195,29 @@ export class ParticipationSubject {
     default: 0,
   })
   score!: number;
+
+  @Prop({
+    required: true,
+  })
+  durationInSeconds!: number;
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  startedAt?: Date | null;
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  endsAt?: Date | null;
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  submittedAt?: Date | null;
 }
 
 @Schema({ timestamps: true })

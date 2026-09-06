@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import {
+  ParticipationSubject,
   SolveAndWinParticipation,
   SolveAndWinParticipationDocument,
 } from '../schemas/solve-and-win-participantion.schema';
@@ -154,6 +155,28 @@ export class SolveAndWinParticipationRepository {
       totalPages: pages,
       contestParticipationObj: participations,
     };
+
+    return response;
+  }
+
+  async updateParticipationSubjects(
+    participationId: Types.ObjectId,
+    subjects: ParticipationSubject[],
+  ): Promise<SolveAndWinParticipationDocument | null> {
+    const response = await this.participationModel
+      .findByIdAndUpdate(
+        participationId,
+        {
+          $set: {
+            subjects,
+          },
+        },
+        {
+          returnDocument: 'after',
+          runValidators: true,
+        },
+      )
+      .exec();
 
     return response;
   }
