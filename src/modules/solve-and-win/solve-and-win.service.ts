@@ -25,7 +25,6 @@ import {
 import {
   ParticipationQuestion,
   ParticipationSubject,
-  SolveAndWinParticipationDocument,
 } from './schemas/solve-and-win-participantion.schema';
 import { SOLVE_AND_WIN_DIFFICULTY_MARKS } from './schemas/solve-and-win-question.schema';
 
@@ -737,8 +736,13 @@ export class SolveAndWinService {
     return response;
   }
 
-  async startSolveAndWinContest(contestId: string, user: JwtUser) {
+  async startSolveAndWinContest(
+    contestId: string,
+    subjectId: string,
+    user: JwtUser,
+  ) {
     const id = new Types.ObjectId(contestId);
+    const subId = new Types.ObjectId(subjectId);
     const userId = new Types.ObjectId(user.sub.toString());
 
     const participationDoc =
@@ -755,10 +759,6 @@ export class SolveAndWinService {
       });
     }
 
-    if (participationDoc.subjects.length > 0) {
-      return participationDoc;
-    }
-
     const contest = await this.contestRepo.findSolveAndWinContestById(id);
 
     if (!contest) {
@@ -766,6 +766,99 @@ export class SolveAndWinService {
         message: `Contest with ID: ${contestId} is not found.`,
         success: false,
         status: 404,
+      });
+    }
+
+    const now = new Date();
+
+    if (contest.endDate && now > new Date(contest.endDate)) {
+      throw new BadRequestException({
+        message: `This contest has officially closed on ${new Date(contest.endDate).toLocaleString()}.`,
+        // message: `This contest has officially closed on ${new Date(contest.endDate).toISOString()}.`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (participationDoc.subjects && participationDoc.subjects.length > 0) {
+      const existingSubject = participationDoc.subjects.find(
+        (s) => s.subjectId.toString() === subId.toString(),
+      );
+
+      if (!existingSubject) {
+        throw new BadRequestException({
+          message: `The selected subject is not part of this contest or your registered subjects.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      if (existingSubject.submittedAt) {
+        throw new BadRequestException({
+          message: `You have already submitted this subject in this contest.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      if (existingSubject.startedAt) {
+        const elapsedSeconds = Math.floor(
+          (now.getTime() - new Date(existingSubject.startedAt).getTime()) /
+            1000,
+        );
+
+        const currentDuration =
+          existingSubject.remainingDurationInSeconds ??
+          existingSubject.durationInSeconds;
+
+        existingSubject.remainingDurationInSeconds = Math.max(
+          0,
+          currentDuration - elapsedSeconds,
+        );
+      } else {
+        existingSubject.remainingDurationInSeconds =
+          existingSubject.remainingDurationInSeconds ??
+          existingSubject.durationInSeconds;
+      }
+
+      if (existingSubject.remainingDurationInSeconds <= 0) {
+        throw new BadRequestException({
+          message: `Your allocated time for this subject has expired.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      const calculatedSessionEnd = new Date(
+        now.getDate() + existingSubject.remainingDurationInSeconds * 1000,
+      );
+
+      existingSubject.startedAt = now;
+      existingSubject.endsAt =
+        contest.endDate && calculatedSessionEnd > new Date(contest.endDate)
+          ? new Date(contest.endDate)
+          : calculatedSessionEnd;
+
+      await this.participationRepo.updateParticipationSubjects(
+        participationDoc._id,
+        participationDoc.subjects,
+      );
+
+      const plainDoc = participationDoc.toObject();
+      plainDoc.subjects = [existingSubject];
+
+      return this.sanitizeParticipation(plainDoc);
+    }
+
+    const targetedContestSubject = contest.subjects.find(
+      (s) => s.subjectId.toString() === subId.toString(),
+    );
+
+    if (!targetedContestSubject) {
+      throw new BadRequestException({
+        message: `Subject with ID: ${subjectId} is not offered in this contest.`,
+        success: false,
+        status: 400,
       });
     }
 
@@ -802,40 +895,43 @@ export class SolveAndWinService {
       const questionSnapshots: ParticipationQuestion[] = questions.map(
         (question) => ({
           questionId: question._id,
-
           question: question.question,
-
           instruction: question.instruction,
-
           content: question.content,
-
           media: question.media,
-
           options: this.shuffleArray(question.options),
-
           section: question.section,
-
           questionType: question.questionType,
-
           correctAnswers: question.correctAnswers,
-
           isMultipleAnswer: question.isMultipleAnswer,
-
           explanation: question.explanation,
-
           explanationSteps: question.explanationSteps,
-
           difficulty: question.difficulty,
-
           marks: SOLVE_AND_WIN_DIFFICULTY_MARKS[question.difficulty],
-
           selectedOption: null,
-
           isCorrect: null,
-
           marksAwarded: 0,
         }),
       );
+
+      const isSelectedSubject =
+        contestSubject.subjectId.toString() === subId.toString();
+
+      let subjectStartedAt: Date | null = null;
+      let subjectEndsAt: Date | null = null;
+
+      if (isSelectedSubject) {
+        subjectStartedAt = now;
+
+        const calculatedSessionEnd = new Date(
+          now.getTime() + contestSubject.durationInSeconds * 1000,
+        );
+
+        subjectEndsAt =
+          contest.endDate && calculatedSessionEnd > new Date(contest.endDate)
+            ? new Date(contest.endDate)
+            : calculatedSessionEnd;
+      }
 
       subjects.push({
         subjectId: contestSubject.subjectId,
@@ -845,8 +941,9 @@ export class SolveAndWinService {
         unansweredQuestions: questionSnapshots.length,
         score: 0,
         durationInSeconds: contestSubject.durationInSeconds,
-        startedAt: null,
-        endsAt: null,
+        remainingDurationInSeconds: contestSubject.durationInSeconds,
+        startedAt: subjectStartedAt,
+        endsAt: subjectEndsAt,
         submittedAt: null,
       });
     }
@@ -865,9 +962,87 @@ export class SolveAndWinService {
       });
     }
 
-    const response = this.sanitizeParticipation(updatedParticipation);
+    const plainDoc = updatedParticipation.toObject();
+    plainDoc.subjects = plainDoc.subjects.filter(
+      (s) => s.subjectId.toString() === subId.toString(),
+    );
+
+    const response = this.sanitizeParticipation(plainDoc);
 
     return response;
+  }
+
+  async pauseSolveAndWinContest(
+    contestId: string,
+    subjectId: string,
+    user: JwtUser,
+  ) {
+    const id = new Types.ObjectId(contestId);
+    const subId = new Types.ObjectId(subjectId);
+    const userId = new Types.ObjectId(user.sub.toString());
+
+    const participationDoc =
+      await this.participationRepo.findSolveAndWinParticipationByIdAndUserId(
+        id,
+        userId,
+      );
+
+    if (!participationDoc) {
+      throw new NotFoundException({
+        message: `You did not put in for the solve and win contest with ID: ${contestId}.`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    const subject = participationDoc.subjects.find(
+      (s) => s.subjectId.toString() === subId.toString(),
+    );
+
+    if (!subject) {
+      throw new BadRequestException({
+        message: `Subject with ID: ${subjectId} was not found in your participation record.`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (subject.submittedAt) {
+      throw new BadRequestException({
+        message: `Cannot pause a subject that has already been submitted.`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (subject.startedAt) {
+      const now = new Date();
+      const elapsedSeconds = Math.floor(
+        (now.getTime() - new Date(subject.startedAt).getTime()) / 1000,
+      );
+
+      const currentDuration =
+        subject.remainingDurationInSeconds ?? subject.durationInSeconds;
+
+      subject.remainingDurationInSeconds = Math.max(
+        0,
+        currentDuration - elapsedSeconds,
+      );
+
+      subject.startedAt = null;
+      subject.endsAt = null;
+
+      const response = await this.participationRepo.updateParticipationSubjects(
+        participationDoc._id,
+        participationDoc.subjects,
+      );
+
+      return response;
+    }
+
+    return {
+      message: 'Contest paused successfully.',
+    };
   }
 
   private validateObjectId(id: string): void {
@@ -903,9 +1078,7 @@ export class SolveAndWinService {
     return shuffled;
   }
 
-  private sanitizeParticipation(
-    participation: SolveAndWinParticipationDocument,
-  ) {
+  private sanitizeParticipation(participation: Record<string, any>) {
     const data = participation.toObject();
 
     return {

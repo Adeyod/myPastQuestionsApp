@@ -767,7 +767,7 @@ export class SolveAndWinController {
 
     return response;
   }
-  @Get('start-solve-and-win-contest/:contestId')
+  @Get('start-solve-and-win-contest/:contestId/:subjectId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.USER)
   @ApiBearerAuth('JWT-auth')
@@ -803,10 +803,59 @@ export class SolveAndWinController {
   })
   async startSolveAndWinContest(
     @Param('contestId') contestId: string,
+    @Param('subjectId') subjectId: string,
     @GetCurrentUser() user: JwtUser,
   ) {
     const response = await this.solveAndWinService.startSolveAndWinContest(
       contestId,
+      subjectId,
+      user,
+    );
+
+    return response;
+  }
+  @Get('pause-solve-and-win-contest/:contestId/:subjectId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: 'device-123456789',
+  })
+  @SuccessMessage('Contest paused successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Pause solve and win contest.',
+    description:
+      'This is the endpoint that user can use to pause solve and win contest.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest paused successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to pause solve and win contest.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async pauseSolveAndWinContest(
+    @Param('contestId') contestId: string,
+    @Param('subjectId') subjectId: string,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response = await this.solveAndWinService.pauseSolveAndWinContest(
+      contestId,
+      subjectId,
       user,
     );
 

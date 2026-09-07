@@ -202,6 +202,11 @@ export class ParticipationSubject {
   durationInSeconds!: number;
 
   @Prop({
+    required: true,
+  })
+  remainingDurationInSeconds!: number;
+
+  @Prop({
     type: Date,
     default: null,
   })
