@@ -192,8 +192,9 @@ export class PracticeWalletService {
 
     if (data.contestId) {
       const existingTransaction =
-        await this.practicePointTransactionRepository.findByContestId(
+        await this.practicePointTransactionRepository.findUserContestTransactionByContestIdAndUserId(
           new Types.ObjectId(data.contestId),
+          new Types.ObjectId(data.userId),
           session,
         );
 

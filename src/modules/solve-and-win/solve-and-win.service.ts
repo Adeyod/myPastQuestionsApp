@@ -1078,16 +1078,47 @@ export class SolveAndWinService {
     return shuffled;
   }
 
-  private sanitizeParticipation(participation: Record<string, any>) {
-    const data = participation.toObject();
+  // private sanitizeParticipation(participation: Record<string, any>) {
+  //   const data =
+  //     typeof participation?.toObject === 'function'
+  //       ? participation.toObject()
+  //       : participation;
+
+  //   return {
+  //     ...data,
+
+  //     subjects: data.subjects.map((subject) => ({
+  //       ...subject,
+
+  //       questions: subject.questions.map((question) => {
+  //         const {
+  //           correctAnswers,
+  //           explanation,
+  //           explanationSteps,
+  //           ...safeQuestion
+  //         } = question;
+
+  //         return safeQuestion;
+  //       }),
+  //     })),
+  //   };
+  // }
+  private sanitizeParticipation(participation: any) {
+    // Extract clean plain object if _doc exists (Express-like fallback)
+    const rawData =
+      participation._doc ||
+      (typeof participation.toObject === 'function'
+        ? participation.toObject()
+        : participation);
+
+    // Deep clone via JSON serialization to completely drop all Mongoose prototype getters/methods
+    const cleanData = JSON.parse(JSON.stringify(rawData));
 
     return {
-      ...data,
-
-      subjects: data.subjects.map((subject) => ({
+      ...cleanData,
+      subjects: (cleanData.subjects || []).map((subject: any) => ({
         ...subject,
-
-        questions: subject.questions.map((question) => {
+        questions: (subject.questions || []).map((question: any) => {
           const {
             correctAnswers,
             explanation,

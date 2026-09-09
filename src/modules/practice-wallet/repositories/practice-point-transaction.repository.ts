@@ -133,6 +133,19 @@ export class PracticePointTransactionRepository {
       .session(session)
       .exec();
   }
+  async findUserContestTransactionByContestIdAndUserId(
+    contestId: Types.ObjectId,
+    userId: Types.ObjectId,
+    session: ClientSession,
+  ): Promise<PracticePointTransactionDocument | null> {
+    return await this.transactionModel
+      .findOne({
+        contestId,
+        userId,
+      })
+      .session(session)
+      .exec();
+  }
 
   async getAllPracticePointTransactions(
     queryDto: QueryWithPaginationDto,
