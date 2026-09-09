@@ -89,7 +89,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Solve and win contests fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -129,7 +129,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Active Solve and win contests fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -169,7 +169,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Solve and win contest fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -213,7 +213,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Solve and win contest fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -254,7 +254,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Solve and win contest updated successfully.')
   @HttpCode(HttpStatus.OK)
@@ -300,7 +300,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Solve and win contest cancelled successfully.')
   @HttpCode(HttpStatus.OK)
@@ -339,7 +339,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Solve and win contest deleted successfully.')
   @HttpCode(HttpStatus.OK)
@@ -379,7 +379,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Subjects added to solve and win contest successfully.')
   @HttpCode(HttpStatus.OK)
@@ -426,7 +426,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Subjects removed from solve and win contest successfully.')
   @HttpCode(HttpStatus.OK)
@@ -522,7 +522,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Questions added to solve and win contest successfully.')
   @HttpCode(HttpStatus.OK)
@@ -561,7 +561,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage(
     'Questions removed from a solve and win contest successfully.',
@@ -603,7 +603,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Solve and win contest activated successfully.')
   @HttpCode(HttpStatus.OK)
@@ -643,7 +643,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('User joined solve and win contest successfully.')
   @HttpCode(HttpStatus.OK)
@@ -688,7 +688,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('User contest participations fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -735,7 +735,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Contest participations fetched successfully.')
   @HttpCode(HttpStatus.OK)
@@ -775,7 +775,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Contest started successfully.')
   @HttpCode(HttpStatus.OK)
@@ -822,7 +822,7 @@ export class SolveAndWinController {
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
-    example: 'device-123456789',
+    example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Contest paused successfully.')
   @HttpCode(HttpStatus.OK)

@@ -28,6 +28,7 @@ import { WalletsModule } from './modules/wallets/wallets.module';
 import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
 import { PracticeWalletModule } from './modules/practice-wallet/practice-wallet.module';
 import { SolveAndWinModule } from './modules/solve-and-win/solve-and-win.module';
+import { QuizModule } from './modules/quiz/quiz.module';
 
 @Module({
   imports: [
@@ -145,6 +146,7 @@ import { SolveAndWinModule } from './modules/solve-and-win/solve-and-win.module'
     PracticeModule,
     PracticeWalletModule,
     SolveAndWinModule,
+    QuizModule,
   ],
   controllers: [AppController],
   providers: [AppService],
