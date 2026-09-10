@@ -7,10 +7,48 @@ export class QuizService {
   constructor(private readonly quizRepo: QuizRepository) {}
 
   async createQuiz(dto: CreateQuizDto) {
+    const startDate = new Date(dto.start_date);
+    const now = new Date();
+
+    if (startDate < now) {
+      throw new BadRequestException({
+        message: `The quiz start date cannot be set in the past. Provided date: ${startDate.toISOString()}`,
+        success: false,
+        status: 400,
+      });
+    }
+
     const expectedRounds = dto.number_of_rounds - 1;
     if (dto.round_information.length !== expectedRounds) {
       throw new BadRequestException({
         message: `Round information must contain exactly ${expectedRounds} objects for a ${dto.number_of_rounds}-round quiz (excluding the final round).`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    dto.round_information.forEach((round, index) => {
+      const expectedRoundNumber = index + 1;
+      if (round.round_number !== expectedRoundNumber) {
+        throw new BadRequestException({
+          message: `Invalid round number sequence at index ${index}. Expected round number to be ${expectedRoundNumber}, but received ${round.round_number}.`,
+          success: false,
+          status: 400,
+        });
+      }
+    });
+
+    const totalEliminatedContestants = dto.round_information.reduce(
+      (sum, round) => sum + round.exit_number,
+      0,
+    );
+
+    const remainingForFinal =
+      dto.no_of_contestants - totalEliminatedContestants;
+
+    if (remainingForFinal !== 2) {
+      throw new BadRequestException({
+        message: `Invalid contestant elimination strategy. Starting with ${dto.no_of_contestants} contestants and eliminating ${totalEliminatedContestants} contestants leaves ${remainingForFinal} players. Exactly 2 contestants must remain for the final round.`,
         success: false,
         status: 400,
       });
@@ -45,6 +83,19 @@ export class QuizService {
           status: 400,
         });
       }
+    }
+
+    const finalBreakdownTotal =
+      dto.final_round_information.difficultyBreakdown.easy +
+      dto.final_round_information.difficultyBreakdown.medium +
+      dto.final_round_information.difficultyBreakdown.hard;
+
+    if (finalBreakdownTotal !== dto.final_round_information.no_of_questions) {
+      throw new BadRequestException({
+        message: `In final round information, difficulty total (${finalBreakdownTotal}) does not match number of questions (${dto.final_round_information.no_of_questions}).`,
+        success: false,
+        status: 400,
+      });
     }
 
     const quiz = await this.quizRepo.createQuiz(dto);

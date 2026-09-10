@@ -39,6 +39,21 @@ export class RoundInformation {
   exit_reward!: number;
 }
 
+@Schema({ _id: false })
+export class FinalRoundInformation {
+  @Prop({ required: true })
+  no_of_questions!: number;
+
+  @Prop({ required: true, type: DifficultyBreakdown })
+  difficultyBreakdown!: DifficultyBreakdown;
+
+  @Prop({ required: true, default: 0 })
+  first_position_reward!: number;
+
+  @Prop({ required: true, default: 0 })
+  second_position_reward!: number;
+}
+
 export type QuizDocument = Quiz & Document;
 
 @Schema({ timestamps: true })
@@ -70,11 +85,8 @@ export class Quiz {
   @Prop({ required: true, type: [RoundInformation] })
   round_information!: RoundInformation[];
 
-  @Prop({ required: true, default: 0 })
-  first_position_reward!: number;
-
-  @Prop({ required: true, default: 0 })
-  second_position_reward!: number;
+  @Prop({ required: true, type: FinalRoundInformation })
+  final_round_information!: FinalRoundInformation;
 }
 
 export const QuizSchema = SchemaFactory.createForClass(Quiz);

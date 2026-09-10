@@ -89,6 +89,45 @@ export class RoundInformationDto {
   @Min(0)
   exit_reward!: number;
 }
+export class FinalRoundInformationDto {
+  @ApiProperty({
+    description: 'This is the number of questions for the final round.',
+    example: 10,
+  })
+  @IsNumber()
+  @Min(1)
+  no_of_questions!: number;
+
+  @ApiProperty({
+    description:
+      'Breakdown of the expected questions by difficulty level for final round.',
+    type: DifficultyBreakdownDto,
+    example: {
+      easy: 8,
+      medium: 7,
+      hard: 5,
+    },
+  })
+  @ValidateNested()
+  @Type(() => DifficultyBreakdownDto)
+  difficultyBreakdown!: DifficultyBreakdownDto;
+
+  @ApiProperty({
+    description: 'This is the reward for the user that become first.',
+    example: 100,
+  })
+  @IsNumber()
+  @Min(0)
+  first_position_reward!: number;
+
+  @ApiProperty({
+    description: 'This is the reward for the user that become second.',
+    example: 75,
+  })
+  @IsNumber()
+  @Min(0)
+  second_position_reward!: number;
+}
 
 export class CreateQuizDto {
   @ApiProperty({
@@ -186,20 +225,19 @@ export class CreateQuizDto {
   round_information!: RoundInformationDto[];
 
   @ApiProperty({
-    description: 'This is the reward for the user that become first.',
-    example: 100,
+    description:
+      'This is the information belonging to final round of the quiz.',
+    type: FinalRoundInformationDto,
+    example: {
+      no_of_questions: 10,
+      difficultyBreakdown: { easy: 2, medium: 3, hard: 5 },
+      first_position_reward: 100,
+      second_position_reward: 50,
+    },
   })
-  @IsNumber()
-  @Min(0)
-  first_position_reward!: number;
-
-  @ApiProperty({
-    description: 'This is the reward for the user that become second.',
-    example: 75,
-  })
-  @IsNumber()
-  @Min(0)
-  second_position_reward!: number;
+  @ValidateNested()
+  @Type(() => FinalRoundInformationDto)
+  final_round_information!: FinalRoundInformationDto;
 
   @ApiProperty({
     description: 'This is the status of the quiz.',
