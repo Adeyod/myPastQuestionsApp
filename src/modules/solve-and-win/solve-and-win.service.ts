@@ -14,7 +14,9 @@ import { AddQuestionsToContestSubjectDto } from './dtos/add-questions-to-contest
 import { AddSubjectsToContestDto } from './dtos/add-subjects-to-contest.dto';
 import { CreateSolveAndWinContestDto } from './dtos/create-contest.dto';
 import { RemoveSubjectsFromContestDto } from './dtos/remove-subjects-from-contest.dto';
+import { UpdateParticipationAnswersDto } from './dtos/update-answers.dto';
 import { UpdateSolveAndWinContestDto } from './dtos/update-contest.dto';
+import { UpdateRemainingTimeDto } from './dtos/update-remaining-time.dto';
 import { SolveAndWinContestRepository } from './repositories/solve-and-win-contest.repository';
 import { SolveAndWinParticipationRepository } from './repositories/solve-and-win-participant.repository';
 import { SolveAndWinQuestionRepository } from './repositories/solve-and-win-question.repository';
@@ -817,8 +819,12 @@ export class SolveAndWinService {
         );
       } else {
         existingSubject.remainingDurationInSeconds =
-          existingSubject.remainingDurationInSeconds ??
+          existingSubject.remainingDurationInSeconds ||
           existingSubject.durationInSeconds;
+
+        // existingSubject.remainingDurationInSeconds =
+        //   existingSubject.remainingDurationInSeconds ??
+        //   existingSubject.durationInSeconds;
       }
 
       if (existingSubject.remainingDurationInSeconds <= 0) {
@@ -829,9 +835,15 @@ export class SolveAndWinService {
         });
       }
 
+      // const calculatedSessionEndBefore = new Date(
+      //   now.getDate() + existingSubject.remainingDurationInSeconds * 1000,
+      // );
+
       const calculatedSessionEnd = new Date(
-        now.getDate() + existingSubject.remainingDurationInSeconds * 1000,
+        now.getTime() + existingSubject.remainingDurationInSeconds * 1000,
       );
+
+      console.log('calculatedSessionEnd:', calculatedSessionEnd);
 
       existingSubject.startedAt = now;
       existingSubject.endsAt =
@@ -970,6 +982,255 @@ export class SolveAndWinService {
     const response = this.sanitizeParticipation(plainDoc);
 
     return response;
+  }
+  async updateSolveAndWinContestSubjectQuestionAnswers(
+    contestId: string,
+    subjectId: string,
+    user: JwtUser,
+    dto: UpdateParticipationAnswersDto,
+  ) {
+    const cId = new Types.ObjectId(contestId);
+    const sId = new Types.ObjectId(subjectId);
+    const userId = new Types.ObjectId(user.sub.toString());
+
+    // 1. Fetch participation document
+    const participationDoc =
+      await this.participationRepo.findSolveAndWinParticipationByIdAndUserId(
+        cId,
+        userId,
+      );
+
+    if (!participationDoc) {
+      throw new NotFoundException({
+        message: 'Participation record not found for this contest.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const targetSubject = participationDoc.subjects.find(
+      (s) => s.subjectId.toString() === sId.toString(),
+    );
+
+    if (!targetSubject) {
+      throw new BadRequestException({
+        message:
+          'Target subject is not part of your active contest participation.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (targetSubject.submittedAt) {
+      throw new BadRequestException({
+        message: 'This subject has already been submitted.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (!targetSubject.startedAt) {
+      throw new BadRequestException({
+        message:
+          'You must start the subject session before submitting answers.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const now = new Date();
+    const elapsedSeconds = Math.floor(
+      (now.getTime() - new Date(targetSubject.startedAt).getTime()) / 1000,
+    );
+    const remainingTime = Math.max(
+      0,
+      targetSubject.durationInSeconds - elapsedSeconds,
+    );
+
+    if (remainingTime <= 0) {
+      throw new BadRequestException({
+        message: 'Your allocated time for this subject has expired.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    targetSubject.remainingDurationInSeconds = remainingTime;
+
+    const answerMap = new Map(
+      dto.answers.map((item) => [item.questionId, item.selectedOption]),
+    );
+
+    targetSubject.questions.forEach((question) => {
+      const qId = question.questionId.toString();
+      if (answerMap.has(qId)) {
+        const selectedOpt = new Types.ObjectId(answerMap.get(qId));
+        question.selectedOption = selectedOpt;
+
+        const isCorrect = question.correctAnswers.some(
+          (ca) => ca.toString() === selectedOpt.toString(),
+        );
+
+        question.isCorrect = isCorrect;
+        question.marksAwarded = isCorrect ? question.marks : 0;
+      }
+    });
+
+    let subjectCorrect = 0;
+    let subjectWrong = 0;
+    let subjectUnanswered = 0;
+    let subjectScore = 0;
+
+    targetSubject.questions.forEach((q) => {
+      if (!q.selectedOption) {
+        subjectUnanswered++;
+      } else if (q.isCorrect) {
+        subjectCorrect++;
+        subjectScore += q.marksAwarded;
+      } else {
+        subjectWrong++;
+      }
+    });
+
+    targetSubject.correctAnswers = subjectCorrect;
+    targetSubject.wrongAnswers = subjectWrong;
+    targetSubject.unansweredQuestions = subjectUnanswered;
+    targetSubject.score = subjectScore;
+
+    let overallScore = 0;
+    let overallCorrect = 0;
+    let overallWrong = 0;
+    let overallUnanswered = 0;
+
+    participationDoc.subjects.forEach((sub) => {
+      overallScore += sub.score;
+      overallCorrect += sub.correctAnswers;
+      overallWrong += sub.wrongAnswers;
+      overallUnanswered += sub.unansweredQuestions;
+    });
+
+    const updatedDoc = await this.participationRepo.updateSubjectAnswers(
+      participationDoc._id,
+      participationDoc.subjects,
+      overallScore,
+      overallCorrect,
+      overallWrong,
+      overallUnanswered,
+    );
+
+    if (!updatedDoc) {
+      throw new BadRequestException({
+        message: 'Failed to record your answers.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const plainDoc = updatedDoc.toObject();
+    plainDoc.subjects = plainDoc.subjects.filter(
+      (s) => s.subjectId.toString() === sId.toString(),
+    );
+
+    return this.sanitizeParticipation(plainDoc);
+  }
+
+  async updateSolveAndWinContestSubjectRemainingTime(
+    contestId: string,
+    subjectId: string,
+    dto: UpdateRemainingTimeDto,
+    user: JwtUser,
+  ) {
+    const cId = new Types.ObjectId(contestId);
+    const sId = new Types.ObjectId(subjectId);
+    const userId = new Types.ObjectId(user.sub.toString());
+
+    const participationDoc =
+      await this.participationRepo.findSolveAndWinParticipationByIdAndUserId(
+        cId,
+        userId,
+      );
+
+    if (!participationDoc) {
+      throw new NotFoundException({
+        message: 'Participation record not found for this contest.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const targetSubject = participationDoc.subjects.find(
+      (s) => s.subjectId.toString() === sId.toString(),
+    );
+
+    if (!targetSubject) {
+      throw new BadRequestException({
+        message:
+          'Target subject is not part of your active contest participation.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (targetSubject.submittedAt) {
+      throw new BadRequestException({
+        message: 'This subject has already been submitted.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (!targetSubject.startedAt) {
+      throw new BadRequestException({
+        message: 'You have not started this subject session yet.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const now = new Date();
+    const serverElapsedSeconds = Math.floor(
+      (now.getTime() - new Date(targetSubject.startedAt).getTime()) / 1000,
+    );
+
+    const calculatedServerRemaining = Math.max(
+      0,
+      targetSubject.durationInSeconds - serverElapsedSeconds,
+    );
+
+    const synchronizedRemaining = Math.min(
+      dto.remainingDurationInSeconds,
+      calculatedServerRemaining,
+    );
+
+    targetSubject.remainingDurationInSeconds = Math.max(
+      0,
+      synchronizedRemaining,
+    );
+
+    if (targetSubject.remainingDurationInSeconds <= 0) {
+      targetSubject.remainingDurationInSeconds = 0;
+      targetSubject.submittedAt = now;
+    }
+
+    const updatedDoc = await this.participationRepo.updateSubjectRemainingTime(
+      participationDoc._id,
+      participationDoc.subjects,
+    );
+
+    if (!updatedDoc) {
+      throw new BadRequestException({
+        message: 'Unable to sync remaining time.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const plainDoc = updatedDoc.toObject();
+    plainDoc.subjects = plainDoc.subjects.filter(
+      (s) => s.subjectId.toString() === sId.toString(),
+    );
+
+    return this.sanitizeParticipation(plainDoc);
   }
 
   async pauseSolveAndWinContest(

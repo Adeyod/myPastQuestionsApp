@@ -33,7 +33,9 @@ import { AddSubjectsToContestDto } from './dtos/add-subjects-to-contest.dto';
 import { CreateSolveAndWinContestDto } from './dtos/create-contest.dto';
 import { RemoveQuestionsFromContestDto } from './dtos/remove-questions-from-contest.dto';
 import { RemoveSubjectsFromContestDto } from './dtos/remove-subjects-from-contest.dto';
+import { UpdateParticipationAnswersDto } from './dtos/update-answers.dto';
 import { UpdateSolveAndWinContestDto } from './dtos/update-contest.dto';
+import { UpdateRemainingTimeDto } from './dtos/update-remaining-time.dto';
 import { SolveAndWinService } from './solve-and-win.service';
 
 @Controller('solve-and-win/contests')
@@ -858,6 +860,109 @@ export class SolveAndWinController {
       subjectId,
       user,
     );
+
+    return response;
+  }
+
+  @Get('update-solve-and-win-contest-question-answers/:contestId/:subjectId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Contest answer updated successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update solve and win contest question answers.',
+    description:
+      'This is the endpoint that user can use to update solve and win contest question answer.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest answer updated successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to update solve and win contest answer.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async updateSolveAndWinContestSubjectQuestionAnswers(
+    @Param('contestId') contestId: string,
+    @Param('subjectId') subjectId: string,
+    @Body() dto: UpdateParticipationAnswersDto,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response =
+      await this.solveAndWinService.updateSolveAndWinContestSubjectQuestionAnswers(
+        contestId,
+        subjectId,
+        user,
+        dto,
+      );
+
+    return response;
+  }
+  @Get(
+    'update-solve-and-win-contest-question-remaining-time/:contestId/:subjectId',
+  )
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Contest time updated successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update solve and win contest question time.',
+    description:
+      'This is the endpoint that user can use to update solve and win contest question time.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest time updated successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to update solve and win contest time.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async updateSolveAndWinContestSubjectRemainingTime(
+    @Param('contestId') contestId: string,
+    @Param('subjectId') subjectId: string,
+    @Body() dto: UpdateRemainingTimeDto,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response =
+      await this.solveAndWinService.updateSolveAndWinContestSubjectRemainingTime(
+        contestId,
+        subjectId,
+        dto,
+        user,
+      );
 
     return response;
   }

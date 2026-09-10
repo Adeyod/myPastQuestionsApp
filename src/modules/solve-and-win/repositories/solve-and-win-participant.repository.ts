@@ -180,4 +180,46 @@ export class SolveAndWinParticipationRepository {
 
     return response;
   }
+
+  async updateSubjectAnswers(
+    participationId: Types.ObjectId,
+    updatedSubjects: ParticipationSubject[],
+    totalScore: number,
+    totalCorrect: number,
+    totalWrong: number,
+    totalUnanswered: number,
+  ): Promise<SolveAndWinParticipationDocument | null> {
+    return this.participationModel
+      .findByIdAndUpdate(
+        participationId,
+        {
+          $set: {
+            subjects: updatedSubjects,
+            score: totalScore,
+            correctAnswers: totalCorrect,
+            wrongAnswers: totalWrong,
+            unansweredQuestions: totalUnanswered,
+          },
+        },
+        { returnDocument: 'after' },
+      )
+      .exec();
+  }
+
+  async updateSubjectRemainingTime(
+    participationId: Types.ObjectId,
+    updatedSubjects: ParticipationSubject[],
+  ): Promise<SolveAndWinParticipationDocument | null> {
+    return this.participationModel
+      .findByIdAndUpdate(
+        participationId,
+        {
+          $set: {
+            subjects: updatedSubjects,
+          },
+        },
+        { returnDocument: 'after' },
+      )
+      .exec();
+  }
 }
