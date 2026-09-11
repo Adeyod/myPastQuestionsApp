@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { CreateQuizDto } from './dtos/create-quiz.dto';
 import { QuizRepository } from './repositories/quiz.repository';
 
@@ -109,5 +110,11 @@ export class QuizService {
     }
 
     return quiz;
+  }
+
+  async findAllQuizzes(queryDto: QueryWithPaginationDto) {
+    const response = await this.quizRepo.findAllQuizzes(queryDto);
+
+    return response;
   }
 }
