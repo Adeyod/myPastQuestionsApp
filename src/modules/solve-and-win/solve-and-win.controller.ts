@@ -816,7 +816,7 @@ export class SolveAndWinController {
 
     return response;
   }
-  @Get('pause-solve-and-win-contest/:contestId/:subjectId')
+  @Patch('pause-solve-and-win-contest/:contestId/:subjectId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.USER)
   @ApiBearerAuth('JWT-auth')
@@ -864,7 +864,7 @@ export class SolveAndWinController {
     return response;
   }
 
-  @Get('update-solve-and-win-contest-question-answers/:contestId/:subjectId')
+  @Patch('update-solve-and-win-contest-question-answers/:contestId/:subjectId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.USER)
   @ApiBearerAuth('JWT-auth')
@@ -914,7 +914,7 @@ export class SolveAndWinController {
 
     return response;
   }
-  @Get(
+  @Patch(
     'update-solve-and-win-contest-question-remaining-time/:contestId/:subjectId',
   )
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
