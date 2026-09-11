@@ -6,6 +6,7 @@ import {
   ParticipationSubject,
   SolveAndWinParticipation,
   SolveAndWinParticipationDocument,
+  SolveAndWinParticipationStatus,
 } from '../schemas/solve-and-win-participantion.schema';
 
 @Injectable()
@@ -219,6 +220,37 @@ export class SolveAndWinParticipationRepository {
           },
         },
         { returnDocument: 'after' },
+      )
+      .exec();
+  }
+
+  async submitSubjectParticipation(
+    participationId: Types.ObjectId,
+    updatedSubjects: ParticipationSubject[],
+    overallScore: number,
+    overallCorrect: number,
+    overallWrong: number,
+    overallUnanswered: number,
+    overallPercentage: number,
+    status: SolveAndWinParticipationStatus,
+    submittedAt?: Date | null,
+  ): Promise<SolveAndWinParticipationDocument | null> {
+    return this.participationModel
+      .findByIdAndUpdate(
+        participationId,
+        {
+          $set: {
+            subjects: updatedSubjects,
+            score: overallScore,
+            correctAnswers: overallCorrect,
+            wrongAnswers: overallWrong,
+            unansweredQuestions: overallUnanswered,
+            percentage: overallPercentage,
+            status: status,
+            ...(submittedAt ? { submittedAt } : {}),
+          },
+        },
+        { new: true },
       )
       .exec();
   }

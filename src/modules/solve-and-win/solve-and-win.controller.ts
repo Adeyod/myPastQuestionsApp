@@ -33,6 +33,7 @@ import { AddSubjectsToContestDto } from './dtos/add-subjects-to-contest.dto';
 import { CreateSolveAndWinContestDto } from './dtos/create-contest.dto';
 import { RemoveQuestionsFromContestDto } from './dtos/remove-questions-from-contest.dto';
 import { RemoveSubjectsFromContestDto } from './dtos/remove-subjects-from-contest.dto';
+import { SubmitSolveAndWinSubjectDto } from './dtos/submit-subject.dto';
 import { UpdateParticipationAnswersDto } from './dtos/update-answers.dto';
 import { UpdateSolveAndWinContestDto } from './dtos/update-contest.dto';
 import { UpdateRemainingTimeDto } from './dtos/update-remaining-time.dto';
@@ -962,6 +963,57 @@ export class SolveAndWinController {
         subjectId,
         dto,
         user,
+      );
+
+    return response;
+  }
+  @Patch('submit-solve-and-win-contest-question/:contestId/:subjectId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Contest submitted successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Submit solve and win contest question.',
+    description:
+      'This is the endpoint that user can use to submit solve and win contest question.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest submitted successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request. Unable to submit solve and win contest question.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async submitSolveAndWinContestSubjectQuestion(
+    @Param('contestId') contestId: string,
+    @Param('subjectId') subjectId: string,
+    @Body() dto: SubmitSolveAndWinSubjectDto,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response =
+      await this.solveAndWinService.submitSolveAndWinContestSubjectQuestion(
+        contestId,
+        subjectId,
+        user,
+        dto,
       );
 
     return response;

@@ -14,6 +14,7 @@ import { AddQuestionsToContestSubjectDto } from './dtos/add-questions-to-contest
 import { AddSubjectsToContestDto } from './dtos/add-subjects-to-contest.dto';
 import { CreateSolveAndWinContestDto } from './dtos/create-contest.dto';
 import { RemoveSubjectsFromContestDto } from './dtos/remove-subjects-from-contest.dto';
+import { SubmitSolveAndWinSubjectDto } from './dtos/submit-subject.dto';
 import { UpdateParticipationAnswersDto } from './dtos/update-answers.dto';
 import { UpdateSolveAndWinContestDto } from './dtos/update-contest.dto';
 import { UpdateRemainingTimeDto } from './dtos/update-remaining-time.dto';
@@ -27,6 +28,7 @@ import {
 import {
   ParticipationQuestion,
   ParticipationSubject,
+  SolveAndWinParticipationStatus,
 } from './schemas/solve-and-win-participantion.schema';
 import { SOLVE_AND_WIN_DIFFICULTY_MARKS } from './schemas/solve-and-win-question.schema';
 
@@ -773,6 +775,15 @@ export class SolveAndWinService {
 
     const now = new Date();
 
+    if (contest.startDate && now < new Date(contest.startDate)) {
+      throw new BadRequestException({
+        message: `This contest will officially start on ${new Date(contest.startDate).toLocaleString()}.`,
+        // message: `This contest has officially closed on ${new Date(contest.endDate).toISOString()}.`,
+        success: false,
+        status: 400,
+      });
+    }
+
     if (contest.endDate && now > new Date(contest.endDate)) {
       throw new BadRequestException({
         message: `This contest has officially closed on ${new Date(contest.endDate).toLocaleString()}.`,
@@ -993,7 +1004,36 @@ export class SolveAndWinService {
     const sId = new Types.ObjectId(subjectId);
     const userId = new Types.ObjectId(user.sub.toString());
 
-    // 1. Fetch participation document
+    const contest = await this.contestRepo.findSolveAndWinContestById(cId);
+
+    if (!contest) {
+      throw new NotFoundException({
+        message: `Contest with ID: ${contestId} not found.`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    const now = new Date();
+    const contestEndDate = new Date(contest.endDate);
+    const contestStartDate = new Date(contest.startDate);
+
+    if (now < contestStartDate) {
+      throw new BadRequestException({
+        message: `You can not update solve and win contest when contest has not officially started. Contest starts date is: ${contestStartDate.toISOString()}.`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (now > contestEndDate) {
+      throw new BadRequestException({
+        message: `You can not update solve and win contest when contest has ended. Contest end date is: ${contestEndDate.toISOString()}.`,
+        success: false,
+        status: 400,
+      });
+    }
+
     const participationDoc =
       await this.participationRepo.findSolveAndWinParticipationByIdAndUserId(
         cId,
@@ -1038,7 +1078,6 @@ export class SolveAndWinService {
       });
     }
 
-    const now = new Date();
     const elapsedSeconds = Math.floor(
       (now.getTime() - new Date(targetSubject.startedAt).getTime()) / 1000,
     );
@@ -1133,6 +1172,186 @@ export class SolveAndWinService {
 
     return this.sanitizeParticipation(plainDoc);
   }
+  async submitSolveAndWinContestSubjectQuestion(
+    contestId: string,
+    subjectId: string,
+    user: JwtUser,
+    dto: SubmitSolveAndWinSubjectDto,
+  ) {
+    const cId = new Types.ObjectId(contestId);
+    const sId = new Types.ObjectId(subjectId);
+    const userId = new Types.ObjectId(user.sub.toString());
+
+    const contest = await this.contestRepo.findSolveAndWinContestById(cId);
+
+    if (!contest) {
+      throw new NotFoundException({
+        message: `Contest with ID: ${contestId} not found.`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    const now = new Date();
+    const contestEndDate = new Date(contest.endDate);
+
+    if (now > contestEndDate) {
+      throw new BadRequestException({
+        message: `You can not submit when contest has ended. Contest end date is: ${contestEndDate.toISOString()}.`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    const participationDoc =
+      await this.participationRepo.findSolveAndWinParticipationByIdAndUserId(
+        cId,
+        userId,
+      );
+
+    if (!participationDoc) {
+      throw new NotFoundException({
+        message: 'Participation record not found for this contest.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const targetSubject = participationDoc.subjects.find(
+      (s) => s.subjectId.toString() === sId.toString(),
+    );
+
+    if (!targetSubject) {
+      throw new BadRequestException({
+        message:
+          'Target subject is not part of your active contest participation.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (targetSubject.submittedAt) {
+      throw new BadRequestException({
+        message: 'You have already submitted this subject.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (!targetSubject.startedAt) {
+      throw new BadRequestException({
+        message: 'You must start the subject session before submitting.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (dto.answers && dto.answers.length > 0) {
+      const answerMap = new Map(
+        dto.answers.map((item) => [item.questionId, item.selectedOption]),
+      );
+
+      targetSubject.questions.forEach((question) => {
+        const qId = question.questionId.toString();
+        if (answerMap.has(qId)) {
+          question.selectedOption = new Types.ObjectId(answerMap.get(qId));
+        }
+      });
+    }
+
+    let subjectCorrect = 0;
+    let subjectWrong = 0;
+    let subjectUnanswered = 0;
+    let subjectScore = 0;
+
+    targetSubject.questions.forEach((question) => {
+      if (!question.selectedOption) {
+        question.isCorrect = false;
+        question.marksAwarded = 0;
+        subjectUnanswered++;
+      } else {
+        const isCorrect = question.correctAnswers.some(
+          (ca) => ca.toString() === question.selectedOption!.toString(),
+        );
+
+        question.isCorrect = isCorrect;
+        question.marksAwarded = isCorrect ? question.marks : 0;
+
+        if (isCorrect) {
+          subjectCorrect++;
+          subjectScore += question.marks;
+        } else {
+          subjectWrong++;
+        }
+      }
+    });
+
+    targetSubject.correctAnswers = subjectCorrect;
+    targetSubject.wrongAnswers = subjectWrong;
+    targetSubject.unansweredQuestions = subjectUnanswered;
+    targetSubject.score = subjectScore;
+    targetSubject.remainingDurationInSeconds = 0;
+    targetSubject.submittedAt = now;
+
+    let overallScore = 0;
+    let overallCorrect = 0;
+    let overallWrong = 0;
+    let overallUnanswered = 0;
+    let totalPossibleMarks = 0;
+
+    participationDoc.subjects.forEach((sub) => {
+      overallScore += sub.score;
+      overallCorrect += sub.correctAnswers;
+      overallWrong += sub.wrongAnswers;
+      overallUnanswered += sub.unansweredQuestions;
+
+      sub.questions.forEach((q) => {
+        totalPossibleMarks += q.marks;
+      });
+    });
+
+    const overallPercentage =
+      totalPossibleMarks > 0
+        ? Number(((overallScore / totalPossibleMarks) * 100).toFixed(2))
+        : 0;
+
+    const allSubjectsSubmitted = participationDoc.subjects.every(
+      (sub) => sub.submittedAt !== null,
+    );
+
+    const contestStatus = allSubjectsSubmitted
+      ? SolveAndWinParticipationStatus.COMPLETED
+      : SolveAndWinParticipationStatus.IN_PROGRESS;
+
+    const overallSubmittedAt = allSubjectsSubmitted ? now : null;
+
+    const updatedDoc = await this.participationRepo.submitSubjectParticipation(
+      participationDoc._id,
+      participationDoc.subjects,
+      overallScore,
+      overallCorrect,
+      overallWrong,
+      overallUnanswered,
+      overallPercentage,
+      contestStatus,
+      overallSubmittedAt,
+    );
+
+    if (!updatedDoc) {
+      throw new BadRequestException({
+        message: 'Unable to process subject submission.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const plainDoc = updatedDoc.toObject();
+    plainDoc.subjects = plainDoc.subjects.filter(
+      (s) => s.subjectId.toString() === sId.toString(),
+    );
+
+    return this.sanitizeParticipation(plainDoc);
+  }
 
   async updateSolveAndWinContestSubjectRemainingTime(
     contestId: string,
@@ -1143,6 +1362,37 @@ export class SolveAndWinService {
     const cId = new Types.ObjectId(contestId);
     const sId = new Types.ObjectId(subjectId);
     const userId = new Types.ObjectId(user.sub.toString());
+
+    const contest = await this.contestRepo.findSolveAndWinContestById(cId);
+
+    if (!contest) {
+      throw new NotFoundException({
+        message: `Contest with ID: ${contestId} not found.`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    const now = new Date();
+    const contestEndDate = new Date(contest.endDate);
+
+    const contestStartDate = new Date(contest.startDate);
+
+    if (now < contestStartDate) {
+      throw new BadRequestException({
+        message: `You can not update solve and win time when contest has not officially started. Contest starts date is: ${contestStartDate.toISOString()}.`,
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (now > contestEndDate) {
+      throw new BadRequestException({
+        message: `You can not update solve and win time when contest has ended. Contest end date is: ${contestEndDate.toISOString()}.`,
+        success: false,
+        status: 400,
+      });
+    }
 
     const participationDoc =
       await this.participationRepo.findSolveAndWinParticipationByIdAndUserId(
@@ -1187,7 +1437,6 @@ export class SolveAndWinService {
       });
     }
 
-    const now = new Date();
     const serverElapsedSeconds = Math.floor(
       (now.getTime() - new Date(targetSubject.startedAt).getTime()) / 1000,
     );
