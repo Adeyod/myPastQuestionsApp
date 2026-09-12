@@ -527,6 +527,44 @@ export class SolveAndWinService {
 
     return response;
   }
+  async deactivateContest(contestId: string) {
+    this.validateObjectId(contestId);
+
+    const id = new Types.ObjectId(contestId);
+
+    const contest = await this.contestRepo.findSolveAndWinContestById(id);
+
+    if (!contest) {
+      throw new NotFoundException({
+        message: 'Solve and Win contest not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    // for (const subject of contest.subjects) {
+    //   if (!subject.questions?.length) {
+    //     throw new BadRequestException({
+    //       message:
+    //         'Every contest subject must have at least one question before activation.',
+    //       success: false,
+    //       status: 400,
+    //     });
+    //   }
+    // }
+
+    const response = await this.contestRepo.deactivateContest(id);
+
+    if (!response) {
+      throw new BadRequestException({
+        message: 'Unable to de-activate contest.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    return response;
+  }
 
   async cancelContest(contestId: string) {
     this.validateObjectId(contestId);
@@ -589,7 +627,6 @@ export class SolveAndWinService {
       });
     }
 
-    // Only drafts should be permanently deleted.
     if (contest.status !== SolveAndWinContestStatus.DRAFT) {
       throw new BadRequestException({
         message: 'Only draft contests can be permanently deleted.',
@@ -1645,14 +1682,12 @@ export class SolveAndWinService {
   //   };
   // }
   private sanitizeParticipation(participation: any) {
-    // Extract clean plain object if _doc exists (Express-like fallback)
     const rawData =
       participation._doc ||
       (typeof participation.toObject === 'function'
         ? participation.toObject()
         : participation);
 
-    // Deep clone via JSON serialization to completely drop all Mongoose prototype getters/methods
     const cleanData = JSON.parse(JSON.stringify(rawData));
 
     return {

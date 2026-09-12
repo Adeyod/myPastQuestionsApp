@@ -420,6 +420,45 @@ export class SolveAndWinController {
 
     return response;
   }
+  @Patch('deactivate-contest-by-contestId/:contestId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Solve and win contest deleted successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get all solve and win contests.',
+    description:
+      'This is the endpoint that is going to be used to delete solve and win contest.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Solve and win contest deleted successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to delete solve and win contest.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async deactivateContest(@Param('contestId') contestId: string) {
+    const response = await this.solveAndWinService.deactivateContest(contestId);
+
+    return response;
+  }
 
   @Patch('remove-subjects-from-contest/:contestId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)

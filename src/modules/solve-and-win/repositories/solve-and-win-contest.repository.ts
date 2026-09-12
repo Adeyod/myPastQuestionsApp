@@ -45,7 +45,7 @@ export class SolveAndWinContestRepository {
     solveAndWinContestObj: SolveAndWinContestDocument[];
   }> {
     const { page, limit, searchParams } = queryDto;
-    let query = this.contestModel.find();
+    let query = this.contestModel.find({ isActive: true });
 
     if (searchParams) {
       const regex = new RegExp(searchParams, 'i');
