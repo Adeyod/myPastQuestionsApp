@@ -72,80 +72,26 @@ export class SolveAndWinParticipationRepository {
   //     (participation) => participation.contestId !== null,
   //   );
 
+  //   const filtered = activeParticipationsYetToStart.map((a) => {
+  //     const _id = a._id;
+  //     const contestId = a.contestId;
+
+  //     return {
+  //       _id,
+  //       contestId,
+  //     };
+  //   });
+
   //   const res = {
   //     totalCount: activeParticipationsYetToStart.length,
   //     totalPages: Math.ceil(total / limit),
-  //     contestParticipationObj: activeParticipationsYetToStart,
+  //     contestParticipationObj: filtered,
   //   };
+
+  //   console.log('filtered:', filtered);
 
   //   return res;
   // }
-
-  async getAllContestParticipationsYetToStart(
-    userId: Types.ObjectId,
-    queryDto: QueryWithPaginationDto,
-  ) {
-    const { page = 1, limit = 10 } = queryDto;
-    const skip = (page - 1) * limit;
-    const now = new Date();
-
-    const pipeline: any[] = [
-      // 1. Match user's unstarted participation records
-      {
-        $match: {
-          userId,
-          $or: [{ subjects: { $size: 0 } }, { 'subjects.startedAt': null }],
-        },
-      },
-      // 2. Join with the SolveAndWinContest collection (adjust table name if different)
-      {
-        $lookup: {
-          from: 'solveandwincontests', // Make sure this matches your MongoDB collection name for contests
-          localField: 'contestId',
-          foreignField: '_id',
-          as: 'contest',
-        },
-      },
-      // 3. Unwind joined contest array
-      { $unwind: '$contest' },
-      // 4. Filter only contests where startDate is strictly in the future
-      {
-        $match: {
-          'contest.startDate': { $gt: now },
-        },
-      },
-    ];
-
-    // Execute pagination facet query
-    const result = await this.participationModel.aggregate([
-      ...pipeline,
-      {
-        $facet: {
-          data: [
-            { $skip: skip },
-            { $limit: limit },
-            // 5. Shape output to return ONLY _id and contestId
-            {
-              $project: {
-                _id: 1,
-                contestId: 1,
-              },
-            },
-          ],
-          totalCount: [{ $count: 'count' }],
-        },
-      },
-    ]);
-
-    const total = result[0]?.totalCount[0]?.count || 0;
-    const contestParticipationObj = result[0]?.data || [];
-
-    return {
-      totalCount: total,
-      totalPages: Math.ceil(total / limit),
-      contestParticipationObj,
-    };
-  }
 
   async getAllMyContestParticipations(
     userId: Types.ObjectId,
@@ -206,6 +152,79 @@ export class SolveAndWinParticipationRepository {
     };
 
     return response;
+  }
+
+  async getAllContestParticipationsYetToStart(
+    userId: Types.ObjectId,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    const { page = 1, limit = 10 } = queryDto;
+    const skip = (page - 1) * limit;
+    const now = new Date();
+
+    const pipeline: any[] = [
+      // 1. Match ONLY unstarted participations for the user
+      {
+        $match: {
+          userId,
+          $and: [
+            { status: { $ne: 'COMPLETED' } }, // Exclude finished ones
+            {
+              $or: [
+                { subjects: { $size: 0 } },
+                { 'subjects.startedAt': { $exists: false } },
+                { 'subjects.startedAt': null },
+              ],
+            },
+          ],
+        },
+      },
+      // 2. Lookup contest details (verify collection name in MongoDB)
+      {
+        $lookup: {
+          from: 'solveandwincontests', // Check your db collection name (e.g., 'solve_and_win_contests')
+          localField: 'contestId',
+          foreignField: '_id',
+          as: 'contest',
+        },
+      },
+      // 3. Keep document only if contest lookup exists
+      { $unwind: '$contest' },
+      // 4. Ensure contest start date is strictly in the future
+      {
+        $match: {
+          'contest.startDate': { $gt: now },
+        },
+      },
+      // 5. Project ONLY _id and contestId BEFORE pagination
+      {
+        $project: {
+          _id: 1,
+          contestId: 1,
+        },
+      },
+    ];
+
+    const result = await this.participationModel.aggregate([
+      ...pipeline,
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
+    ]);
+
+    const total = result[0]?.totalCount[0]?.count || 0;
+    const contestParticipationObj = result[0]?.data || [];
+
+    console.log('contestParticipationObj:', contestParticipationObj);
+
+    return {
+      totalCount: total,
+      totalPages: Math.ceil(total / limit),
+      contestParticipationObj,
+    };
   }
   async getAllContestParticipations(queryDto: QueryWithPaginationDto): Promise<{
     totalCount: number;

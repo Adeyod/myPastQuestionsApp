@@ -10,7 +10,7 @@ import { Queue } from 'bull';
 import { AppModule } from './app.module';
 import { MongoExceptionFilter } from './common/filters/mongo-exception.filter';
 import { GlobalResponseInterceptor } from './common/interceptor/global-response.interceptor';
-import { PracticeWalletRepository } from './modules/practice-wallet/repositories/practice-wallet.repository';
+import { SolveAndWinParticipationRepository } from './modules/solve-and-win/repositories/solve-and-win-participant.repository';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -27,8 +27,14 @@ async function bootstrap() {
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
 
-  const repo = app.get(PracticeWalletRepository);
-  // await repo.findOrCreateByUserId(id);
+  // const userId = new Types.ObjectId('69b6e2d1c2500fccbbfbe3cb');
+  // const userId = new Types.ObjectId('6a882e27b03aa8c1156b28a2');
+  // const dto = {
+  //   limit: 10,
+  //   page: 1,
+  // };
+  const repo = app.get(SolveAndWinParticipationRepository);
+  // await repo.getAllContestParticipationsYetToStart(userId, dto);
   // await repo.findByEmail('ayodejiadebolu@gmail.com');
 
   // Create Bull Board
