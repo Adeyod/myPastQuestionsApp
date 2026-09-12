@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { JwtUser } from '../../common/types/jwt-user.type';
 import { CreateQuizDto } from './dtos/create-quiz.dto';
 import { QuizRepository } from './repositories/quiz.repository';
 
@@ -114,6 +116,13 @@ export class QuizService {
 
   async findAllQuizzes(queryDto: QueryWithPaginationDto) {
     const response = await this.quizRepo.findAllQuizzes(queryDto);
+
+    return response;
+  }
+  async findAllMyQuizzes(user: JwtUser, queryDto: QueryWithPaginationDto) {
+    const userId = new Types.ObjectId(user.sub.toString());
+
+    const response = await this.quizRepo.findAllMyQuizzes(userId, queryDto);
 
     return response;
   }

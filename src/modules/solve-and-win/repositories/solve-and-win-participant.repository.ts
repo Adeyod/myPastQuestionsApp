@@ -42,6 +42,45 @@ export class SolveAndWinParticipationRepository {
     return response;
   }
 
+  async getAllContestParticipationsYetToStart(
+    userId: Types.ObjectId,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    const { page = 1, limit = 10 } = queryDto;
+    const skip = (page - 1) * limit;
+    const now = new Date();
+
+    const filter = {
+      userId,
+      $or: [{ subjects: { $size: 0 } }, { 'subjects.startedAt': null }],
+    };
+
+    const [data, total] = await Promise.all([
+      this.participationModel
+        .find(filter)
+        .populate({
+          path: 'contestId',
+          match: { startDate: { $gt: now } },
+        })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.participationModel.countDocuments(filter).exec(),
+    ]);
+
+    const activeParticipationsYetToStart = data.filter(
+      (participation) => participation.contestId !== null,
+    );
+
+    const res = {
+      totalCount: activeParticipationsYetToStart.length,
+      totalPages: Math.ceil(total / limit),
+      contestParticipationObj: activeParticipationsYetToStart,
+    };
+
+    return res;
+  }
+
   async getAllMyContestParticipations(
     userId: Types.ObjectId,
     queryDto: QueryWithPaginationDto,

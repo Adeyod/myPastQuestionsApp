@@ -730,6 +730,55 @@ export class SolveAndWinController {
 
     return response;
   }
+  @Get('my-joined-contest/:userId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('User joined contest fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Logged in user will use this endpoint to get all the contest he has joined but not yet started.',
+    description:
+      'This is the endpoint that user is going to use to get all solve and win contest he has joined but not yet started.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User joined contest fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Bad request. Unable to fetch user's joined contest.",
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllContestParticipationsYetToStart(
+    @GetCurrentUser() user: JwtUser,
+    @Param('userId') userId: string,
+    @Query() dto: QueryWithPaginationDto,
+  ) {
+    const response =
+      await this.solveAndWinService.getAllContestParticipationsYetToStart(
+        user,
+        userId,
+        dto,
+      );
+
+    return response;
+  }
   @Get('get-all-contest-participations')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.ADMIN)

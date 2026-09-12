@@ -184,9 +184,6 @@ export class SolveAndWinService {
     const userPracticeWallet =
       await this.practiceWalletService.getOrCreateUserPracticeWallet(user);
 
-    console.log('userPracticeWallet.points:', userPracticeWallet.points);
-    console.log('contest.entryPoints:', contest.entryPoints);
-
     if (userPracticeWallet.points < contest.entryPoints) {
       throw new BadRequestException({
         message:
@@ -243,6 +240,20 @@ export class SolveAndWinService {
     } finally {
       session.endSession();
     }
+  }
+
+  async getAllMyContestParticipations(
+    user: JwtUser,
+    dto: QueryWithPaginationDto,
+  ) {
+    const userId = new Types.ObjectId(user.sub.toString());
+
+    const response = await this.participationRepo.getAllMyContestParticipations(
+      userId,
+      dto,
+    );
+
+    return response;
   }
 
   async findSolveAndWinByStatus(status: SolveAndWinContestStatus) {
@@ -732,6 +743,26 @@ export class SolveAndWinService {
     user: JwtUser,
     queryDto: QueryWithPaginationDto,
   ) {
+    const response = await this.participationRepo.getAllMyContestParticipations(
+      new Types.ObjectId(user.sub.toString()),
+      queryDto,
+    );
+
+    return response;
+  }
+  async getAllContestParticipationsYetToStart(
+    user: JwtUser,
+    userId: string,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    if (userId !== user.sub.toString()) {
+      throw new ConflictException({
+        message: 'You can only view the contest that you have joined.',
+        success: false,
+        status: 409,
+      });
+    }
+
     const response = await this.participationRepo.getAllMyContestParticipations(
       new Types.ObjectId(user.sub.toString()),
       queryDto,
