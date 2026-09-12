@@ -46,13 +46,14 @@ export class SolveAndWinParticipationRepository {
   //   userId: Types.ObjectId,
   //   queryDto: QueryWithPaginationDto,
   // ) {
-  //   const { page = 1, limit = 10 } = queryDto;
+  //   const { page = 1, limit = 10, searchParams } = queryDto;
   //   const skip = (page - 1) * limit;
   //   const now = new Date();
 
+  //   console.log('queryDto:', queryDto);
+
   //   const filter = {
   //     userId,
-  //     $or: [{ subjects: { $size: 0 } }, { 'subjects.startedAt': null }],
   //   };
 
   //   const [data, total] = await Promise.all([
@@ -89,6 +90,12 @@ export class SolveAndWinParticipationRepository {
   //   };
 
   //   console.log('filtered:', filtered);
+  //   console.log('data:', data);
+  //   console.log(
+  //     'activeParticipationsYetToStart:',
+  //     activeParticipationsYetToStart,
+  //   );
+  //   console.log('total:', total);
 
   //   return res;
   // }
@@ -162,41 +169,63 @@ export class SolveAndWinParticipationRepository {
     const skip = (page - 1) * limit;
     const now = new Date();
 
+    // const pipeline: any[] = [
+    //   // 1. Match unstarted participations for the user
+    //   {
+    //     $match: {
+    //       userId,
+    //     },
+    //   },
+    //   // 2. Lookup contest details
+    //   {
+    //     $lookup: {
+    //       from: 'solveandwincontests', // Double-check exact collection name in your MongoDB GUI (Compass/Atlas)
+    //       localField: 'contestId',
+    //       foreignField: '_id',
+    //       as: 'contest',
+    //     },
+    //   },
+    //   // 3. Unwind joined contest
+    //   { $unwind: '$contest' },
+    //   // 4. Ensure contest start date is strictly in the future
+    //   {
+    //     $match: {
+    //       'contest.startDate': { $gt: now },
+    //     },
+    //   },
+    //   // 5. Project ONLY required keys
+    //   {
+    //     $project: {
+    //       _id: 1,
+    //       contestId: 1,
+    //     },
+    //   },
+    // ];
+
     const pipeline: any[] = [
-      // 1. Match ONLY unstarted participations for the user
       {
         $match: {
           userId,
-          $and: [
-            { status: { $ne: 'COMPLETED' } }, // Exclude finished ones
-            {
-              $or: [
-                { subjects: { $size: 0 } },
-                { 'subjects.startedAt': { $exists: false } },
-                { 'subjects.startedAt': null },
-              ],
-            },
-          ],
         },
       },
-      // 2. Lookup contest details (verify collection name in MongoDB)
       {
         $lookup: {
-          from: 'solveandwincontests', // Check your db collection name (e.g., 'solve_and_win_contests')
+          from: 'solveandwincontests',
           localField: 'contestId',
           foreignField: '_id',
           as: 'contest',
         },
       },
-      // 3. Keep document only if contest lookup exists
-      { $unwind: '$contest' },
-      // 4. Ensure contest start date is strictly in the future
+      {
+        $unwind: '$contest',
+      },
       {
         $match: {
-          'contest.startDate': { $gt: now },
+          'contest.startDate': {
+            $gt: now,
+          },
         },
       },
-      // 5. Project ONLY _id and contestId BEFORE pagination
       {
         $project: {
           _id: 1,
@@ -204,7 +233,6 @@ export class SolveAndWinParticipationRepository {
         },
       },
     ];
-
     const result = await this.participationModel.aggregate([
       ...pipeline,
       {
@@ -215,10 +243,39 @@ export class SolveAndWinParticipationRepository {
       },
     ]);
 
+    // const result = await this.participationModel.aggregate([
+    //   {
+    //     $match: {
+    //       userId,
+    //     },
+    //   },
+    //   {
+    //     $lookup: {
+    //       from: 'solveandwincontests',
+    //       localField: 'contestId',
+    //       foreignField: '_id',
+    //       as: 'contest',
+    //     },
+    //   },
+    //   {
+    //     $unwind: '$contest',
+    //   },
+    //   {
+    //     $project: {
+    //       _id: 1,
+    //       contestId: 1,
+    //       'contest._id': 1,
+    //       'contest.startDate': 1,
+    //     },
+    //   },
+    // ]);
+
+    console.log('result:', result);
     const total = result[0]?.totalCount[0]?.count || 0;
     const contestParticipationObj = result[0]?.data || [];
 
     console.log('contestParticipationObj:', contestParticipationObj);
+    console.log('total:', total);
 
     return {
       totalCount: total,

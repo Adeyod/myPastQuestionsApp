@@ -800,10 +800,11 @@ export class SolveAndWinService {
       });
     }
 
-    const response = await this.participationRepo.getAllMyContestParticipations(
-      new Types.ObjectId(user.sub.toString()),
-      queryDto,
-    );
+    const response =
+      await this.participationRepo.getAllContestParticipationsYetToStart(
+        new Types.ObjectId(user.sub.toString()),
+        queryDto,
+      );
 
     return response;
   }
