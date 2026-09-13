@@ -93,6 +93,87 @@ export class SolveAndWinContestRepository {
 
     return response;
   }
+  async findUpcomingContests(queryDto: QueryWithPaginationDto): Promise<{
+    totalCount: number;
+    totalPages: number;
+    solveAndWinContestObj: SolveAndWinContestDocument[];
+  }> {
+    const { page, limit, searchParams } = queryDto;
+    const now = new Date();
+
+    await this.contestModel.updateMany(
+      {
+        status: SolveAndWinContestStatus.UPCOMING,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+      },
+      { $set: { status: SolveAndWinContestStatus.ONGOING } },
+    );
+
+    await this.contestModel.updateMany(
+      {
+        status: {
+          $in: [
+            SolveAndWinContestStatus.UPCOMING,
+            SolveAndWinContestStatus.ONGOING,
+          ],
+        },
+        endDate: { $lt: now },
+      },
+      {
+        $set: { status: SolveAndWinContestStatus.COMPLETED },
+      },
+    );
+
+    const filter: any = {
+      status: SolveAndWinContestStatus.UPCOMING,
+      startDate: { $gt: now },
+    };
+
+    if (searchParams) {
+      const regex = new RegExp(searchParams, 'i');
+
+      filter.title = { $regex: regex };
+    }
+
+    const count = await this.contestModel.countDocuments(filter);
+
+    if (count === 0) {
+      throw new NotFoundException({
+        message: 'No upcoming contests found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const pages = Math.ceil(count / limit);
+
+    if (page > pages) {
+      throw new NotFoundException({
+        message: 'Page not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const contests = await this.contestModel
+      .find(filter)
+      .populate('subjects.subjectId', 'name')
+      .sort({ startDate: 1, createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .exec();
+
+    const response = {
+      totalCount: count,
+      totalPages: pages,
+      solveAndWinContestObj: contests,
+    };
+
+    return response;
+  }
 
   async findActiveContests(): Promise<SolveAndWinContestDocument[]> {
     return await this.contestModel

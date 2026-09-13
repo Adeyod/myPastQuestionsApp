@@ -4,12 +4,9 @@ import { HydratedDocument, Types } from 'mongoose';
 export type SolveAndWinContestDocument = HydratedDocument<SolveAndWinContest>;
 
 export enum SolveAndWinContestStatus {
-  DRAFT = 'DRAFT',
   UPCOMING = 'UPCOMING',
-  PUBLISHED = 'PUBLISHED',
-  ACTIVE = 'ACTIVE',
+  ONGOING = 'ONGOING',
   COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED',
 }
 
 @Schema({ _id: false })
@@ -128,7 +125,7 @@ export class SolveAndWinContest {
   @Prop({
     type: String,
     enum: SolveAndWinContestStatus,
-    default: SolveAndWinContestStatus.DRAFT,
+    default: SolveAndWinContestStatus.UPCOMING,
     index: true,
   })
   status!: SolveAndWinContestStatus;

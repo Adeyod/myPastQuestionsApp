@@ -131,6 +131,11 @@ export class SolveAndWinService {
     return response;
   }
 
+  async findUpcomingContests(dto: QueryWithPaginationDto) {
+    const response = await this.contestRepo.findUpcomingContests(dto);
+
+    return response;
+  }
   async findActiveContests() {
     const response = await this.contestRepo.findActiveContests();
 
@@ -286,7 +291,7 @@ export class SolveAndWinService {
       });
     }
 
-    this.ensureDraft(contest);
+    this.ensureUpcoming(contest);
 
     const updateData: Partial<SolveAndWinContest> = {};
 
@@ -470,9 +475,9 @@ export class SolveAndWinService {
       });
     }
 
-    if (contest.status !== SolveAndWinContestStatus.DRAFT) {
+    if (contest.status !== SolveAndWinContestStatus.UPCOMING) {
       throw new BadRequestException({
-        message: 'Only a draft contest can be activated.',
+        message: 'Only a upcoming contest can be activated for users to start.',
         success: false,
         status: 400,
       });
@@ -486,31 +491,22 @@ export class SolveAndWinService {
       });
     }
 
-    // for (const subject of contest.subjects) {
-    //   if (!subject.questions?.length) {
-    //     throw new BadRequestException({
-    //       message:
-    //         'Every contest subject must have at least one question before activation.',
-    //       success: false,
-    //       status: 400,
-    //     });
-    //   }
-    // }
-
     const now = new Date();
 
-    let status: SolveAndWinContestStatus;
-
     if (contest.startDate > now) {
-      status = SolveAndWinContestStatus.UPCOMING;
-    } else if (contest.startDate <= now && contest.endDate > now) {
-      status = SolveAndWinContestStatus.ACTIVE;
-    } else {
       throw new BadRequestException({
-        message: 'The contest end date has already passed.',
+        message: `Cannot activate contest before its start date (${contest.startDate.toISOString()}).`,
         success: false,
         status: 400,
       });
+    }
+
+    let status: SolveAndWinContestStatus;
+
+    if (now > contest.endDate) {
+      status = SolveAndWinContestStatus.COMPLETED;
+    } else {
+      status = SolveAndWinContestStatus.ONGOING;
     }
 
     const response = await this.contestRepo.updateSolveAndWinById(id, {
@@ -566,87 +562,79 @@ export class SolveAndWinService {
     return response;
   }
 
-  async cancelContest(contestId: string) {
-    this.validateObjectId(contestId);
+  // async cancelContest(contestId: string) {
+  //   this.validateObjectId(contestId);
 
-    const id = new Types.ObjectId(contestId);
+  //   const id = new Types.ObjectId(contestId);
 
-    const contest = await this.contestRepo.findSolveAndWinContestById(id);
+  //   const contest = await this.contestRepo.findSolveAndWinContestById(id);
 
-    if (!contest) {
-      throw new NotFoundException({
-        message: 'Solve and Win contest not found.',
-        success: false,
-        status: 404,
-      });
-    }
+  //   if (!contest) {
+  //     throw new NotFoundException({
+  //       message: 'Solve and Win contest not found.',
+  //       success: false,
+  //       status: 404,
+  //     });
+  //   }
 
-    if (contest.status === SolveAndWinContestStatus.COMPLETED) {
-      throw new BadRequestException({
-        message: 'A completed contest cannot be cancelled.',
-        success: false,
-        status: 400,
-      });
-    }
+  //   if (contest.status === SolveAndWinContestStatus.COMPLETED) {
+  //     throw new BadRequestException({
+  //       message: 'A completed contest cannot be cancelled.',
+  //       success: false,
+  //       status: 400,
+  //     });
+  //   }
 
-    if (contest.status === SolveAndWinContestStatus.CANCELLED) {
-      throw new BadRequestException({
-        message: 'Contest is already cancelled.',
-        success: false,
-        status: 400,
-      });
-    }
+  //   const response = await this.contestRepo.updateSolveAndWinById(id, {
+  //     status: SolveAndWinContestStatus.CANCELLED,
+  //   });
 
-    const response = await this.contestRepo.updateSolveAndWinById(id, {
-      status: SolveAndWinContestStatus.CANCELLED,
-    });
+  //   if (!response) {
+  //     throw new BadRequestException({
+  //       message: 'Unable to cancel contest.',
+  //       success: false,
+  //       status: 400,
+  //     });
+  //   }
 
-    if (!response) {
-      throw new BadRequestException({
-        message: 'Unable to cancel contest.',
-        success: false,
-        status: 400,
-      });
-    }
+  //   return response;
+  // }
 
-    return response;
-  }
+  // async deleteContest(contestId: string) {
+  //   this.validateObjectId(contestId);
 
-  async deleteContest(contestId: string) {
-    this.validateObjectId(contestId);
+  //   const id = new Types.ObjectId(contestId);
 
-    const id = new Types.ObjectId(contestId);
+  //   const contest = await this.contestRepo.findSolveAndWinContestById(id);
 
-    const contest = await this.contestRepo.findSolveAndWinContestById(id);
+  //   if (!contest) {
+  //     throw new NotFoundException({
+  //       message: 'Solve and Win contest not found.',
+  //       success: false,
+  //       status: 404,
+  //     });
+  //   }
 
-    if (!contest) {
-      throw new NotFoundException({
-        message: 'Solve and Win contest not found.',
-        success: false,
-        status: 404,
-      });
-    }
+  //   if (contest.status !== SolveAndWinContestStatus.DRAFT) {
+  //     throw new BadRequestException({
+  //       message: 'Only draft contests can be permanently deleted.',
+  //       success: false,
+  //       status: 400,
+  //     });
+  //   }
 
-    if (contest.status !== SolveAndWinContestStatus.DRAFT) {
-      throw new BadRequestException({
-        message: 'Only draft contests can be permanently deleted.',
-        success: false,
-        status: 400,
-      });
-    }
+  //   const response = await this.contestRepo.deleteContest(id);
 
-    const response = await this.contestRepo.deleteContest(id);
+  //   if (!response) {
+  //     throw new BadRequestException({
+  //       message: 'Unable to delete contest.',
+  //       success: false,
+  //       status: 400,
+  //     });
+  //   }
 
-    if (!response) {
-      throw new BadRequestException({
-        message: 'Unable to delete contest.',
-        success: false,
-        status: 400,
-      });
-    }
-
-    return response;
-  }
+  //   return response;
+  // }
 
   async addSubjectsToContest(contestId: string, dto: AddSubjectsToContestDto) {
     this.validateObjectId(contestId);
@@ -664,7 +652,7 @@ export class SolveAndWinService {
       });
     }
 
-    this.ensureDraft(contest);
+    this.ensureUpcoming(contest);
 
     // Convert IDs
     const subjectIds = dto.subjectIds.map(
@@ -727,7 +715,7 @@ export class SolveAndWinService {
       });
     }
 
-    this.ensureDraft(contest);
+    this.ensureUpcoming(contest);
 
     const subjectIds = dto.subjectIds.map(
       (subjectId) => new Types.ObjectId(subjectId),
@@ -1634,11 +1622,11 @@ export class SolveAndWinService {
     }
   }
 
-  private ensureDraft(contest: SolveAndWinContest): void {
-    if (contest.status !== SolveAndWinContestStatus.DRAFT) {
+  private ensureUpcoming(contest: SolveAndWinContest): void {
+    if (contest.status !== SolveAndWinContestStatus.UPCOMING) {
       throw new BadRequestException({
         message:
-          'This contest can no longer be modified because it is not in draft status.',
+          'This contest can no longer be modified because you can only modify upcoming contest.',
         success: false,
         status: 400,
       });

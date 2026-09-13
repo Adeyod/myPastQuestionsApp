@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -163,6 +162,46 @@ export class SolveAndWinController {
 
     return response;
   }
+  @Get('get-all-upcoming-contests')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Upcoming Solve and win contests fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get all upcoming solve and win contests.',
+    description:
+      'This is the endpoint that is going to be used to get all upcoming solve and win contests.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Upcoming Solve and win contests fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request. Unable to fetch upcoming solve and win contests.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async findUpcomingContests(@Query() dto: QueryWithPaginationDto) {
+    const response = await this.solveAndWinService.findUpcomingContests(dto);
+
+    return response;
+  }
 
   @Get('get-contest-with-subjects-by-id/:contestId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
@@ -295,84 +334,84 @@ export class SolveAndWinController {
     return response;
   }
 
-  @Delete('cancel-contest-by-id/:contestId')
-  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @ApiBearerAuth('JWT-auth')
-  @ApiHeader({
-    name: 'x-device-id',
-    description: 'Unique device identifier for the user session',
-    required: true,
-    example: '394ir-84736e5362-yw7qy3i38',
-  })
-  @SuccessMessage('Solve and win contest cancelled successfully.')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Cancel solve and win contest.',
-    description:
-      'This is the endpoint that is going to be used to cancel a solve and win contest.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Solve and win contest cancelled successfully.',
-    type: ApiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request. Unable to cancel solve and win contest.',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  @ApiResponse({
-    status: 429,
-    description: 'Too many requests. Rate limit exceeded',
-  })
-  async cancelContest(@Param('contestId') contestId: string) {
-    const response = await this.solveAndWinService.cancelContest(contestId);
+  // @Delete('cancel-contest-by-id/:contestId')
+  // @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  // @Roles(Role.ADMIN)
+  // @ApiBearerAuth('JWT-auth')
+  // @ApiHeader({
+  //   name: 'x-device-id',
+  //   description: 'Unique device identifier for the user session',
+  //   required: true,
+  //   example: '394ir-84736e5362-yw7qy3i38',
+  // })
+  // @SuccessMessage('Solve and win contest cancelled successfully.')
+  // @HttpCode(HttpStatus.OK)
+  // @ApiOperation({
+  //   summary: 'Cancel solve and win contest.',
+  //   description:
+  //     'This is the endpoint that is going to be used to cancel a solve and win contest.',
+  // })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Solve and win contest cancelled successfully.',
+  //   type: ApiResponseDto,
+  // })
+  // @ApiResponse({
+  //   status: 400,
+  //   description: 'Bad request. Unable to cancel solve and win contest.',
+  // })
+  // @ApiResponse({
+  //   status: 500,
+  //   description: 'Internal server error',
+  // })
+  // @ApiResponse({
+  //   status: 429,
+  //   description: 'Too many requests. Rate limit exceeded',
+  // })
+  // async cancelContest(@Param('contestId') contestId: string) {
+  //   const response = await this.solveAndWinService.cancelContest(contestId);
 
-    return response;
-  }
-  @Delete('delete-contest-by-id/:contestId')
-  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @ApiBearerAuth('JWT-auth')
-  @ApiHeader({
-    name: 'x-device-id',
-    description: 'Unique device identifier for the user session',
-    required: true,
-    example: '394ir-84736e5362-yw7qy3i38',
-  })
-  @SuccessMessage('Solve and win contest deleted successfully.')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Delete solve and win contest.',
-    description:
-      'This is the endpoint that is going to be used to delete a solve and win contest.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Solve and win contest deleted successfully.',
-    type: ApiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request. Unable to delete solve and win contest.',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  @ApiResponse({
-    status: 429,
-    description: 'Too many requests. Rate limit exceeded',
-  })
-  async deleteContest(@Param('contestId') contestId: string) {
-    const response = await this.solveAndWinService.deleteContest(contestId);
+  //   return response;
+  // }
+  // @Delete('delete-contest-by-id/:contestId')
+  // @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  // @Roles(Role.ADMIN)
+  // @ApiBearerAuth('JWT-auth')
+  // @ApiHeader({
+  //   name: 'x-device-id',
+  //   description: 'Unique device identifier for the user session',
+  //   required: true,
+  //   example: '394ir-84736e5362-yw7qy3i38',
+  // })
+  // @SuccessMessage('Solve and win contest deleted successfully.')
+  // @HttpCode(HttpStatus.OK)
+  // @ApiOperation({
+  //   summary: 'Delete solve and win contest.',
+  //   description:
+  //     'This is the endpoint that is going to be used to delete a solve and win contest.',
+  // })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Solve and win contest deleted successfully.',
+  //   type: ApiResponseDto,
+  // })
+  // @ApiResponse({
+  //   status: 400,
+  //   description: 'Bad request. Unable to delete solve and win contest.',
+  // })
+  // @ApiResponse({
+  //   status: 500,
+  //   description: 'Internal server error',
+  // })
+  // @ApiResponse({
+  //   status: 429,
+  //   description: 'Too many requests. Rate limit exceeded',
+  // })
+  // async deleteContest(@Param('contestId') contestId: string) {
+  //   const response = await this.solveAndWinService.deleteContest(contestId);
 
-    return response;
-  }
+  //   return response;
+  // }
 
   @Patch('add-subjects-to-contest/:contestId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
@@ -433,7 +472,7 @@ export class SolveAndWinController {
   @SuccessMessage('Solve and win contest deleted successfully.')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get all solve and win contests.',
+    summary: 'Delete solve and win contest.',
     description:
       'This is the endpoint that is going to be used to delete solve and win contest.',
   })

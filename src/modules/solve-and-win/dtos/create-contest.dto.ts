@@ -111,8 +111,8 @@ export class CreateSolveAndWinContestDto {
   category!: string;
 
   @ApiProperty({
-    description: 'Title',
-    example: SolveAndWinContestStatus.DRAFT,
+    description: 'Status',
+    example: SolveAndWinContestStatus.UPCOMING,
   })
   @IsString()
   @IsEnum(SolveAndWinContestStatus)
