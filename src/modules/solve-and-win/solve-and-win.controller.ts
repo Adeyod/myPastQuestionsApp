@@ -162,7 +162,7 @@ export class SolveAndWinController {
 
     return response;
   }
-  @Get('get-all-upcoming-contests')
+  @Get('get-all-not-completed-contests')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.USER, Role.ADMIN)
   @ApiBearerAuth('JWT-auth')
@@ -172,22 +172,22 @@ export class SolveAndWinController {
     required: true,
     example: '394ir-84736e5362-yw7qy3i38',
   })
-  @SuccessMessage('Upcoming Solve and win contests fetched successfully.')
+  @SuccessMessage('Not completed solve and win contests fetched successfully.')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get all upcoming solve and win contests.',
+    summary: 'Get all not completed solve and win contests.',
     description:
-      'This is the endpoint that is going to be used to get all upcoming solve and win contests.',
+      'This is the endpoint that is going to be used to get all not completed solve and win contests.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Upcoming Solve and win contests fetched successfully.',
+    description: 'Not completed solve and win contests fetched successfully.',
     type: ApiResponseDto,
   })
   @ApiResponse({
     status: 400,
     description:
-      'Bad request. Unable to fetch upcoming solve and win contests.',
+      'Bad request. Unable to fetch not completed solve and win contests.',
   })
   @ApiResponse({
     status: 500,
@@ -197,8 +197,9 @@ export class SolveAndWinController {
     status: 429,
     description: 'Too many requests. Rate limit exceeded',
   })
-  async findUpcomingContests(@Query() dto: QueryWithPaginationDto) {
-    const response = await this.solveAndWinService.findUpcomingContests(dto);
+  async findNotCompletedContests(@Query() dto: QueryWithPaginationDto) {
+    const response =
+      await this.solveAndWinService.findNotCompletedContests(dto);
 
     return response;
   }

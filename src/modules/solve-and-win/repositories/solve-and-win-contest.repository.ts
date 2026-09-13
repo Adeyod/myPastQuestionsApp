@@ -93,7 +93,7 @@ export class SolveAndWinContestRepository {
 
     return response;
   }
-  async findUpcomingContests(queryDto: QueryWithPaginationDto): Promise<{
+  async findNotCompletedContests(queryDto: QueryWithPaginationDto): Promise<{
     totalCount: number;
     totalPages: number;
     solveAndWinContestObj: SolveAndWinContestDocument[];
@@ -126,8 +126,7 @@ export class SolveAndWinContestRepository {
     );
 
     const filter: any = {
-      status: SolveAndWinContestStatus.UPCOMING,
-      startDate: { $gt: now },
+      status: { $ne: SolveAndWinContestStatus.COMPLETED },
     };
 
     if (searchParams) {

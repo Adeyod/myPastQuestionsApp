@@ -131,8 +131,8 @@ export class SolveAndWinService {
     return response;
   }
 
-  async findUpcomingContests(dto: QueryWithPaginationDto) {
-    const response = await this.contestRepo.findUpcomingContests(dto);
+  async findNotCompletedContests(dto: QueryWithPaginationDto) {
+    const response = await this.contestRepo.findNotCompletedContests(dto);
 
     return response;
   }
@@ -186,6 +186,19 @@ export class SolveAndWinService {
       });
     }
 
+    const now = new Date();
+
+    if (
+      contest.status === SolveAndWinContestStatus.COMPLETED ||
+      now > contest.endDate
+    ) {
+      throw new BadRequestException({
+        message: 'This contest has ended and you can not join it again.',
+        success: false,
+        status: 400,
+      });
+    }
+
     const userPracticeWallet =
       await this.practiceWalletService.getOrCreateUserPracticeWallet(user);
 
@@ -234,6 +247,7 @@ export class SolveAndWinService {
           contest._id,
           userId,
           contest.entryPoints,
+          session,
         );
 
       await session.commitTransaction();

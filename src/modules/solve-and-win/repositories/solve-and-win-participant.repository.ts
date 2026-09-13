@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import {
   ParticipationSubject,
@@ -20,12 +20,13 @@ export class SolveAndWinParticipationRepository {
     contestId: Types.ObjectId,
     userId: Types.ObjectId,
     pointsSpent: number,
+    session: ClientSession,
   ): Promise<SolveAndWinParticipationDocument> {
     const response = await new this.participationModel({
       contestId,
       userId,
       pointsSpent,
-    }).save();
+    }).save({ session });
 
     return response;
   }
