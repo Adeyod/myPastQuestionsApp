@@ -944,7 +944,9 @@ export class SolveAndWinService {
       if (existingSubject.remainingDurationInSeconds <= 0) {
         const isEverySubjectFinished = participationDoc.subjects.every(
           (sub) =>
-            sub.submittedAt !== null || sub.remainingDurationInSeconds === 0,
+            sub.submittedAt !== null ||
+            sub.remainingDurationInSeconds === 0 ||
+            (sub.endsAt != null && now > new Date(sub.endsAt)),
         );
 
         if (isEverySubjectFinished) {
