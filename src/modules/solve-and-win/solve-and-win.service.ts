@@ -887,6 +887,11 @@ export class SolveAndWinService {
     }
 
     if (contest.endDate && now > new Date(contest.endDate)) {
+      // Change participation document status to COMPLETED here
+      await this.participationRepo.updateSolveAndWinParticipationStatusByIdAndStatus(
+        participationDoc._id,
+        SolveAndWinParticipationStatus.COMPLETED,
+      );
       throw new BadRequestException({
         message: `This contest has officially closed on ${new Date(contest.endDate).toLocaleString()}.`,
         // message: `This contest has officially closed on ${new Date(contest.endDate).toISOString()}.`,
@@ -934,13 +939,21 @@ export class SolveAndWinService {
         existingSubject.remainingDurationInSeconds =
           existingSubject.remainingDurationInSeconds ||
           existingSubject.durationInSeconds;
-
-        // existingSubject.remainingDurationInSeconds =
-        //   existingSubject.remainingDurationInSeconds ??
-        //   existingSubject.durationInSeconds;
       }
 
       if (existingSubject.remainingDurationInSeconds <= 0) {
+        const isEverySubjectFinished = participationDoc.subjects.every(
+          (sub) =>
+            sub.submittedAt !== null || sub.remainingDurationInSeconds === 0,
+        );
+
+        if (isEverySubjectFinished) {
+          await this.participationRepo.updateSolveAndWinParticipationStatusByIdAndStatus(
+            participationDoc._id,
+            SolveAndWinParticipationStatus.COMPLETED,
+          );
+        }
+
         throw new BadRequestException({
           message: `Your allocated time for this subject has expired.`,
           success: false,

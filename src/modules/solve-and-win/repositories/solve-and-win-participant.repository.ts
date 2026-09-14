@@ -43,6 +43,26 @@ export class SolveAndWinParticipationRepository {
     return response;
   }
 
+  async updateSolveAndWinParticipationStatusByIdAndStatus(
+    contestId: Types.ObjectId,
+    status: SolveAndWinParticipationStatus,
+  ) {
+    const response = await this.participationModel
+      .findByIdAndUpdate(
+        contestId,
+        {
+          status,
+        },
+        {
+          returnDocument: 'after',
+          runValidators: true,
+        },
+      )
+      .exec();
+
+    return response;
+  }
+
   // async getAllContestParticipationsYetToStart(
   //   userId: Types.ObjectId,
   //   queryDto: QueryWithPaginationDto,
