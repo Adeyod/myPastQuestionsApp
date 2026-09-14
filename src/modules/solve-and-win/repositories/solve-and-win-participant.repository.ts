@@ -162,128 +162,68 @@ export class SolveAndWinParticipationRepository {
     return response;
   }
 
-  async getAllContestParticipationsThatHasNotEnded(
-    userId: Types.ObjectId,
-    queryDto: QueryWithPaginationDto,
-  ) {
-    const { page = 1, limit = 10 } = queryDto;
-    const skip = (page - 1) * limit;
-    const now = new Date();
+  // async getAllContestParticipationsThatHasNotEnded(
+  //   userId: Types.ObjectId,
+  //   queryDto: QueryWithPaginationDto,
+  // ) {
+  //   const { page = 1, limit = 10 } = queryDto;
+  //   const skip = (page - 1) * limit;
+  //   const now = new Date();
 
-    // const pipeline: any[] = [
-    //   // 1. Match unstarted participations for the user
-    //   {
-    //     $match: {
-    //       userId,
-    //     },
-    //   },
-    //   // 2. Lookup contest details
-    //   {
-    //     $lookup: {
-    //       from: 'solveandwincontests', // Double-check exact collection name in your MongoDB GUI (Compass/Atlas)
-    //       localField: 'contestId',
-    //       foreignField: '_id',
-    //       as: 'contest',
-    //     },
-    //   },
-    //   // 3. Unwind joined contest
-    //   { $unwind: '$contest' },
-    //   // 4. Ensure contest start date is strictly in the future
-    //   {
-    //     $match: {
-    //       'contest.startDate': { $gt: now },
-    //     },
-    //   },
-    //   // 5. Project ONLY required keys
-    //   {
-    //     $project: {
-    //       _id: 1,
-    //       contestId: 1,
-    //     },
-    //   },
-    // ];
+  //   const pipeline: any[] = [
+  //     {
+  //       $match: {
+  //         userId,
+  //       },
+  //     },
+  //     {
+  //       $lookup: {
+  //         from: 'solveandwincontests',
+  //         localField: 'contestId',
+  //         foreignField: '_id',
+  //         as: 'contest',
+  //       },
+  //     },
+  //     {
+  //       $unwind: '$contest',
+  //     },
+  //     {
+  //       $match: {
+  //         'contest.startDate': {
+  //           $gt: now,
+  //         },
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         _id: 1,
+  //         contestId: 1,
+  //       },
+  //     },
+  //   ];
+  //   const result = await this.participationModel.aggregate([
+  //     ...pipeline,
+  //     {
+  //       $facet: {
+  //         data: [{ $skip: skip }, { $limit: limit }],
+  //         totalCount: [{ $count: 'count' }],
+  //       },
+  //     },
+  //   ]);
 
-    const pipeline: any[] = [
-      {
-        $match: {
-          userId,
-        },
-      },
-      {
-        $lookup: {
-          from: 'solveandwincontests',
-          localField: 'contestId',
-          foreignField: '_id',
-          as: 'contest',
-        },
-      },
-      {
-        $unwind: '$contest',
-      },
-      {
-        $match: {
-          'contest.startDate': {
-            $gt: now,
-          },
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          contestId: 1,
-        },
-      },
-    ];
-    const result = await this.participationModel.aggregate([
-      ...pipeline,
-      {
-        $facet: {
-          data: [{ $skip: skip }, { $limit: limit }],
-          totalCount: [{ $count: 'count' }],
-        },
-      },
-    ]);
+  //   console.log('result:', result);
+  //   const total = result[0]?.totalCount[0]?.count || 0;
+  //   const contestParticipationObj = result[0]?.data || [];
 
-    // const result = await this.participationModel.aggregate([
-    //   {
-    //     $match: {
-    //       userId,
-    //     },
-    //   },
-    //   {
-    //     $lookup: {
-    //       from: 'solveandwincontests',
-    //       localField: 'contestId',
-    //       foreignField: '_id',
-    //       as: 'contest',
-    //     },
-    //   },
-    //   {
-    //     $unwind: '$contest',
-    //   },
-    //   {
-    //     $project: {
-    //       _id: 1,
-    //       contestId: 1,
-    //       'contest._id': 1,
-    //       'contest.startDate': 1,
-    //     },
-    //   },
-    // ]);
+  //   console.log('contestParticipationObj:', contestParticipationObj);
+  //   console.log('total:', total);
 
-    console.log('result:', result);
-    const total = result[0]?.totalCount[0]?.count || 0;
-    const contestParticipationObj = result[0]?.data || [];
-
-    console.log('contestParticipationObj:', contestParticipationObj);
-    console.log('total:', total);
-
-    return {
-      totalCount: total,
-      totalPages: Math.ceil(total / limit),
-      contestParticipationObj,
-    };
-  }
+  //   return {
+  //     totalCount: total,
+  //     totalPages: Math.ceil(total / limit),
+  //     contestParticipationObj,
+  //   };
+  // }
   async getAllContestParticipations(queryDto: QueryWithPaginationDto): Promise<{
     totalCount: number;
     totalPages: number;
@@ -340,6 +280,52 @@ export class SolveAndWinParticipationRepository {
     };
 
     return response;
+  }
+
+  async getAllContestParticipationsThatHasNotEnded(
+    userId: Types.ObjectId,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    const { page = 1, limit = 10 } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const pipeline: any[] = [
+      { $match: { userId } },
+
+      {
+        $lookup: {
+          from: 'solveandwincontests',
+          localField: 'contestId',
+          foreignField: '_id',
+          as: 'contest',
+        },
+      },
+
+      { $unwind: '$contest' },
+
+      { $match: { 'contest.status': { $ne: 'COMPLETED' } } },
+    ];
+
+    const countPipeline = [...pipeline, { $count: 'total' }];
+    const countResult = await this.participationModel
+      .aggregate(countPipeline)
+      .exec();
+    const total = countResult[0]?.total || 0;
+
+    const dataPipeline = [
+      ...pipeline,
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+    ];
+
+    const data = await this.participationModel.aggregate(dataPipeline).exec();
+
+    return {
+      contestParticipationObj: data,
+      totalCount: total,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async updateParticipationSubjects(
