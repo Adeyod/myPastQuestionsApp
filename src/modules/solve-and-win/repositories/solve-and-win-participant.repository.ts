@@ -162,7 +162,7 @@ export class SolveAndWinParticipationRepository {
     return response;
   }
 
-  async getAllContestParticipationsYetToStart(
+  async getAllContestParticipationsThatHasNotEnded(
     userId: Types.ObjectId,
     queryDto: QueryWithPaginationDto,
   ) {
@@ -435,5 +435,21 @@ export class SolveAndWinParticipationRepository {
         { new: true },
       )
       .exec();
+  }
+
+  async findUserJoinedContestIds(
+    userId: Types.ObjectId,
+    contestIds: Types.ObjectId[],
+  ): Promise<Types.ObjectId[]> {
+    const participations = await this.participationModel
+      .find({
+        userId,
+        contestId: { $in: contestIds },
+      })
+      .select('contestId')
+      .lean()
+      .exec();
+
+    return participations.map((p) => p.contestId);
   }
 }

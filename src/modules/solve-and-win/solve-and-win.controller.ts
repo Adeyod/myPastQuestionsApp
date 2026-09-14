@@ -164,7 +164,7 @@ export class SolveAndWinController {
   }
   @Get('get-all-not-completed-contests')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
-  @Roles(Role.USER, Role.ADMIN)
+  @Roles(Role.USER)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
     name: 'x-device-id',
@@ -197,9 +197,14 @@ export class SolveAndWinController {
     status: 429,
     description: 'Too many requests. Rate limit exceeded',
   })
-  async findNotCompletedContests(@Query() dto: QueryWithPaginationDto) {
-    const response =
-      await this.solveAndWinService.findNotCompletedContests(dto);
+  async findNotCompletedContests(
+    @GetCurrentUser() user: JwtUser,
+    @Query() dto: QueryWithPaginationDto,
+  ) {
+    const response = await this.solveAndWinService.findNotCompletedContests(
+      user,
+      dto,
+    );
 
     return response;
   }
@@ -844,13 +849,13 @@ export class SolveAndWinController {
     status: 429,
     description: 'Too many requests. Rate limit exceeded',
   })
-  async getAllContestParticipationsYetToStart(
+  async getAllContestParticipationsThatHasNotEnded(
     @GetCurrentUser() user: JwtUser,
     @Param('userId') userId: string,
     @Query() dto: QueryWithPaginationDto,
   ) {
     const response =
-      await this.solveAndWinService.getAllContestParticipationsYetToStart(
+      await this.solveAndWinService.getAllContestParticipationsThatHasNotEnded(
         user,
         userId,
         dto,

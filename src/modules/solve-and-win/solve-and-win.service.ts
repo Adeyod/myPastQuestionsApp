@@ -131,10 +131,40 @@ export class SolveAndWinService {
     return response;
   }
 
-  async findNotCompletedContests(dto: QueryWithPaginationDto) {
+  async findNotCompletedContests(user: JwtUser, dto: QueryWithPaginationDto) {
+    const userId = new Types.ObjectId(user.sub.toString());
+
     const response = await this.contestRepo.findNotCompletedContests(dto);
 
-    return response;
+    if (
+      !response.solveAndWinContestObj ||
+      response.solveAndWinContestObj.length === 0
+    ) {
+      return response;
+    }
+
+    const contestIds = response.solveAndWinContestObj.map(
+      (contest) => contest._id,
+    );
+
+    const joinedContestIds =
+      await this.participationRepo.findUserJoinedContestIds(userId, contestIds);
+
+    const joinedSet = new Set(joinedContestIds.map((id) => id.toString()));
+
+    // 4. Filter out contests that exist in the user's joined set
+    const filteredContests = response.solveAndWinContestObj.filter(
+      (contest) => !joinedSet.has(contest._id.toString()),
+    );
+
+    const totalCount = response.totalCount - joinedContestIds.length;
+    const totalPages = Math.ceil(totalCount / response.limit);
+
+    return {
+      solveAndWinContestObj: filteredContests,
+      totalCount,
+      totalPages,
+    };
   }
   async findActiveContests() {
     const response = await this.contestRepo.findActiveContests();
@@ -789,7 +819,7 @@ export class SolveAndWinService {
 
     return response;
   }
-  async getAllContestParticipationsYetToStart(
+  async getAllContestParticipationsThatHasNotEnded(
     user: JwtUser,
     userId: string,
     queryDto: QueryWithPaginationDto,
@@ -803,7 +833,7 @@ export class SolveAndWinService {
     }
 
     const response =
-      await this.participationRepo.getAllContestParticipationsYetToStart(
+      await this.participationRepo.getAllContestParticipationsThatHasNotEnded(
         new Types.ObjectId(user.sub.toString()),
         queryDto,
       );

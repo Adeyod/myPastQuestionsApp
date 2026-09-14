@@ -97,6 +97,7 @@ export class SolveAndWinContestRepository {
     totalCount: number;
     totalPages: number;
     solveAndWinContestObj: SolveAndWinContestDocument[];
+    limit: number;
   }> {
     const { page, limit, searchParams } = queryDto;
     const now = new Date();
@@ -169,6 +170,7 @@ export class SolveAndWinContestRepository {
       totalCount: count,
       totalPages: pages,
       solveAndWinContestObj: contests,
+      limit,
     };
 
     return response;
