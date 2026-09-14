@@ -963,10 +963,6 @@ export class SolveAndWinService {
         });
       }
 
-      // const calculatedSessionEndBefore = new Date(
-      //   now.getDate() + existingSubject.remainingDurationInSeconds * 1000,
-      // );
-
       const calculatedSessionEnd = new Date(
         now.getTime() + existingSubject.remainingDurationInSeconds * 1000,
       );

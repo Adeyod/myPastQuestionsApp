@@ -67,7 +67,7 @@ export class QuizController {
 
   @Get('get-all-quizzes')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.USER)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
     name: 'x-device-id',
