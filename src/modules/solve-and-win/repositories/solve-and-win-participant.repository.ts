@@ -290,7 +290,12 @@ export class SolveAndWinParticipationRepository {
     const skip = (page - 1) * limit;
 
     const pipeline: any[] = [
-      { $match: { userId } },
+      {
+        $match: {
+          userId,
+          status: { $ne: SolveAndWinParticipationStatus.COMPLETED },
+        },
+      },
 
       {
         $lookup: {

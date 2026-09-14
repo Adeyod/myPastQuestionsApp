@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Query,
   UseGuards,
@@ -139,9 +140,10 @@ export class QuizController {
   })
   async findAllMyQuizzes(
     @Query() dto: QueryWithPaginationDto,
+    @Param('userId') userId: string,
     @GetCurrentUser() user: JwtUser,
   ) {
-    const response = await this.quizService.findAllMyQuizzes(user, dto);
+    const response = await this.quizService.findAllMyQuizzes(user, userId, dto);
 
     return response;
   }

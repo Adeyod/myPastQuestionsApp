@@ -17,51 +17,6 @@ export enum SolveAndWinParticipationStatus {
   DISQUALIFIED = 'DISQUALIFIED',
 }
 
-// @Schema({ _id: false })
-// export class ParticipationQuestion {
-//   @Prop({
-//     type: Types.ObjectId,
-//     ref: 'SolveAndWinQuestion',
-//     required: true,
-//   })
-//   questionId!: Types.ObjectId;
-
-//   @Prop({
-//     type: Types.ObjectId,
-//     ref: 'Subject',
-//     required: true,
-//   })
-//   subjectId!: Types.ObjectId;
-
-//   @Prop({
-//     type: String,
-//     default: null,
-//   })
-//   selectedAnswer?: string | null;
-
-//   @Prop({
-//     type: Boolean,
-//     default: null,
-//   })
-//   isCorrect?: boolean | null;
-
-//   @Prop({
-//     type: [Types.ObjectId],
-//     default: [],
-//   })
-//   correctAnswers!: Types.ObjectId[];
-
-//   @Prop({
-//     default: 0,
-//   })
-//   marksAwarded!: number;
-
-//   @Prop({
-//     default: 1,
-//   })
-//   maxMarks!: number;
-// }
-
 @Schema({ _id: false })
 export class ParticipationQuestion {
   @Prop({

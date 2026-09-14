@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { JwtUser } from '../../common/types/jwt-user.type';
@@ -119,10 +123,23 @@ export class QuizService {
 
     return response;
   }
-  async findAllMyQuizzes(user: JwtUser, queryDto: QueryWithPaginationDto) {
-    const userId = new Types.ObjectId(user.sub.toString());
+  async findAllMyQuizzes(
+    user: JwtUser,
+    userId: string,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    if (userId !== user.sub.toString()) {
+      throw new ConflictException({
+        message:
+          'You can only view the quizzes that you have joined and not that of another user.',
+        success: false,
+        status: 409,
+      });
+    }
 
-    const response = await this.quizRepo.findAllMyQuizzes(userId, queryDto);
+    const id = new Types.ObjectId(user.sub.toString());
+
+    const response = await this.quizRepo.findAllMyQuizzes(id, queryDto);
 
     return response;
   }

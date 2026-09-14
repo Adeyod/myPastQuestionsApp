@@ -28,6 +28,7 @@ import {
 import {
   ParticipationQuestion,
   ParticipationSubject,
+  SolveAndWinParticipationDocument,
   SolveAndWinParticipationStatus,
 } from './schemas/solve-and-win-participantion.schema';
 import { SOLVE_AND_WIN_DIFFICULTY_MARKS } from './schemas/solve-and-win-question.schema';
@@ -1739,5 +1740,23 @@ export class SolveAndWinService {
         }),
       })),
     };
+  }
+
+  private evaluateAndUpdateParticipationStatus(
+    participationDoc: SolveAndWinParticipationDocument,
+    now: Date = new Date(),
+  ): void {
+    const hasCompletedAllSubjects =
+      participationDoc.subjects.length > 0 &&
+      participationDoc.subjects.every(
+        (subject) => subject.submittedAt !== null,
+      );
+
+    if (hasCompletedAllSubjects) {
+      participationDoc.status = SolveAndWinParticipationStatus.COMPLETED;
+      participationDoc.submittedAt = now;
+    } else {
+      participationDoc.status = SolveAndWinParticipationStatus.IN_PROGRESS;
+    }
   }
 }
