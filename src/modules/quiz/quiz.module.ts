@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from '../auth/auth.module';
 import { SolveAndWinModule } from '../solve-and-win/solve-and-win.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import { QuizController } from './quiz.controller';
+import { QuizGateway } from './quiz.gateway';
 import { QuizService } from './quiz.service';
 import { QuizLeaderboardRepository } from './repositories/quiz-leaderboard.repository';
 import { QuizParticipantRepository } from './repositories/quiz-participation.repository';
@@ -29,6 +31,7 @@ import { Quiz, QuizSchema } from './schemas/quiz.schema';
     ]),
     UserSessionModule,
     SolveAndWinModule,
+    AuthModule,
   ],
   controllers: [QuizController],
   providers: [
@@ -37,6 +40,7 @@ import { Quiz, QuizSchema } from './schemas/quiz.schema';
     QuizLeaderboardRepository,
     QuizParticipantRepository,
     QuizVoteRepository,
+    QuizGateway,
   ],
 })
 export class QuizModule {}

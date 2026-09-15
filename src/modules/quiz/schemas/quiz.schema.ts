@@ -82,7 +82,11 @@ export class Quiz {
   @Prop({ required: true })
   number_of_rounds!: number;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'User',
+    default: [],
+  })
   joined_users!: Types.ObjectId[];
 
   @Prop({ required: true, type: [RoundInformation] })

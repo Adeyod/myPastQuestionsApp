@@ -26,11 +26,16 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import type { JwtUser } from '../../common/types/jwt-user.type';
 import { Role } from '../users/schemas/user.schema';
 import { CreateQuizDto } from './dtos/create-quiz.dto';
+import { GetRoundQuestionDto } from './dtos/get-round-question.dto';
+import { QuizGateway } from './quiz.gateway';
 import { QuizService } from './quiz.service';
 
 @Controller('quiz')
 export class QuizController {
-  constructor(private readonly quizService: QuizService) {}
+  constructor(
+    private readonly quizService: QuizService,
+    private readonly quizGateway: QuizGateway,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
@@ -146,6 +151,105 @@ export class QuizController {
     const response = await this.quizService.findAllMyQuizzes(user, userId, dto);
 
     return response;
+  }
+  @Get('get-round-questions/:quizId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Quiz round questions fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get round quiz questions.',
+    description:
+      'This is the endpoint that is going to be used to get quiz round questions.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Quiz round questions fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch quiz round questions.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getRoundQuestions(
+    @Param('quizId') quizId: string,
+    @Body() dto: GetRoundQuestionDto,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response = await this.quizService.getRoundQuestions(
+      quizId,
+      dto.roundNumber,
+    );
+
+    return response;
+  }
+
+  @Post('create-room')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Quiz room created successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Create quiz room.',
+    description:
+      'This is the endpoint that is going to be used to create quiz room.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Quiz room created successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to create quiz room.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async createMeetingRoom(
+    @Body('quizId') quizId: string,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const result = await this.quizService.createMeetingRoom(quizId, user);
+
+    // 2. Emit WS notification so frontend participants listening on /quiz namespace get room code
+    this.quizGateway.server.emit('room_ready_to_join', {
+      quizId,
+      roomId: result.roomId,
+    });
+
+    return {
+      success: true,
+      message: 'Room created successfully.',
+      data: result,
+    };
   }
 
   @Post('join-quiz-by-id/:quizId')

@@ -10,6 +10,7 @@ import { UsersModule } from '../users/users.module';
 import { WalletsModule } from '../wallets/wallets.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { WsJwtGuard } from './guards/ws-jwt.guard';
 import {
   BlacklistedToken,
   BlacklistedTokenSchema,
@@ -39,6 +40,7 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     WalletsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RefreshTokenStrategy],
+  providers: [AuthService, JwtStrategy, RefreshTokenStrategy, WsJwtGuard],
+  exports: [WsJwtGuard, JwtModule],
 })
 export class AuthModule {}

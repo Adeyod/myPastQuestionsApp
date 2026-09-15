@@ -221,6 +221,16 @@ export class QuizService {
       });
     }
 
+    if (
+      quiz.status === QuizStatus.COMPLETED ||
+      quiz.status === QuizStatus.CANCELLED
+    ) {
+      throw new BadRequestException({
+        success: false,
+        message: `Cannot create a room for a ${quiz.status.toLowerCase()} quiz.`,
+      });
+    }
+
     const roomId = `QUIZ_ROOM_${quizId.toString()}_${Date.now()}`;
     quiz.room_id = roomId;
     quiz.status = QuizStatus.IN_PROGRESS;
