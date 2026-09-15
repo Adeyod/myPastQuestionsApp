@@ -76,8 +76,6 @@ import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
     //   useFactory: (configService: ConfigService) => {
     //     const redisUrl = configService.getOrThrow<string>('REDIS_URL');
 
-    //     console.log('redisUrl:', redisUrl);
-
     //     if (redisUrl && !redisUrl.includes('localhost')) {
     //       console.log('Redis does not include localhost');
     //       return {
