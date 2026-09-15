@@ -2,16 +2,34 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { JwtUser } from '../../common/types/jwt-user.type';
+import { SolveAndWinService } from '../solve-and-win/solve-and-win.service';
 import { CreateQuizDto } from './dtos/create-quiz.dto';
+import {
+  CastVoteDto,
+  JoinQuizDto,
+  SyncLeaderboardDto,
+} from './dtos/join-quiz.dto';
+import { QuizLeaderboardRepository } from './repositories/quiz-leaderboard.repository';
+import { QuizParticipantRepository } from './repositories/quiz-participation.repository';
+import { QuizVoteRepository } from './repositories/quiz-vote.repository';
 import { QuizRepository } from './repositories/quiz.repository';
+import { ParticipantStatus } from './schemas/quiz-participant.schema';
+import { QuizStatus } from './schemas/quiz.schema';
 
 @Injectable()
 export class QuizService {
-  constructor(private readonly quizRepo: QuizRepository) {}
+  constructor(
+    private readonly quizRepo: QuizRepository,
+    private readonly voteRepo: QuizVoteRepository,
+    private readonly questionService: SolveAndWinService,
+    private readonly participantRepo: QuizParticipantRepository,
+    private readonly leaderboardRepo: QuizLeaderboardRepository,
+  ) {}
 
   async createQuiz(dto: CreateQuizDto) {
     const startDate = new Date(dto.start_date);
@@ -142,5 +160,234 @@ export class QuizService {
     const response = await this.quizRepo.findAllMyQuizzes(id, queryDto);
 
     return response;
+  }
+
+  async joinQuiz(user: JwtUser, dto: JoinQuizDto) {
+    const quizId = new Types.ObjectId(dto.quizId);
+    const userId = new Types.ObjectId(user.sub.toString());
+
+    const quiz = await this.quizRepo.findQuizById(quizId);
+    if (!quiz) {
+      throw new NotFoundException({
+        message: 'Quiz not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (quiz.status !== QuizStatus.WAITING) {
+      throw new BadRequestException({
+        message: 'Quiz registration is closed.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const currentCount =
+      await this.participantRepo.countQuizParticipants(quizId);
+    if (currentCount >= quiz.no_of_contestants) {
+      throw new BadRequestException({
+        message: 'Quiz capacity reached.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const existingParticipant =
+      await this.participantRepo.findParticipantByQuizAndUser(quizId, userId);
+    if (existingParticipant) {
+      throw new ConflictException({
+        message: 'You have already joined this quiz.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    const participant = await this.participantRepo.createParticipant(
+      quizId,
+      userId,
+    );
+    await this.quizRepo.addJoinedUser(quizId, userId);
+
+    return participant;
+  }
+
+  // 2. Admin creates WebSockets meeting room
+  async createMeetingRoom(quizIdStr: string, adminUser: JwtUser) {
+    const quizId = new Types.ObjectId(quizIdStr);
+    const quiz = await this.quizRepo.findQuizById(quizId);
+
+    if (!quiz) {
+      throw new NotFoundException({
+        message: 'Quiz not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const roomId = `QUIZ_ROOM_${quizId.toString()}_${Date.now()}`;
+    quiz.room_id = roomId;
+    quiz.status = QuizStatus.IN_PROGRESS;
+    await this.quizRepo.save(quiz);
+
+    return { roomId, quizId };
+  }
+
+  // 3. Admin fetches Round Questions for distribution
+  async getRoundQuestions(quizIdStr: string, roundNumber: number) {
+    const quizId = new Types.ObjectId(quizIdStr);
+    const quiz = await this.quizRepo.findQuizById(quizId);
+
+    if (!quiz) {
+      throw new NotFoundException({
+        message: 'Quiz not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const roundInfo = quiz.round_information.find(
+      (r) => r.round_number === roundNumber,
+    );
+    if (!roundInfo) {
+      throw new BadRequestException({
+        message: 'Invalid round requested.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const questions =
+      await this.questionService.findQuestionsBySubjectAndDifficulty(
+        quiz.subject,
+        roundInfo.difficultyBreakdown,
+        roundInfo.no_of_questions,
+      );
+
+    quiz.current_round = roundNumber;
+    await this.quizRepo.save(quiz);
+
+    return questions;
+  }
+
+  // 4. Save/Sync Leaderboard state & perform round removal
+  async syncLeaderboardAndPruneParticipants(dto: SyncLeaderboardDto) {
+    const quizId = new Types.ObjectId(dto.quizId);
+    const leaderboard = await this.leaderboardRepo.upsertLeaderboard(dto);
+
+    // Update participant states in batch based on leaderboard entries
+    for (const entry of dto.entries) {
+      const pUserId = new Types.ObjectId(entry.userId);
+      const participant =
+        await this.participantRepo.findParticipantByQuizAndUser(
+          quizId,
+          pUserId,
+        );
+
+      if (participant) {
+        participant.totalScore = entry.score;
+        participant.totalTimeTakenInSeconds = entry.timeTakenInSeconds;
+
+        if (entry.isEliminated) {
+          participant.status = ParticipantStatus.ELIMINATED;
+        } else if (entry.isTied) {
+          participant.status = ParticipantStatus.TIE_BREAK;
+        } else {
+          participant.status = ParticipantStatus.QUALIFIED;
+          participant.currentRound = dto.roundNumber + 1;
+        }
+
+        await this.participantRepo.saveParticipant(participant);
+      }
+    }
+
+    return leaderboard;
+  }
+
+  // 5. Tie Resolution Option 1: Process Viewer Votes
+  async castViewerVote(voterUser: JwtUser, dto: CastVoteDto) {
+    const quizId = new Types.ObjectId(dto.quizId);
+    const voterUserId = new Types.ObjectId(voterUser.sub.toString());
+    const targetUserId = new Types.ObjectId(dto.votedParticipantId);
+
+    const targetParticipant =
+      await this.participantRepo.findParticipantByQuizAndUser(
+        quizId,
+        targetUserId,
+      );
+    if (
+      !targetParticipant ||
+      targetParticipant.status !== ParticipantStatus.TIE_BREAK
+    ) {
+      throw new BadRequestException({
+        message: 'Participant is not eligible for tie-break voting.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    try {
+      return await this.voteRepo.createVote(
+        quizId,
+        dto.roundNumber,
+        voterUserId,
+        targetUserId,
+      );
+    } catch (err) {
+      throw new ConflictException({
+        message: 'You have already voted in this round tie-breaker.',
+        success: false,
+        status: 409,
+      });
+    }
+  }
+
+  async resolveVotingTieBreaker(quizIdStr: string, roundNumber: number) {
+    const quizId = new Types.ObjectId(quizIdStr);
+    const voteTally = await this.voteRepo.getTallyForRound(quizId, roundNumber);
+
+    if (!voteTally || voteTally.length === 0) {
+      throw new BadRequestException({
+        message: 'No votes recorded for this tie-breaker.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    // Top participant advances
+    const winnerId = voteTally[0]._id;
+    const winnerParticipant =
+      await this.participantRepo.findParticipantByQuizAndUser(quizId, winnerId);
+
+    if (winnerParticipant) {
+      winnerParticipant.status = ParticipantStatus.QUALIFIED;
+      winnerParticipant.currentRound = roundNumber + 1;
+      await this.participantRepo.saveParticipant(winnerParticipant);
+    }
+
+    return { winnerId, tally: voteTally };
+  }
+
+  // 6. Tie Resolution Option 2: Fastest Finger Tie-Breaker Question
+  async getTieBreakerQuestion(quizIdStr: string) {
+    const quizId = new Types.ObjectId(quizIdStr);
+    const quiz = await this.quizRepo.findQuizById(quizId);
+
+    if (!quiz) {
+      throw new NotFoundException({
+        message: 'Quiz not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const [question] =
+      await this.questionService.findQuestionsBySubjectAndDifficulty(
+        quiz.subject,
+        { easy: 1, medium: 0, hard: 0 },
+        1,
+      );
+
+    return question;
   }
 }

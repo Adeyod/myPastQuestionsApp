@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 
 export enum QuizStatus {
   DRAFT = 'DRAFT',
@@ -54,7 +54,7 @@ export class FinalRoundInformation {
   second_position_reward!: number;
 }
 
-export type QuizDocument = Quiz & Document;
+export type QuizDocument = HydratedDocument<Quiz>;
 
 @Schema({ timestamps: true })
 export class Quiz {
@@ -90,6 +90,12 @@ export class Quiz {
 
   @Prop({ required: true, type: FinalRoundInformation })
   final_round_information!: FinalRoundInformation;
+
+  @Prop({ default: 0 })
+  current_round!: number;
+
+  @Prop({ type: String, default: null })
+  room_id?: string | null;
 }
 
 export const QuizSchema = SchemaFactory.createForClass(Quiz);

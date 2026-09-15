@@ -22,6 +22,7 @@ import { SolveAndWinContestRepository } from './repositories/solve-and-win-conte
 import { SolveAndWinParticipationRepository } from './repositories/solve-and-win-participant.repository';
 import { SolveAndWinQuestionRepository } from './repositories/solve-and-win-question.repository';
 import {
+  DifficultyBreakdown,
   SolveAndWinContest,
   SolveAndWinContestStatus,
 } from './schemas/solve-and-win-contest.schema';
@@ -1666,6 +1667,29 @@ export class SolveAndWinService {
     return {
       message: 'Contest paused successfully.',
     };
+  }
+
+  async findQuestionsBySubjectAndDifficulty(
+    subjectId: Types.ObjectId,
+    difficultyBreakdown: DifficultyBreakdown,
+    totalQuestionsExpected: number,
+  ) {
+    const response =
+      await this.solveAndWinQuestionRepo.findQuestionsBySubjectAndDifficulty(
+        subjectId,
+        difficultyBreakdown,
+        totalQuestionsExpected,
+      );
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Questions not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
   }
 
   private validateObjectId(id: string): void {

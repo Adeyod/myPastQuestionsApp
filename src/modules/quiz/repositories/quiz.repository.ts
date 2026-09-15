@@ -140,4 +140,23 @@ export class QuizRepository {
 
     return response;
   }
+
+  async addJoinedUser(
+    quizId: Types.ObjectId,
+    userId: Types.ObjectId,
+  ): Promise<QuizDocument | null> {
+    const response = await this.quizModel
+      .findByIdAndUpdate(
+        quizId,
+        { $addToSet: { joined_users: userId } },
+        { new: true },
+      )
+      .exec();
+
+    return response;
+  }
+
+  async save(quiz: QuizDocument): Promise<QuizDocument> {
+    return await quiz.save();
+  }
 }

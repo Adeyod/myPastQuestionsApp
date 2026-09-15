@@ -42,5 +42,6 @@ import { SolveAndWinService } from './solve-and-win.service';
     SolveAndWinParticipationRepository,
     SolveAndWinQuestionRepository,
   ],
+  exports: [SolveAndWinService],
 })
 export class SolveAndWinModule {}

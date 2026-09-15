@@ -539,4 +539,61 @@ export class SolveAndWinQuestionRepository {
       return safeQuestion;
     });
   }
+
+  async findQuestionsBySubjectAndDifficulty(
+    subjectId: Types.ObjectId,
+    difficultyBreakdown: DifficultyBreakdown,
+    totalQuestionsExpected: number,
+  ): Promise<SolveAndWinQuestionDocument[]> {
+    const pipeline: any[] = [];
+
+    const facetStage: Record<string, any[]> = {};
+
+    if (difficultyBreakdown.easy > 0) {
+      facetStage.easy = [
+        { $match: { subject: subjectId, difficulty: 'EASY' } },
+        { $sample: { size: difficultyBreakdown.easy } },
+      ];
+    }
+
+    if (difficultyBreakdown.medium > 0) {
+      facetStage.medium = [
+        { $match: { subject: subjectId, difficulty: 'MEDIUM' } },
+        { $sample: { size: difficultyBreakdown.medium } },
+      ];
+    }
+
+    if (difficultyBreakdown.hard > 0) {
+      facetStage.hard = [
+        { $match: { subject: subjectId, difficulty: 'HARD' } },
+        { $sample: { size: difficultyBreakdown.hard } },
+      ];
+    }
+
+    const [result] = await this.questionModel
+      .aggregate([
+        { $facet: facetStage },
+        {
+          $project: {
+            combined: {
+              $concatArrays: [
+                { $ifNull: ['$easy', []] },
+                { $ifNull: ['$medium', []] },
+                { $ifNull: ['$hard', []] },
+              ],
+            },
+          },
+        },
+      ])
+      .exec();
+
+    const questions = result?.combined || [];
+
+    for (let i = questions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [questions[i], questions[j]] = [questions[j], questions[i]];
+    }
+
+    return questions;
+  }
 }
