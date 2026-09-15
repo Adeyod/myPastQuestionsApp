@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { AnyBulkWriteOperation, Model, Types } from 'mongoose';
 import {
   ParticipantStatus,
   QuizParticipant,
@@ -112,6 +112,11 @@ export class QuizParticipantRepository {
     if (bulkOps.length > 0) {
       await this.participantModel.bulkWrite(bulkOps);
     }
+  }
+
+  async bulkWrite(bulkOps: AnyBulkWriteOperation<QuizParticipantDocument>[]) {
+    if (!bulkOps || bulkOps.length === 0) return;
+    return this.participantModel.bulkWrite(bulkOps);
   }
 
   // 8. Retrieve all participants eligible for tie-breaking in a given quiz

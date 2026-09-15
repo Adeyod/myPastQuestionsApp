@@ -292,34 +292,80 @@ export class QuizService {
   }
 
   // 4. Save/Sync Leaderboard state & perform round removal
+  // async syncLeaderboardAndPruneParticipants(dto: SyncLeaderboardDto) {
+  //   const quizId = new Types.ObjectId(dto.quizId);
+  //   const leaderboard = await this.leaderboardRepo.upsertLeaderboard(dto);
+
+  //   // Update participant states in batch based on leaderboard entries
+  //   for (const entry of dto.entries) {
+  //     const pUserId = new Types.ObjectId(entry.userId);
+  //     const participant =
+  //       await this.participantRepo.findParticipantByQuizAndUser(
+  //         quizId,
+  //         pUserId,
+  //       );
+
+  //     if (participant) {
+  //       participant.totalScore = entry.score;
+  //       participant.totalTimeTakenInSeconds = entry.timeTakenInSeconds;
+
+  //       if (entry.isEliminated) {
+  //         participant.status = ParticipantStatus.ELIMINATED;
+  //       } else if (entry.isTied) {
+  //         participant.status = ParticipantStatus.TIE_BREAK;
+  //       } else {
+  //         participant.status = ParticipantStatus.QUALIFIED;
+  //         participant.currentRound = dto.roundNumber + 1;
+  //       }
+
+  //       await this.participantRepo.saveParticipant(participant);
+  //     }
+  //   }
+
+  //   return leaderboard;
+  // }
+
   async syncLeaderboardAndPruneParticipants(dto: SyncLeaderboardDto) {
     const quizId = new Types.ObjectId(dto.quizId);
+
+    // 1. Upsert leaderboard document
     const leaderboard = await this.leaderboardRepo.upsertLeaderboard(dto);
 
-    // Update participant states in batch based on leaderboard entries
-    for (const entry of dto.entries) {
+    // 2. Prepare bulk update operations
+    const bulkOps = dto.entries.map((entry) => {
       const pUserId = new Types.ObjectId(entry.userId);
-      const participant =
-        await this.participantRepo.findParticipantByQuizAndUser(
-          quizId,
-          pUserId,
-        );
 
-      if (participant) {
-        participant.totalScore = entry.score;
-        participant.totalTimeTakenInSeconds = entry.timeTakenInSeconds;
+      let status = ParticipantStatus.QUALIFIED;
+      let nextRound = dto.roundNumber + 1;
+      let eliminatedInRound: number | null = null;
 
-        if (entry.isEliminated) {
-          participant.status = ParticipantStatus.ELIMINATED;
-        } else if (entry.isTied) {
-          participant.status = ParticipantStatus.TIE_BREAK;
-        } else {
-          participant.status = ParticipantStatus.QUALIFIED;
-          participant.currentRound = dto.roundNumber + 1;
-        }
-
-        await this.participantRepo.saveParticipant(participant);
+      if (entry.isEliminated) {
+        status = ParticipantStatus.ELIMINATED;
+        eliminatedInRound = dto.roundNumber; // Record the elimination round
+        nextRound = dto.roundNumber;
+      } else if (entry.isTied) {
+        status = ParticipantStatus.TIE_BREAK;
       }
+
+      return {
+        updateOne: {
+          filter: { quizId, userId: pUserId },
+          update: {
+            $set: {
+              totalScore: entry.score,
+              totalTimeTakenInSeconds: entry.timeTakenInSeconds,
+              status,
+              currentRound: nextRound,
+              ...(eliminatedInRound !== null && { eliminatedInRound }),
+            },
+          },
+        },
+      };
+    });
+
+    // 3. Execute bulk update in one round-trip
+    if (bulkOps.length > 0) {
+      await this.participantRepo.bulkWrite(bulkOps);
     }
 
     return leaderboard;

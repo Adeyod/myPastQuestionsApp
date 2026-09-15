@@ -2,7 +2,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 
 export enum QuizStatus {
-  DRAFT = 'DRAFT',
   WAITING = 'WAITING',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
@@ -64,7 +63,7 @@ export class Quiz {
   @Prop({ required: true })
   description!: string;
 
-  @Prop({ required: true, enum: QuizStatus, default: QuizStatus.DRAFT })
+  @Prop({ required: true, enum: QuizStatus, default: QuizStatus.WAITING })
   status!: QuizStatus;
 
   @Prop({ required: true, type: Types.ObjectId, ref: 'Subject' })

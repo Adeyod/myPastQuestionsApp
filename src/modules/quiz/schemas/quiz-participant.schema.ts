@@ -43,6 +43,9 @@ export class QuizParticipant {
 
   @Prop({ type: Number, default: null })
   finalPosition?: number | null;
+
+  @Prop({ type: Number, default: null })
+  eliminatedInRound?: number | null;
 }
 
 export const QuizParticipantSchema =
