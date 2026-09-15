@@ -158,6 +158,21 @@ export class QuizService {
     return response;
   }
 
+  async findQuizById(quizId: string) {
+    const id = new Types.ObjectId(quizId);
+    const response = await this.quizRepo.findQuizById(id);
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Quiz not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
+  }
+
   async joinQuizById(user: JwtUser, id: string) {
     const quizId = new Types.ObjectId(id);
     const userId = new Types.ObjectId(user.sub.toString());
