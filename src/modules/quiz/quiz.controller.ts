@@ -147,4 +147,46 @@ export class QuizController {
 
     return response;
   }
+
+  @Post('join-quiz-by-id/:quizId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('User joined quiz successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Join quiz.',
+    description: 'This is the endpoint that user is going to use to join quiz.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User joined quiz successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to join quiz.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async joinQuizById(
+    @Param('quizId') quizId: string,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response = await this.quizService.joinQuizById(user, quizId);
+
+    return response;
+  }
 }

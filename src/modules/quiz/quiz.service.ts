@@ -9,11 +9,7 @@ import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { SolveAndWinService } from '../solve-and-win/solve-and-win.service';
 import { CreateQuizDto } from './dtos/create-quiz.dto';
-import {
-  CastVoteDto,
-  JoinQuizDto,
-  SyncLeaderboardDto,
-} from './dtos/join-quiz.dto';
+import { CastVoteDto, SyncLeaderboardDto } from './dtos/join-quiz.dto';
 import { QuizLeaderboardRepository } from './repositories/quiz-leaderboard.repository';
 import { QuizParticipantRepository } from './repositories/quiz-participation.repository';
 import { QuizVoteRepository } from './repositories/quiz-vote.repository';
@@ -162,8 +158,8 @@ export class QuizService {
     return response;
   }
 
-  async joinQuiz(user: JwtUser, dto: JoinQuizDto) {
-    const quizId = new Types.ObjectId(dto.quizId);
+  async joinQuizById(user: JwtUser, id: string) {
+    const quizId = new Types.ObjectId(id);
     const userId = new Types.ObjectId(user.sub.toString());
 
     const quiz = await this.quizRepo.findQuizById(quizId);
