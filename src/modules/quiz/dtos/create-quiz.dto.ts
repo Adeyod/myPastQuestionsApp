@@ -241,7 +241,7 @@ export class CreateQuizDto {
 
   @ApiProperty({
     description: 'This is the status of the quiz.',
-    example: QuizStatus.DRAFT,
+    example: QuizStatus.WAITING,
   })
   @IsEnum(QuizStatus)
   status!: QuizStatus;
