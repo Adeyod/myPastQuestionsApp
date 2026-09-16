@@ -245,7 +245,6 @@ export class QuizService {
     return participant;
   }
 
-  // 2. Admin creates WebSockets meeting room
   async createMeetingRoom(quizIdStr: string, adminUser: JwtUser) {
     const quizId = new Types.ObjectId(quizIdStr);
     const quiz = await this.quizRepo.findQuizById(quizId);
@@ -276,7 +275,6 @@ export class QuizService {
     return { roomId, quizId };
   }
 
-  // 3. Admin fetches Round Questions for distribution
   async getRoundQuestions(quizIdStr: string, roundNumber: number) {
     const quizId = new Types.ObjectId(quizIdStr);
     const quiz = await this.quizRepo.findQuizById(quizId);

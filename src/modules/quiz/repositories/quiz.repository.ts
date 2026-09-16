@@ -92,7 +92,7 @@ export class QuizRepository {
     quizzesObj: QuizDocument[];
   }> {
     const { page, limit, searchParams } = queryDto;
-    let query = this.quizModel.find();
+    let query = this.quizModel.find({ joined_users: { $nin: [userId] } });
 
     if (searchParams) {
       const regex = new RegExp(searchParams, 'i');
