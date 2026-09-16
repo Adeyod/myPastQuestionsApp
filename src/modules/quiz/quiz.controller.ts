@@ -109,6 +109,54 @@ export class QuizController {
 
     return response;
   }
+  @Get('get-all-waiting-quizzes-user-has-not-joined/:userId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Quizzes fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get all quizzes.',
+    description:
+      'This is the endpoint that logged in user is going to use to get all quizzes that he has not joined.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Quizzes fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch quizzes.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async findAllWaitingQuizzesLoggedInUserHasNotJoined(
+    @Query() dto: QueryWithPaginationDto,
+    @Param('userId') userId: string,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response =
+      await this.quizService.findAllWaitingQuizzesLoggedInUserHasNotJoined(
+        user,
+        userId,
+        dto,
+      );
+
+    return response;
+  }
   @Get('get-quiz-by-quizId/:quizId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.USER)

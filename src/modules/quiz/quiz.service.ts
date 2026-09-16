@@ -132,6 +132,28 @@ export class QuizService {
     return quiz;
   }
 
+  async findAllWaitingQuizzesLoggedInUserHasNotJoined(
+    user: JwtUser,
+    userId: string,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    if (userId !== user.sub.toString()) {
+      throw new ConflictException({
+        message: 'ID mis-match.',
+        success: false,
+        status: 409,
+      });
+    }
+    const id = new Types.ObjectId(user.sub.toString());
+
+    const response =
+      await this.quizRepo.findAllWaitingQuizzesLoggedInUserHasNotJoined(
+        queryDto,
+        id,
+      );
+
+    return response;
+  }
   async findAllQuizzes(queryDto: QueryWithPaginationDto) {
     const response = await this.quizRepo.findAllQuizzes(queryDto);
 
