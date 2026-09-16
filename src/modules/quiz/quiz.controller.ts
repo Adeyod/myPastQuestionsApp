@@ -286,7 +286,7 @@ export class QuizController {
     return response;
   }
 
-  @Post('create-room')
+  @Post('create-room/:quizId')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth('JWT-auth')
@@ -321,7 +321,7 @@ export class QuizController {
     description: 'Too many requests. Rate limit exceeded',
   })
   async createMeetingRoom(
-    @Body('quizId') quizId: string,
+    @Param('quizId') quizId: string,
     @GetCurrentUser() user: JwtUser,
   ) {
     const result = await this.quizService.createMeetingRoom(quizId, user);
