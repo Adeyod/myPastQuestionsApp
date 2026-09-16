@@ -88,4 +88,66 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     this.server.to(data.roomId).emit('leaderboard_updated', data.leaderboard);
   }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('request_tiebreaker_question')
+  async handleRequestTiebreakerQuestion(
+    @MessageBody()
+    data: {
+      quizId: string;
+      roomId: string;
+      tiedUserIds: string[]; // User IDs involved in the tie
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    // Service fetches 1 extra question for the quiz subject
+    const tiebreakerQuestion = await this.quizService.getTiebreakerQuestion(
+      data.quizId,
+    );
+
+    // Broadcast tie-breaker payload to the whole room,
+    // but include targetUserIds so frontend clients filter visibility
+    this.server.to(data.roomId).emit('tiebreaker_question_started', {
+      quizId: data.quizId,
+      tiedUserIds: data.tiedUserIds,
+      question: tiebreakerQuestion,
+      timestamp: new Date(),
+    });
+
+    return { success: true, message: 'Tie-breaker question dispatched.' };
+  }
+
+  /**
+   * 2. Admin finalizes tie-breaker (via Voting OR Tie Question results)
+   * Prunes eliminated user IDs from joined_users -> spectator_array in DB and syncs room.
+   */
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('resolve_tiebreaker_eliminations')
+  async handleResolveTiebreakerEliminations(
+    @MessageBody()
+    data: {
+      quizId: string;
+      roomId: string;
+      roundNumber: number;
+      eliminatedUserIds: string[]; // IDs selected by admin for removal
+    },
+  ) {
+    // 1. Database mutation: move IDs from joined_users to spectator_array
+    await this.quizService.pruneEliminatedUsers(
+      data.quizId,
+      data.eliminatedUserIds,
+      data.roundNumber,
+    );
+
+    // 2. Broadcast updated elimination list to all room participants
+    this.server.to(data.roomId).emit('participants_eliminated', {
+      eliminatedUserIds: data.eliminatedUserIds,
+      timestamp: new Date(),
+    });
+
+    return {
+      success: true,
+      message: 'Eliminated participants successfully moved to spectators.',
+    };
+  }
 }

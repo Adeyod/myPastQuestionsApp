@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { AnyBulkWriteOperation, Model, Types } from 'mongoose';
+import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import {
   ParticipantStatus,
   QuizParticipant,
@@ -45,6 +46,64 @@ export class QuizParticipantRepository {
     const response = await this.participantModel
       .countDocuments({ quizId })
       .exec();
+
+    return response;
+  }
+
+  async findAllMyQuizParticipations(
+    userId: Types.ObjectId,
+    queryDto: QueryWithPaginationDto,
+  ): Promise<{
+    totalCount: number;
+    totalPages: number;
+    participationsObj: QuizParticipantDocument[];
+  }> {
+    const { page, limit, searchParams } = queryDto;
+    let query = this.participantModel.find();
+
+    if (searchParams) {
+      const regex = new RegExp(searchParams, 'i');
+
+      query = query.where({
+        $or: [{ status: { $regex: regex } }, { quiz_title: { $regex: regex } }],
+      });
+    }
+
+    const count = await query.clone().countDocuments();
+    let pages = 0;
+
+    if (page !== undefined && limit !== undefined && count !== 0) {
+      const offset = (page - 1) * limit;
+
+      query = query.skip(offset).limit(limit);
+      pages = Math.ceil(count / limit);
+
+      if (page > pages) {
+        throw new NotFoundException({
+          message: 'Page not found.',
+          success: false,
+          status: 404,
+        });
+      }
+    }
+
+    const participations = await query
+      .populate('quizId')
+      .sort({ createdAt: -1 });
+
+    if (participations.length === 0) {
+      throw new NotFoundException({
+        message: 'Quiz participations not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const response = {
+      totalCount: count,
+      totalPages: pages,
+      participationsObj: participations,
+    };
 
     return response;
   }
@@ -116,7 +175,7 @@ export class QuizParticipantRepository {
 
   async bulkWrite(bulkOps: AnyBulkWriteOperation<QuizParticipantDocument>[]) {
     if (!bulkOps || bulkOps.length === 0) return;
-    return this.participantModel.bulkWrite(bulkOps);
+    return await this.participantModel.bulkWrite(bulkOps);
   }
 
   // 8. Retrieve all participants eligible for tie-breaking in a given quiz

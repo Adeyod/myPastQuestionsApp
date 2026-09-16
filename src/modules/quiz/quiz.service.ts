@@ -175,7 +175,10 @@ export class QuizService {
 
     const id = new Types.ObjectId(user.sub.toString());
 
-    const response = await this.quizRepo.findAllMyQuizzes(id, queryDto);
+    const response = await this.participantRepo.findAllMyQuizParticipations(
+      id,
+      queryDto,
+    );
 
     return response;
   }
@@ -476,5 +479,59 @@ export class QuizService {
       );
 
     return question;
+  }
+
+  async getTiebreakerQuestion(quizIdStr: string) {
+    const quiz = await this.quizRepo.findQuizById(
+      new Types.ObjectId(quizIdStr),
+    );
+    if (!quiz) {
+      throw new NotFoundException({
+        message: 'Quiz not found',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const [question] =
+      await this.questionService.findQuestionsBySubjectAndDifficulty(
+        quiz.subject,
+        { easy: 0, medium: 1, hard: 0 }, // Adjust difficulty as required
+        1,
+      );
+
+    return question;
+  }
+
+  /**
+   * Helper called by resolve_tiebreaker_eliminations to update arrays.
+   */
+  async pruneEliminatedUsers(
+    quizIdStr: string,
+    eliminatedUserIdsStr: string[],
+    roundNumber: number,
+  ) {
+    const quizId = new Types.ObjectId(quizIdStr);
+    const eliminatedUserIds = eliminatedUserIdsStr.map(
+      (id) => new Types.ObjectId(id),
+    );
+
+    // Atomically pull from joined_users and push into spectator_array
+    await this.quizRepo.transitionUsersToSpectators(quizId, eliminatedUserIds);
+
+    // Batch update participant statuses in QuizParticipant collection
+    await this.participantRepo.bulkWrite(
+      eliminatedUserIds.map((userId) => ({
+        updateOne: {
+          filter: { quizId, userId },
+          update: {
+            $set: {
+              status: ParticipantStatus.ELIMINATED,
+              eliminatedInRound: roundNumber,
+            },
+          },
+        },
+      })),
+    );
   }
 }

@@ -83,63 +83,6 @@ export class QuizRepository {
 
     return response;
   }
-  async findAllMyQuizzes(
-    userId: Types.ObjectId,
-    queryDto: QueryWithPaginationDto,
-  ): Promise<{
-    totalCount: number;
-    totalPages: number;
-    quizzesObj: QuizDocument[];
-  }> {
-    const { page, limit, searchParams } = queryDto;
-    let query = this.quizModel.find({ joined_users: { $nin: [userId] } });
-
-    if (searchParams) {
-      const regex = new RegExp(searchParams, 'i');
-
-      query = query.where({
-        $or: [{ status: { $regex: regex } }, { quiz_title: { $regex: regex } }],
-      });
-    }
-
-    const count = await query.clone().countDocuments();
-    let pages = 0;
-
-    if (page !== undefined && limit !== undefined && count !== 0) {
-      const offset = (page - 1) * limit;
-
-      query = query.skip(offset).limit(limit);
-      pages = Math.ceil(count / limit);
-
-      if (page > pages) {
-        throw new NotFoundException({
-          message: 'Page not found.',
-          success: false,
-          status: 404,
-        });
-      }
-    }
-
-    const quizzes = await query
-      .populate('subject', 'name')
-      .sort({ createdAt: -1 });
-
-    if (quizzes.length === 0) {
-      throw new NotFoundException({
-        message: 'Quizzes not found.',
-        success: false,
-        status: 404,
-      });
-    }
-
-    const response = {
-      totalCount: count,
-      totalPages: pages,
-      quizzesObj: quizzes,
-    };
-
-    return response;
-  }
 
   async addJoinedUser(
     quizId: Types.ObjectId,
@@ -150,6 +93,28 @@ export class QuizRepository {
         quizId,
         { $addToSet: { joined_users: userId } },
         { new: true },
+      )
+      .exec();
+
+    return response;
+  }
+
+  async transitionUsersToSpectators(
+    quizId: Types.ObjectId,
+    eliminatedUserIds: Types.ObjectId[],
+  ): Promise<QuizDocument | null> {
+    if (!eliminatedUserIds || eliminatedUserIds.length === 0) {
+      return null;
+    }
+
+    const response = await this.quizModel
+      .findByIdAndUpdate(
+        quizId,
+        {
+          $pull: { joined_users: { $in: eliminatedUserIds } },
+          $addToSet: { spectator_array: { $each: eliminatedUserIds } },
+        },
+        { returnDocument: 'after' },
       )
       .exec();
 
