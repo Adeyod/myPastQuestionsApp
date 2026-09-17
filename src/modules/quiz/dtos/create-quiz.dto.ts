@@ -3,7 +3,6 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsDateString,
-  IsEnum,
   IsMongoId,
   IsNotEmpty,
   IsNumber,
@@ -12,7 +11,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { DifficultyBreakdownDto } from '../../solve-and-win/dtos/create-contest.dto';
-import { QuizStatus } from '../schemas/quiz.schema';
 
 // export class DifficultyBreakdownDto {
 //   @ApiProperty({
@@ -239,10 +237,10 @@ export class CreateQuizDto {
   @Type(() => FinalRoundInformationDto)
   final_round_information!: FinalRoundInformationDto;
 
-  @ApiProperty({
-    description: 'This is the status of the quiz.',
-    example: QuizStatus.WAITING,
-  })
-  @IsEnum(QuizStatus)
-  status!: QuizStatus;
+  // @ApiProperty({
+  //   description: 'This is the status of the quiz.',
+  //   example: QuizStatus.WAITING,
+  // })
+  // @IsEnum(QuizStatus)
+  // status!: QuizStatus;
 }

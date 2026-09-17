@@ -12,6 +12,7 @@ export class QuizRepository {
   async createQuiz(createQuizDto: CreateQuizDto): Promise<QuizDocument> {
     const createdQuiz = new this.quizModel({
       ...createQuizDto,
+      status: QuizStatus.WAITING,
       subject: new Types.ObjectId(createQuizDto.subject),
       start_date: new Date(createQuizDto.start_date),
     });
