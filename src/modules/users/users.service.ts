@@ -6,12 +6,32 @@ import {
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { MailService } from '../../mail/mail.service';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UsersRepository } from './repositories/users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(private usersRepository: UsersRepository) {}
+  constructor(
+    private usersRepository: UsersRepository,
+    private mailService: MailService,
+  ) {}
+  async findUserDetails(id: Types.ObjectId) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException({
+        message: 'User not found',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const userObj = user.toObject();
+    const { password, ...others } = userObj;
+
+    return others;
+  }
   async findUserById(id: Types.ObjectId): Promise<UserResponseDto> {
     const user = await this.usersRepository.findById(id);
 
@@ -111,5 +131,39 @@ export class UsersService {
       queryWithPaginationDto,
     );
     return response;
+  }
+
+  async sendEmailNotificationToAllUnsibscribedUsers() {
+    const unsubscribedUsers =
+      await this.usersRepository.findAllUnsubscribedUsers();
+
+    if (unsubscribedUsers.length === 0) {
+      throw new NotFoundException({
+        message: 'No user found to be unsubscribed.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const payload = unsubscribedUsers.map((user) => {
+      const response = {
+        email: user.email,
+        first_name: user.firstName,
+      };
+
+      return response;
+    });
+
+    const subject = `Plan Activation Reminder`;
+
+    const mailResponse = await this.mailService.sendBulkEmails(
+      payload,
+      subject,
+    );
+    console.log('mailResponse:', mailResponse);
+
+    return {
+      message: 'Email notification sent successfully.',
+    };
   }
 }

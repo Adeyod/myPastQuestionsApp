@@ -36,6 +36,18 @@ export class UsersRepository {
     return await this.userModel.find(filter);
   }
 
+  async findAllUnsubscribedUsers(): Promise<UserDocument[]> {
+    return await this.userModel
+      .find({
+        $or: [
+          { plans: { $size: 0 } },
+          { plans: { $exists: false } },
+          { plans: null },
+        ],
+      })
+      .lean()
+      .exec();
+  }
   async findManyByIds(
     ids: string[] | Types.ObjectId[],
   ): Promise<UserDocument[]> {

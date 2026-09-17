@@ -4,6 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -135,5 +136,33 @@ export class UsersController {
   })
   async getAllUsers(@Query() queryWithPaginationDto: QueryWithPaginationDto) {
     return await this.usersService.getAllUsers(queryWithPaginationDto);
+  }
+  @Post('notify-all-unsubscribed-users-to-subscribe')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @SuccessMessage('Notifications sent successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Send email notification to all users that has not subscribe to a plan.',
+    description:
+      'This is the endpoint that admin will use to send email notification to all users that has not subscribed to a plan.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Notifications sent successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request. Unable to send email Notifications.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error.',
+  })
+  async sendEmailNotificationToAllUnsibscribedUsers() {
+    return await this.usersService.sendEmailNotificationToAllUnsibscribedUsers();
   }
 }

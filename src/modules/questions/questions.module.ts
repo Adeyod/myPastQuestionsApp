@@ -5,6 +5,7 @@ import { PracticeWalletModule } from '../practice-wallet/practice-wallet.module'
 import { PracticeModule } from '../practice/practice.module';
 import { SubjectsModule } from '../subjects/subjects.module';
 import { UserSessionModule } from '../user-session/user-session.module';
+import { UsersModule } from '../users/users.module';
 import { WalletsModule } from '../wallets/wallets.module';
 import { QuestionsController } from './questions.controller';
 import { QuestionsService } from './questions.service';
@@ -19,6 +20,7 @@ import { Question, QuestionSchema } from './schemas/question.schema';
     SubjectsModule,
     WalletsModule,
     PlansModule,
+    UsersModule,
     UserSessionModule,
     PracticeModule,
     PracticeWalletModule,

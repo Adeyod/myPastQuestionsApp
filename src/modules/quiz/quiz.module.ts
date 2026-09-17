@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from '../auth/auth.module';
 import { SolveAndWinModule } from '../solve-and-win/solve-and-win.module';
 import { UserSessionModule } from '../user-session/user-session.module';
+import { UsersModule } from '../users/users.module';
 import { QuizController } from './quiz.controller';
 import { QuizGateway } from './quiz.gateway';
 import { QuizService } from './quiz.service';
@@ -30,6 +31,7 @@ import { Quiz, QuizSchema } from './schemas/quiz.schema';
       { name: Quiz.name, schema: QuizSchema },
     ]),
     UserSessionModule,
+    UsersModule,
     SolveAndWinModule,
     AuthModule,
   ],

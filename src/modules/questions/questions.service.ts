@@ -7,11 +7,14 @@ import {
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
 import { JwtUser } from '../../common/types/jwt-user.type';
+import { checkExpiration } from '../../common/utils/helper';
 import { PlansService } from '../plans/plans.service';
+import { PlanCode } from '../plans/schemas/plan.schema';
 import { PracticeWalletService } from '../practice-wallet/practice-wallet.service';
 import { PracticeModeService } from '../practice/services/practice-mode.service';
 import { PracticeService } from '../practice/services/practice.service';
 import { SubjectsRepository } from '../subjects/repositories/subjects.repository';
+import { UsersService } from '../users/users.service';
 import { WalletsService } from '../wallets/wallets.service';
 import { GetPracticeQuestionsDto } from './dto/get-practice-questions.dto';
 import { GetQuestionsDto } from './dto/get-questions.dto';
@@ -27,6 +30,7 @@ export class QuestionsService {
     private walletService: WalletsService,
     private practiceModeService: PracticeModeService,
     private practiceService: PracticeService,
+    private usersService: UsersService,
     private practiceWalletService: PracticeWalletService,
     private plansService: PlansService,
   ) {}
@@ -188,9 +192,27 @@ export class QuestionsService {
     );
   }
 
-  async getFreeQuestionsPerPlan(getQuestionsDto: GetQuestionsDto) {
+  async getFreeQuestionsPerPlan(
+    getQuestionsDto: GetQuestionsDto,
+    user: JwtUser,
+  ) {
+    const id = new Types.ObjectId(user.sub.toString());
     const { plan, year, subjectId, examType } = getQuestionsDto;
 
+    const userCreatedDate = await this.usersService.findUserDetails(id);
+
+    if (!userCreatedDate.plans.includes(PlanCode.SECONDARY)) {
+      const expiration = checkExpiration(userCreatedDate.createdAt);
+
+      if (expiration === true) {
+        throw new BadRequestException({
+          message:
+            'Your free question practice has expired. Kindly subscribe to a plan to continue enjoying question practice.',
+          success: false,
+          status: 400,
+        });
+      }
+    }
     const freeYears = ['2000', '2001'];
     const freeSubjects = ['mathematics', 'english'];
 

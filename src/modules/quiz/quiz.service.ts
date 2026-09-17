@@ -7,7 +7,10 @@ import {
 import { Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { JwtUser } from '../../common/types/jwt-user.type';
+import { checkExpiration } from '../../common/utils/helper';
+import { PlanCode } from '../plans/schemas/plan.schema';
 import { SolveAndWinService } from '../solve-and-win/solve-and-win.service';
+import { UsersService } from '../users/users.service';
 import { CreateQuizDto } from './dtos/create-quiz.dto';
 import { CastVoteDto, SyncLeaderboardDto } from './dtos/join-quiz.dto';
 import { QuizLeaderboardRepository } from './repositories/quiz-leaderboard.repository';
@@ -23,6 +26,7 @@ export class QuizService {
     private readonly quizRepo: QuizRepository,
     private readonly voteRepo: QuizVoteRepository,
     private readonly questionService: SolveAndWinService,
+    private readonly usersService: UsersService,
     private readonly participantRepo: QuizParticipantRepository,
     private readonly leaderboardRepo: QuizLeaderboardRepository,
   ) {}
@@ -146,6 +150,21 @@ export class QuizService {
     }
     const id = new Types.ObjectId(user.sub.toString());
 
+    const userDetails = await this.usersService.findUserDetails(id);
+
+    if (!userDetails.plans.includes(PlanCode.SECONDARY)) {
+      const expiration = checkExpiration(userDetails.createdAt);
+
+      if (expiration) {
+        throw new BadRequestException({
+          message:
+            'Your free quiz participation has expired. Kindly subscribe to a plan to continue enjoying quiz participation.',
+          success: false,
+          status: 400,
+        });
+      }
+    }
+
     const response =
       await this.quizRepo.findAllWaitingQuizzesLoggedInUserHasNotJoined(
         queryDto,
@@ -205,6 +224,20 @@ export class QuizService {
     const quizId = new Types.ObjectId(id);
     const userId = new Types.ObjectId(user.sub.toString());
 
+    const userDetails = await this.usersService.findUserDetails(userId);
+
+    if (!userDetails.plans.includes(PlanCode.SECONDARY)) {
+      const expiration = checkExpiration(userDetails.createdAt);
+
+      if (expiration) {
+        throw new BadRequestException({
+          message:
+            'Your free quiz participation has expired. Kindly subscribe to a Secondary plan to join quiz.',
+          success: false,
+          status: 400,
+        });
+      }
+    }
     const quiz = await this.quizRepo.findQuizById(quizId);
     if (!quiz) {
       throw new NotFoundException({

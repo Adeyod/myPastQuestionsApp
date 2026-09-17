@@ -56,3 +56,17 @@ export function addDays(date: Date, days: number): Date {
 
   return result;
 }
+
+export function checkExpiration(startDate: Date): boolean {
+  if (!(startDate instanceof Date) || isNaN(startDate.getTime())) {
+    throw new Error('Invalid date');
+  }
+
+  const now = new Date();
+
+  const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+
+  const expirationTime = startDate.getTime() + thirtyDaysInMs;
+
+  return now.getTime() > expirationTime;
+}

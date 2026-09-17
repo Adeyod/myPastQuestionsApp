@@ -211,8 +211,14 @@ export class QuestionsController {
     status: 500,
     description: 'Internal server error',
   })
-  async getFreeQuestionsPerPlan(@Query() getQuestionsDto: GetQuestionsDto) {
-    return await this.questionsService.getFreeQuestionsPerPlan(getQuestionsDto);
+  async getFreeQuestionsPerPlan(
+    @Query() getQuestionsDto: GetQuestionsDto,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    return await this.questionsService.getFreeQuestionsPerPlan(
+      getQuestionsDto,
+      user,
+    );
   }
   @Get('paid-questions-per-plan')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard, PlansGuard)
