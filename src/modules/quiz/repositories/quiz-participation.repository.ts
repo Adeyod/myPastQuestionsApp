@@ -59,7 +59,7 @@ export class QuizParticipantRepository {
     participationsObj: QuizParticipantDocument[];
   }> {
     const { page, limit, searchParams } = queryDto;
-    let query = this.participantModel.find();
+    let query = this.participantModel.find({ userId });
 
     if (searchParams) {
       const regex = new RegExp(searchParams, 'i');
