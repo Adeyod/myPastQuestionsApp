@@ -164,6 +164,9 @@ export class QuizService {
     userId: string,
     queryDto: QueryWithPaginationDto,
   ) {
+    console.log('findAllMyQuizzes userId:', userId);
+    console.log('findAllMyQuizzes user.sub.toString():', user.sub.toString());
+
     if (userId !== user.sub.toString()) {
       throw new ConflictException({
         message:
