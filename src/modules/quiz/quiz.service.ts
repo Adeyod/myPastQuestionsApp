@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,9 +16,11 @@ import { CreateQuizDto } from './dtos/create-quiz.dto';
 import { CastVoteDto, SyncLeaderboardDto } from './dtos/join-quiz.dto';
 import { QuizLeaderboardRepository } from './repositories/quiz-leaderboard.repository';
 import { QuizParticipantRepository } from './repositories/quiz-participation.repository';
+import { QuizRoomRepository } from './repositories/quiz-room.repository';
 import { QuizVoteRepository } from './repositories/quiz-vote.repository';
 import { QuizRepository } from './repositories/quiz.repository';
 import { ParticipantStatus } from './schemas/quiz-participant.schema';
+import { QuizRoomStatus } from './schemas/quiz-room.schema';
 import { QuizStatus } from './schemas/quiz.schema';
 
 @Injectable()
@@ -28,6 +31,7 @@ export class QuizService {
     private readonly questionService: SolveAndWinService,
     private readonly usersService: UsersService,
     private readonly participantRepo: QuizParticipantRepository,
+    private readonly quizRoomRepo: QuizRoomRepository,
     private readonly leaderboardRepo: QuizLeaderboardRepository,
   ) {}
 
@@ -284,8 +288,39 @@ export class QuizService {
     return participant;
   }
 
+  // async createMeetingRoom(quizIdStr: string, adminUser: JwtUser) {
+  //   const quizId = new Types.ObjectId(quizIdStr);
+  //   const quiz = await this.quizRepo.findQuizById(quizId);
+
+  //   if (!quiz) {
+  //     throw new NotFoundException({
+  //       message: 'Quiz not found.',
+  //       success: false,
+  //       status: 404,
+  //     });
+  //   }
+
+  //   if (
+  //     quiz.status === QuizStatus.COMPLETED ||
+  //     quiz.status === QuizStatus.CANCELLED
+  //   ) {
+  //     throw new BadRequestException({
+  //       success: false,
+  //       message: `Cannot create a room for a ${quiz.status.toLowerCase()} quiz.`,
+  //     });
+  //   }
+
+  //   const roomId = `QUIZ_ROOM_${quizId.toString()}_${Date.now()}`;
+  //   quiz.room_id = roomId;
+  //   quiz.status = QuizStatus.IN_PROGRESS;
+  //   await this.quizRepo.save(quiz);
+
+  //   return { roomId, quizId };
+  // }
+
   async createMeetingRoom(quizIdStr: string, adminUser: JwtUser) {
     const quizId = new Types.ObjectId(quizIdStr);
+
     const quiz = await this.quizRepo.findQuizById(quizId);
 
     if (!quiz) {
@@ -296,22 +331,142 @@ export class QuizService {
       });
     }
 
-    if (
-      quiz.status === QuizStatus.COMPLETED ||
-      quiz.status === QuizStatus.CANCELLED
-    ) {
-      throw new BadRequestException({
-        success: false,
-        message: `Cannot create a room for a ${quiz.status.toLowerCase()} quiz.`,
-      });
+    // Validate quiz...
+
+    const existingRoom = await this.quizRoomRepo.findActiveRoomByQuizId(quizId);
+
+    if (existingRoom) {
+      return existingRoom;
     }
 
     const roomId = `QUIZ_ROOM_${quizId.toString()}_${Date.now()}`;
+
+    const room = await this.quizRoomRepo.createRoom({
+      quizId,
+      roomId,
+      status: QuizRoomStatus.WAITING,
+      currentRound: 0,
+      currentQuestionIndex: -1,
+    });
+
     quiz.room_id = roomId;
-    quiz.status = QuizStatus.IN_PROGRESS;
     await this.quizRepo.save(quiz);
 
-    return { roomId, quizId };
+    return {
+      roomId,
+      quizId,
+      status: room.status,
+    };
+  }
+
+  async validateParticipantCanJoinRoom(roomId: string, userId: string) {
+    const id = new Types.ObjectId(roomId);
+
+    const room = await this.quizRoomRepo.findRoomByRoomId(id);
+
+    if (!room) {
+      throw new NotFoundException({
+        success: false,
+        message: 'Quiz room not found.',
+      });
+    }
+
+    if (
+      room.status === QuizRoomStatus.COMPLETED ||
+      room.status === QuizRoomStatus.CANCELLED
+    ) {
+      throw new BadRequestException({
+        success: false,
+        message: 'This quiz room is no longer available.',
+      });
+    }
+
+    const quiz = await this.quizRepo.findQuizById(room.quizId);
+
+    if (!quiz) {
+      throw new NotFoundException({
+        success: false,
+        message: 'Quiz associated with this room was not found.',
+      });
+    }
+
+    const isParticipant = quiz.joined_users?.some(
+      (id) => id.toString() === userId,
+    );
+
+    if (!isParticipant) {
+      throw new ForbiddenException({
+        message: 'You are not registered for this quiz contest.',
+        status: 403,
+        success: false,
+      });
+    }
+
+    const isSpectator = quiz.spectator_array?.some(
+      (id) => id.toString() === userId,
+    );
+
+    if (isSpectator) {
+      throw new ForbiddenException({
+        message: 'You have been eliminated from this quiz.',
+        success: false,
+        status: 403,
+      });
+    }
+
+    return room;
+  }
+
+  async registerParticipantSocket(
+    roomId: string,
+    userId: string,
+    socketId: string,
+  ) {
+    const id = new Types.ObjectId(roomId);
+
+    const room = await this.quizRoomRepo.findRoomByRoomId(id);
+
+    if (!room) {
+      throw new NotFoundException({
+        success: false,
+        message: 'Quiz room not found.',
+      });
+    }
+
+    const existingParticipant = room.participants?.find(
+      (participant) => participant.userId.toString() === userId,
+    );
+
+    /*
+     * User already exists in this room.
+     *
+     * This is most likely a reconnection, so update
+     * the socket ID instead of creating another participant.
+     */
+    if (existingParticipant) {
+      existingParticipant.socketId = socketId;
+      existingParticipant.connected = true;
+
+      await this.quizRoomRepo.saveQuizRoom(room);
+
+      return existingParticipant;
+    }
+
+    /*
+     * New participant.
+     */
+    const participant = {
+      userId: new Types.ObjectId(userId),
+      socketId,
+      joinedAt: new Date(),
+      connected: true,
+    };
+
+    room.participants.push(participant);
+
+    await this.quizRoomRepo.saveQuizRoom(room);
+
+    return participant;
   }
 
   async getRoundQuestions(quizIdStr: string, roundNumber: number) {

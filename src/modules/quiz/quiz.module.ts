@@ -9,6 +9,7 @@ import { QuizGateway } from './quiz.gateway';
 import { QuizService } from './quiz.service';
 import { QuizLeaderboardRepository } from './repositories/quiz-leaderboard.repository';
 import { QuizParticipantRepository } from './repositories/quiz-participation.repository';
+import { QuizRoomRepository } from './repositories/quiz-room.repository';
 import { QuizVoteRepository } from './repositories/quiz-vote.repository';
 import { QuizRepository } from './repositories/quiz.repository';
 import {
@@ -19,6 +20,7 @@ import {
   QuizParticipant,
   QuizParticipantSchema,
 } from './schemas/quiz-participant.schema';
+import { QuizRoom, QuizRoomSchema } from './schemas/quiz-room.schema';
 import { QuizVote, QuizVoteSchema } from './schemas/quiz-vote.schema';
 import { Quiz, QuizSchema } from './schemas/quiz.schema';
 
@@ -29,6 +31,7 @@ import { Quiz, QuizSchema } from './schemas/quiz.schema';
       { name: QuizParticipant.name, schema: QuizParticipantSchema },
       { name: QuizVote.name, schema: QuizVoteSchema },
       { name: Quiz.name, schema: QuizSchema },
+      { name: QuizRoom.name, schema: QuizRoomSchema },
     ]),
     UserSessionModule,
     UsersModule,
@@ -43,6 +46,7 @@ import { Quiz, QuizSchema } from './schemas/quiz.schema';
     QuizParticipantRepository,
     QuizVoteRepository,
     QuizGateway,
+    QuizRoomRepository,
   ],
 })
 export class QuizModule {}

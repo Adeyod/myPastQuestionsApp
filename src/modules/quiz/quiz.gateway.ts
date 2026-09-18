@@ -30,29 +30,79 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`Socket Client Disconnected: ${client.id}`);
   }
 
+  // async handleDisconnect(client: Socket) {
+  //   console.log(`Socket Client Disconnected: ${client.id}`);
+
+  //   const user = client.data.user;
+
+  //   if (!user?.sub) {
+  //     return;
+  //   }
+
+  //   try {
+  //     await this.quizService.markParticipantDisconnected(user.sub, client.id);
+  //   } catch (error) {
+  //     console.error('Unable to update participant disconnect state:', error);
+  //   }
+  // }
+
   // Admin & Participants join the Socket.io room channel
+  // @UseGuards(WsJwtGuard)
+  // @SubscribeMessage('join_room')
+  // async handleJoinRoom(
+  //   @MessageBody() data: { quizId: string; roomId: string },
+  //   @ConnectedSocket() client: Socket,
+  // ) {
+  //   const user = client.data.user;
+
+  //   // Join the isolated Socket.io channel for this quiz room
+  //   await client.join(data.roomId);
+
+  //   // Notify room members (Admin dashboard & participants) who joined
+  //   this.server.to(data.roomId).emit('participant_joined_room', {
+  //     userId: user.sub,
+  //     socketId: client.id,
+  //     timestamp: new Date(),
+  //   });
+
+  //   return {
+  //     event: 'joined_room_ack',
+  //     data: {
+  //       roomId: data.roomId,
+  //       message: 'Successfully connected to quiz room.',
+  //     },
+  //   };
+  // }
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('join_room')
   async handleJoinRoom(
-    @MessageBody() data: { quizId: string; roomId: string },
+    @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
     const user = client.data.user;
 
-    // Join the isolated Socket.io channel for this quiz room
-    await client.join(data.roomId);
+    const room = await this.quizService.validateParticipantCanJoinRoom(
+      data.roomId,
+      user.sub,
+    );
 
-    // Notify room members (Admin dashboard & participants) who joined
-    this.server.to(data.roomId).emit('participant_joined_room', {
+    await client.join(room.roomId);
+
+    await this.quizService.registerParticipantSocket(
+      room.roomId,
+      user.sub,
+      client.id,
+    );
+
+    this.server.to(room.roomId).emit('participant_joined_room', {
       userId: user.sub,
-      socketId: client.id,
       timestamp: new Date(),
     });
 
     return {
       event: 'joined_room_ack',
       data: {
-        roomId: data.roomId,
+        roomId: room.roomId,
         message: 'Successfully connected to quiz room.',
       },
     };

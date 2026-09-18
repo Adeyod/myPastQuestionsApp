@@ -88,6 +88,13 @@ export class Quiz {
   })
   joined_users!: Types.ObjectId[];
 
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'User',
+    default: [],
+  })
+  spectator_array!: Types.ObjectId[];
+
   @Prop({ required: true, type: [RoundInformation] })
   round_information!: RoundInformation[];
 
