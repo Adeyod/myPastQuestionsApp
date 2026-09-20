@@ -1,4 +1,6 @@
 import { UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -9,6 +11,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { JwtUser } from '../../common/types/jwt-user.type';
 import { WsJwtGuard } from '../auth/guards/ws-jwt.guard';
 import { QuizService } from './quiz.service';
 
@@ -20,31 +23,73 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly quizService: QuizService) {}
+  constructor(
+    private readonly quizService: QuizService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  afterInit(server: Server) {
+    server.use((socket, next) => {
+      try {
+        const token = this.extractToken(socket);
+
+        if (!token) {
+          return next(new Error('Authentication token missing.'));
+        }
+
+        const secret = this.configService.get<string>('JWT_SECRET');
+
+        if (!secret) {
+          return next(new Error('JWT configuration is missing.'));
+        }
+
+        const user = this.jwtService.verify<JwtUser>(token, {
+          secret,
+        });
+
+        if (!user?.sub) {
+          return next(new Error('Invalid authentication token.'));
+        }
+
+        // Attach authenticated user to socket
+        socket.data.user = user;
+
+        next();
+      } catch (error) {
+        console.error('Socket authentication failed:', error);
+
+        next(new Error('Invalid or expired authentication token.'));
+      }
+    });
+  }
 
   handleConnection(client: Socket) {
+    const user = client.data.user;
+
+    console.log(`Authenticated socket connected: ${client.id}`, user?.sub);
+
     console.log(`Socket Client Connected: ${client.id}`);
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     console.log(`Socket Client Disconnected: ${client.id}`);
+
+    const user: JwtUser = client.data.user;
+
+    if (!user?.sub) {
+      return;
+    }
+
+    try {
+      await this.quizService.markParticipantDisconnected(
+        user.sub.toString(),
+        client.id,
+      );
+    } catch (error) {
+      console.error('Unable to update participant disconnect state:', error);
+    }
   }
-
-  // async handleDisconnect(client: Socket) {
-  //   console.log(`Socket Client Disconnected: ${client.id}`);
-
-  //   const user = client.data.user;
-
-  //   if (!user?.sub) {
-  //     return;
-  //   }
-
-  //   try {
-  //     await this.quizService.markParticipantDisconnected(user.sub, client.id);
-  //   } catch (error) {
-  //     console.error('Unable to update participant disconnect state:', error);
-  //   }
-  // }
 
   // Admin & Participants join the Socket.io room channel
   // @UseGuards(WsJwtGuard)
@@ -73,6 +118,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //     },
   //   };
   // }
+
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('join_room')
   async handleJoinRoom(
@@ -199,5 +245,27 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       success: true,
       message: 'Eliminated participants successfully moved to spectators.',
     };
+  }
+
+  private extractToken(client: Socket): string | null {
+    const authToken = client.handshake.auth?.token;
+
+    if (typeof authToken === 'string' && authToken.trim().length > 0) {
+      return this.removeBearerPrefix(authToken);
+    }
+
+    const authorization = client.handshake.headers?.authorization;
+
+    if (typeof authorization === 'string') {
+      return this.removeBearerPrefix(authorization);
+    }
+
+    return null;
+  }
+
+  private removeBearerPrefix(token: string): string {
+    return token.startsWith('Bearer ')
+      ? token.substring(7).trim()
+      : token.trim();
   }
 }

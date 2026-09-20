@@ -433,6 +433,22 @@ export class QuizService {
       });
     }
 
+    const user = new Types.ObjectId(userId);
+
+    const participantExist =
+      await this.participantRepo.findParticipantByQuizAndUser(
+        room.quizId,
+        user,
+      );
+
+    if (!participantExist) {
+      throw new NotFoundException({
+        message: 'Quiz participant record not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
     const existingParticipant = room.participants?.find(
       (participant) => participant.userId.toString() === userId,
     );
@@ -463,6 +479,10 @@ export class QuizService {
     };
 
     room.participants.push(participant);
+
+    participantExist.socketId = socketId;
+    participantExist.connected = true;
+    await participantExist.save();
 
     await this.quizRoomRepo.saveQuizRoom(room);
 
@@ -692,6 +712,19 @@ export class QuizService {
       );
 
     return question;
+  }
+
+  async markParticipantDisconnected(userId: string, socketId: string) {
+    const id = new Types.ObjectId(userId);
+
+    const participant = await this.participantRepo.findParticipantAndUpdate(
+      id,
+      socketId,
+    );
+
+    if (participant) {
+      return participant;
+    }
   }
 
   /**

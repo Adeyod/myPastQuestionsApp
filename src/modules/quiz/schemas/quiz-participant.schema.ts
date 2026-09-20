@@ -46,6 +46,15 @@ export class QuizParticipant {
 
   @Prop({ type: Number, default: null })
   eliminatedInRound?: number | null;
+
+  @Prop({ type: String, default: null })
+  socketId?: string | null;
+
+  @Prop({ type: Boolean, default: false })
+  connected!: boolean;
+
+  @Prop({ type: Date, default: null })
+  disconnectedAt?: Date | null;
 }
 
 export const QuizParticipantSchema =

@@ -116,6 +116,29 @@ export class QuizParticipantRepository {
     return response;
   }
 
+  async findParticipantAndUpdate(
+    userId: Types.ObjectId,
+    socketId: string,
+  ): Promise<QuizParticipantDocument | null> {
+    const response = await this.participantModel.findOneAndUpdate(
+      {
+        userId: new Types.ObjectId(userId),
+        socketId,
+      },
+      {
+        $set: {
+          connected: false,
+          disconnectedAt: new Date(),
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return response;
+  }
+
   // 5. Fetch all active participants currently in a specific status (e.g. IN_ROOM, QUALIFIED, TIE_BREAK)
   async findParticipantsByStatus(
     quizId: Types.ObjectId,
