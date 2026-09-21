@@ -631,7 +631,7 @@ export class SolveAndWinQuestionRepository {
       facetStage.easy = [
         {
           $match: {
-            subject: formattedSubjectId,
+            subjectId: formattedSubjectId,
             difficulty: SolveAndWinDifficulty.EASY,
           },
         },
@@ -643,7 +643,7 @@ export class SolveAndWinQuestionRepository {
       facetStage.medium = [
         {
           $match: {
-            subject: formattedSubjectId,
+            subjectId: formattedSubjectId,
             difficulty: SolveAndWinDifficulty.MEDIUM,
           },
         },
@@ -655,7 +655,7 @@ export class SolveAndWinQuestionRepository {
       facetStage.hard = [
         {
           $match: {
-            subject: formattedSubjectId,
+            subjectId: formattedSubjectId,
             difficulty: SolveAndWinDifficulty.HARD,
           },
         },
