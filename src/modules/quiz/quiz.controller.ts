@@ -278,6 +278,7 @@ export class QuizController {
     @Body() dto: GetRoundQuestionDto,
     @GetCurrentUser() user: JwtUser,
   ) {
+    console.log('dto:', dto);
     const response = await this.quizService.getRoundQuestions(
       quizId,
       dto.roundNumber,
