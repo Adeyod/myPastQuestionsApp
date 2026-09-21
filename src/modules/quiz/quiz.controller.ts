@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   UseGuards,
@@ -13,6 +14,7 @@ import {
   ApiBearerAuth,
   ApiHeader,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
 import { GetCurrentUser } from '../../common/decorators/get-current-user.decorator';
@@ -26,7 +28,6 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import type { JwtUser } from '../../common/types/jwt-user.type';
 import { Role } from '../users/schemas/user.schema';
 import { CreateQuizDto } from './dtos/create-quiz.dto';
-import { GetRoundQuestionDto } from './dtos/get-round-question.dto';
 import { QuizGateway } from './quiz.gateway';
 import { QuizService } from './quiz.service';
 
@@ -249,6 +250,13 @@ export class QuizController {
     required: true,
     example: '394ir-84736e5362-yw7qy3i38',
   })
+  @ApiQuery({
+    name: 'roundNumber',
+    type: Number,
+    required: true,
+    description: 'The sequence number of the quiz round',
+    example: 1,
+  })
   @SuccessMessage('Quiz round questions fetched successfully.')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -275,13 +283,12 @@ export class QuizController {
   })
   async getRoundQuestions(
     @Param('quizId') quizId: string,
-    @Body() dto: GetRoundQuestionDto,
+    @Query('roundNumber', ParseIntPipe) roundNumber: number,
     @GetCurrentUser() user: JwtUser,
   ) {
-    console.log('dto:', dto);
     const response = await this.quizService.getRoundQuestions(
       quizId,
-      dto.roundNumber,
+      roundNumber,
     );
 
     return response;
