@@ -541,49 +541,131 @@ export class SolveAndWinQuestionRepository {
     });
   }
 
+  // async findQuestionsBySubjectAndDifficulty(
+  //   subjectId: Types.ObjectId,
+  //   difficultyBreakdown: DifficultyBreakdown,
+  //   totalQuestionsExpected: number,
+  // ): Promise<SolveAndWinQuestionDocument[]> {
+  //   const pipeline: any[] = [];
+
+  //   const facetStage: Record<string, any[]> = {};
+
+  //   if (difficultyBreakdown.easy > 0) {
+  //     facetStage.easy = [
+  //       {
+  //         $match: {
+  //           subject: subjectId,
+  //           difficulty: SolveAndWinDifficulty.EASY,
+  //         },
+  //       },
+  //       { $sample: { size: difficultyBreakdown.easy } },
+  //     ];
+  //   }
+
+  //   if (difficultyBreakdown.medium > 0) {
+  //     facetStage.medium = [
+  //       {
+  //         $match: {
+  //           subject: subjectId,
+  //           difficulty: SolveAndWinDifficulty.MEDIUM,
+  //         },
+  //       },
+  //       { $sample: { size: difficultyBreakdown.medium } },
+  //     ];
+  //   }
+
+  //   if (difficultyBreakdown.hard > 0) {
+  //     facetStage.hard = [
+  //       {
+  //         $match: {
+  //           subject: subjectId,
+  //           difficulty: SolveAndWinDifficulty.HARD,
+  //         },
+  //       },
+  //       { $sample: { size: difficultyBreakdown.hard } },
+  //     ];
+  //   }
+
+  //   const [result] = await this.questionModel
+  //     .aggregate([
+  //       { $facet: facetStage },
+  //       {
+  //         $project: {
+  //           combined: {
+  //             $concatArrays: [
+  //               { $ifNull: ['$easy', []] },
+  //               { $ifNull: ['$medium', []] },
+  //               { $ifNull: ['$hard', []] },
+  //             ],
+  //           },
+  //         },
+  //       },
+  //     ])
+  //     .exec();
+  //   console.log('difficultyBreakdown:', difficultyBreakdown);
+
+  //   const questions = result?.combined || [];
+
+  //   for (let i = questions.length - 1; i > 0; i--) {
+  //     const j = Math.floor(Math.random() * (i + 1));
+  //     [questions[i], questions[j]] = [questions[j], questions[i]];
+  //   }
+
+  //   console.log('questions:', questions);
+
+  //   return questions;
+  // }
+
   async findQuestionsBySubjectAndDifficulty(
-    subjectId: Types.ObjectId,
+    subjectId: Types.ObjectId | string,
     difficultyBreakdown: DifficultyBreakdown,
     totalQuestionsExpected: number,
   ): Promise<SolveAndWinQuestionDocument[]> {
-    const pipeline: any[] = [];
+    // 1. Ensure subjectId is strictly a MongoDB ObjectId for aggregation
+    const formattedSubjectId =
+      typeof subjectId === 'string' ? new Types.ObjectId(subjectId) : subjectId;
 
     const facetStage: Record<string, any[]> = {};
 
-    if (difficultyBreakdown.easy > 0) {
+    if (difficultyBreakdown?.easy > 0) {
       facetStage.easy = [
         {
           $match: {
-            subject: subjectId,
+            subject: formattedSubjectId,
             difficulty: SolveAndWinDifficulty.EASY,
           },
         },
-        { $sample: { size: difficultyBreakdown.easy } },
+        { $sample: { size: Number(difficultyBreakdown.easy) } },
       ];
     }
 
-    if (difficultyBreakdown.medium > 0) {
+    if (difficultyBreakdown?.medium > 0) {
       facetStage.medium = [
         {
           $match: {
-            subject: subjectId,
+            subject: formattedSubjectId,
             difficulty: SolveAndWinDifficulty.MEDIUM,
           },
         },
-        { $sample: { size: difficultyBreakdown.medium } },
+        { $sample: { size: Number(difficultyBreakdown.medium) } },
       ];
     }
 
-    if (difficultyBreakdown.hard > 0) {
+    if (difficultyBreakdown?.hard > 0) {
       facetStage.hard = [
         {
           $match: {
-            subject: subjectId,
+            subject: formattedSubjectId,
             difficulty: SolveAndWinDifficulty.HARD,
           },
         },
-        { $sample: { size: difficultyBreakdown.hard } },
+        { $sample: { size: Number(difficultyBreakdown.hard) } },
       ];
+    }
+
+    // Guard against empty facet configuration
+    if (Object.keys(facetStage).length === 0) {
+      return [];
     }
 
     const [result] = await this.questionModel
@@ -602,16 +684,16 @@ export class SolveAndWinQuestionRepository {
         },
       ])
       .exec();
-    console.log('difficultyBreakdown:', difficultyBreakdown);
 
     const questions = result?.combined || [];
 
+    // Fisher-Yates shuffle
     for (let i = questions.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [questions[i], questions[j]] = [questions[j], questions[i]];
     }
 
-    console.log('questions:', questions);
+    console.log('repository questions:', questions);
 
     return questions;
   }
