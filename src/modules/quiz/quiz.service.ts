@@ -359,10 +359,30 @@ export class QuizService {
     };
   }
 
-  async validateParticipantCanJoinRoom(roomId: string, userId: string) {
-    const id = new Types.ObjectId(roomId);
+  async getRoomState(roomId: string) {
+    const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
-    const room = await this.quizRoomRepo.findRoomByRoomId(id);
+    if (!room) {
+      throw new NotFoundException({
+        message: 'Quiz room not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return {
+      roomId: room.roomId,
+      quizId: room.quizId,
+      status: room.status,
+      currentRound: room.currentRound,
+      currentQuestionIndex: room.currentQuestionIndex,
+      questionStartedAt: room.questionStartedAt,
+      questionEndsAt: room.questionEndsAt,
+    };
+  }
+
+  async validateParticipantCanJoinRoom(roomId: string, userId: string) {
+    const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
     if (!room) {
       throw new NotFoundException({
@@ -422,9 +442,7 @@ export class QuizService {
     userId: string,
     socketId: string,
   ) {
-    const id = new Types.ObjectId(roomId);
-
-    const room = await this.quizRoomRepo.findRoomByRoomId(id);
+    const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
     if (!room) {
       throw new NotFoundException({
@@ -488,6 +506,36 @@ export class QuizService {
 
     return participant;
   }
+
+  // async registerParticipantSocket(
+  //   quizId: string,
+  //   userId: string,
+  //   socketId: string,
+  // ) {
+  //   const participant =
+  //     await this.quizParticipantRepo.findParticipantByQuizAndUser(
+  //       new Types.ObjectId(quizId),
+  //       new Types.ObjectId(userId),
+  //     );
+
+  //   if (!participant) {
+  //     throw new NotFoundException({
+  //       success: false,
+  //       message: 'Quiz participant record not found.',
+  //       status: 404,
+  //     });
+  //   }
+
+  //   participant.socketId = socketId;
+  //   participant.connected = true;
+  //   participant.disconnectedAt = null;
+
+  //   if (participant.status === ParticipantStatus.REGISTERED) {
+  //     participant.status = ParticipantStatus.IN_ROOM;
+  //   }
+
+  //   return this.quizParticipantRepo.saveParticipant(participant);
+  // }
 
   async getRoundQuestions(quizIdStr: string, roundNumber: number) {
     const quizId = new Types.ObjectId(quizIdStr);

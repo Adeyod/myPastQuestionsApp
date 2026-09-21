@@ -31,6 +31,31 @@ export class QuizParticipantRepository {
     return response;
   }
 
+  async registerParticipantSocket(
+    quizId: Types.ObjectId,
+    userId: Types.ObjectId,
+    socketId: string,
+  ): Promise<QuizParticipantDocument | null> {
+    const response = await this.participantModel.findOneAndUpdate(
+      {
+        quizId,
+        userId,
+      },
+      {
+        $set: {
+          socketId,
+          connected: true,
+          disconnectedAt: null,
+        },
+      },
+      {
+        new: true,
+      },
+    );
+
+    return response;
+  }
+
   async findParticipantByQuizAndUser(
     quizId: Types.ObjectId,
     userId: Types.ObjectId,

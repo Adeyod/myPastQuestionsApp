@@ -38,16 +38,16 @@ export class QuizRoomRepository {
   async findActiveRoomByQuizId(
     quizId: Types.ObjectId,
   ): Promise<QuizRoomDocument | null> {
-    const response = await this.quizRoomModel.findOne({
+    return this.quizRoomModel.findOne({
       quizId,
+      status: {
+        $in: [QuizRoomStatus.WAITING, QuizRoomStatus.IN_PROGRESS],
+      },
     });
-
-    return response;
   }
-  async findRoomByRoomId(
-    roomId: Types.ObjectId,
-  ): Promise<QuizRoomDocument | null> {
-    const response = await this.quizRoomModel.findById(roomId);
+
+  async findRoomByRoomId(roomId: string): Promise<QuizRoomDocument | null> {
+    const response = await this.quizRoomModel.findOne({ roomId }).exec();
 
     return response;
   }

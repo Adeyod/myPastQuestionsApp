@@ -9,6 +9,7 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
+  WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtUser } from '../../common/types/jwt-user.type';
@@ -121,30 +122,77 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('join_room')
+  // async handleJoinRoom(
+  //   @MessageBody() data: { roomId: string },
+  //   @ConnectedSocket() client: Socket,
+  // ) {
+  //   const user = client.data.user;
+
+  //   const room = await this.quizService.validateParticipantCanJoinRoom(
+  //     data.roomId,
+  //     user.sub,
+  //   );
+
+  //   await client.join(room.roomId);
+
+  //   await this.quizService.registerParticipantSocket(
+  //     room.roomId,
+  //     user.sub,
+  //     client.id,
+  //   );
+
+  //   this.server.to(room.roomId).emit('participant_joined_room', {
+  //     userId: user.sub,
+  //     timestamp: new Date(),
+  //   });
+
+  //   return {
+  //     event: 'joined_room_ack',
+  //     data: {
+  //       roomId: room.roomId,
+  //       message: 'Successfully connected to quiz room.',
+  //     },
+  //   };
+  // }
   async handleJoinRoom(
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
     const user = client.data.user;
 
+    if (!user?.sub) {
+      throw new WsException('Authenticated user not found.');
+    }
+
+    // 1. Validate that the user is allowed to join this room
     const room = await this.quizService.validateParticipantCanJoinRoom(
       data.roomId,
       user.sub,
     );
 
+    // 2. Join the Socket.IO room
     await client.join(room.roomId);
 
+    // 3. Register/update this participant's socket connection
     await this.quizService.registerParticipantSocket(
-      room.roomId,
+      room.quizId.toString(),
       user.sub,
       client.id,
     );
 
+    // 4. Get the current persistent state of the quiz room
+    const roomState = await this.quizService.getRoomState(room.roomId);
+
+    // 5. Send the current state ONLY to this newly connected socket
+    client.emit('room_state', roomState);
+
+    // 6. Notify everyone else/current participants that someone joined
     this.server.to(room.roomId).emit('participant_joined_room', {
       userId: user.sub,
       timestamp: new Date(),
     });
 
+    // 7. Acknowledge the join request
     return {
       event: 'joined_room_ack',
       data: {

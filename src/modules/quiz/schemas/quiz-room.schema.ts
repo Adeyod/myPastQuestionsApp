@@ -3,6 +3,7 @@ import { HydratedDocument, Types } from 'mongoose';
 
 export enum QuizRoomStatus {
   WAITING = 'WAITING',
+  IN_PROGRESS = 'IN_PROGRESS',
   ROUND_IN_PROGRESS = 'ROUND_IN_PROGRESS',
   ROUND_COMPLETED = 'ROUND_COMPLETED',
   COMPLETED = 'COMPLETED',
