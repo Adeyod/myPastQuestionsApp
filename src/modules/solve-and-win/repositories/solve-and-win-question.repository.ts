@@ -10,6 +10,7 @@ import { ClientSession } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import { DifficultyBreakdown } from '../schemas/solve-and-win-contest.schema';
 import {
+  SolveAndWinDifficulty,
   SolveAndWinQuestion,
   SolveAndWinQuestionDocument,
 } from '../schemas/solve-and-win-question.schema';
@@ -551,21 +552,36 @@ export class SolveAndWinQuestionRepository {
 
     if (difficultyBreakdown.easy > 0) {
       facetStage.easy = [
-        { $match: { subject: subjectId, difficulty: 'EASY' } },
+        {
+          $match: {
+            subject: subjectId,
+            difficulty: SolveAndWinDifficulty.EASY,
+          },
+        },
         { $sample: { size: difficultyBreakdown.easy } },
       ];
     }
 
     if (difficultyBreakdown.medium > 0) {
       facetStage.medium = [
-        { $match: { subject: subjectId, difficulty: 'MEDIUM' } },
+        {
+          $match: {
+            subject: subjectId,
+            difficulty: SolveAndWinDifficulty.MEDIUM,
+          },
+        },
         { $sample: { size: difficultyBreakdown.medium } },
       ];
     }
 
     if (difficultyBreakdown.hard > 0) {
       facetStage.hard = [
-        { $match: { subject: subjectId, difficulty: 'HARD' } },
+        {
+          $match: {
+            subject: subjectId,
+            difficulty: SolveAndWinDifficulty.HARD,
+          },
+        },
         { $sample: { size: difficultyBreakdown.hard } },
       ];
     }
@@ -586,6 +602,7 @@ export class SolveAndWinQuestionRepository {
         },
       ])
       .exec();
+    console.log('difficultyBreakdown:', difficultyBreakdown);
 
     const questions = result?.combined || [];
 
@@ -593,6 +610,8 @@ export class SolveAndWinQuestionRepository {
       const j = Math.floor(Math.random() * (i + 1));
       [questions[i], questions[j]] = [questions[j], questions[i]];
     }
+
+    console.log('questions:', questions);
 
     return questions;
   }

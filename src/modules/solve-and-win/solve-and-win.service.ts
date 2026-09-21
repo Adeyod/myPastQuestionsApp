@@ -1689,6 +1689,8 @@ export class SolveAndWinService {
       });
     }
 
+    console.log('question fetching...:', response);
+
     return response;
   }
 
