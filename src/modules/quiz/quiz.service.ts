@@ -8,7 +8,7 @@ import {
 import { Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { JwtUser } from '../../common/types/jwt-user.type';
-import { checkExpiration } from '../../common/utils/helper';
+import { checkExpiration, generateRefCode } from '../../common/utils/helper';
 import { PlanCode } from '../plans/schemas/plan.schema';
 import { SolveAndWinService } from '../solve-and-win/solve-and-win.service';
 import { UsersService } from '../users/users.service';
@@ -279,9 +279,14 @@ export class QuizService {
       });
     }
 
+    const contestantId = generateRefCode();
+
+    console.log('contestantId:', contestantId);
+
     const participant = await this.participantRepo.createParticipant(
       quizId,
       userId,
+      contestantId,
     );
     await this.quizRepo.addJoinedUser(quizId, userId);
 

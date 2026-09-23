@@ -18,12 +18,14 @@ export class QuizParticipantRepository {
   async createParticipant(
     quizId: Types.ObjectId,
     userId: Types.ObjectId,
+    contestantId: string,
   ): Promise<QuizParticipantDocument> {
     const response = await new this.participantModel({
       quizId,
       userId,
       status: ParticipantStatus.REGISTERED,
       currentRound: 1,
+      contestantId,
       totalScore: 0,
       totalTimeTakenInSeconds: 0,
     }).save();

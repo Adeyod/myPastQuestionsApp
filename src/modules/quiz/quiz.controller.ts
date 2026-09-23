@@ -335,10 +335,10 @@ export class QuizController {
     const result = await this.quizService.createMeetingRoom(quizId, user);
 
     // 2. Emit WS notification so frontend participants listening on /quiz namespace get room code
-    this.quizGateway.server.emit('room_ready_to_join', {
-      quizId,
-      roomId: result.roomId,
-    });
+    // this.quizGateway.server.emit('room_ready_to_join', {
+    //   quizId,
+    //   roomId: result.roomId,
+    // });
 
     return {
       success: true,

@@ -47,6 +47,9 @@ export class QuizParticipant {
   @Prop({ type: Number, default: null })
   eliminatedInRound?: number | null;
 
+  @Prop({ type: String })
+  contestantId!: string;
+
   @Prop({ type: String, default: null })
   socketId?: string | null;
 
