@@ -35,6 +35,28 @@ export class QuizService {
     private readonly leaderboardRepo: QuizLeaderboardRepository,
   ) {}
 
+  async activateRoom(roomId: string, adminUserId: string) {
+    const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
+
+    if (!room) {
+      throw new NotFoundException({
+        success: false,
+        message: 'Quiz room not found.',
+        status: 404,
+      });
+    }
+
+    if (room.status !== QuizRoomStatus.WAITING) {
+      throw new BadRequestException(
+        `Room cannot be activated because its current status is ${room.status}.`,
+      );
+    }
+
+    room.status = QuizRoomStatus.IN_PROGRESS;
+
+    return this.quizRoomRepo.saveQuizRoom(room);
+  }
+
   async createQuiz(dto: CreateQuizDto) {
     const startDate = new Date(dto.start_date);
     const now = new Date();
@@ -350,6 +372,7 @@ export class QuizService {
       quizId,
       roomId,
       status: QuizRoomStatus.WAITING,
+      hostId: new Types.ObjectId(adminUser.sub.toString()),
       currentRound: 0,
       currentQuestionIndex: -1,
     });

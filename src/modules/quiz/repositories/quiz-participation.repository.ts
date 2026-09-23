@@ -51,7 +51,7 @@ export class QuizParticipantRepository {
         },
       },
       {
-        new: true,
+        returnDocument: 'after',
       },
     );
 

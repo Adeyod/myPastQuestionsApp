@@ -443,7 +443,7 @@ export class SolveAndWinParticipationRepository {
             ...(submittedAt ? { submittedAt } : {}),
           },
         },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
   }

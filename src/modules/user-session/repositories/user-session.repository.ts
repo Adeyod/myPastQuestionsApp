@@ -64,7 +64,7 @@ export class UserSessionRepository {
     const id = new Types.ObjectId(sessionId);
 
     const response = await this.sessionModel.findByIdAndUpdate(id, data, {
-      new: true,
+      returnDocument: 'after',
     });
 
     console.log('updateSession response:', response);

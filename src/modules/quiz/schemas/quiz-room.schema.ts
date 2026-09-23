@@ -30,6 +30,13 @@ export class QuizRoom {
   roomId!: string;
 
   @Prop({
+    type: Types.ObjectId,
+    ref: 'User',
+    required: true,
+  })
+  hostId!: Types.ObjectId;
+
+  @Prop({
     enum: QuizRoomStatus,
     default: QuizRoomStatus.WAITING,
   })

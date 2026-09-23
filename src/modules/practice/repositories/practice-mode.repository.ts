@@ -74,7 +74,7 @@ export class PracticeModeRepository implements OnModuleInit {
           $set: data,
         },
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       )

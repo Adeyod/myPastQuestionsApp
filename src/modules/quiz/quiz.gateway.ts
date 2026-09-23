@@ -14,6 +14,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { WsJwtGuard } from '../auth/guards/ws-jwt.guard';
+import { Role } from '../users/schemas/user.schema';
 import { QuizService } from './quiz.service';
 
 @WebSocketGateway({
@@ -92,68 +93,48 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // Admin & Participants join the Socket.io room channel
-  // @UseGuards(WsJwtGuard)
-  // @SubscribeMessage('join_room')
-  // async handleJoinRoom(
-  //   @MessageBody() data: { quizId: string; roomId: string },
-  //   @ConnectedSocket() client: Socket,
-  // ) {
-  //   const user = client.data.user;
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('activate_room')
+  async handleActivateRoom(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const user = client.data.user;
 
-  //   // Join the isolated Socket.io channel for this quiz room
-  //   await client.join(data.roomId);
+    // Verify user is an admin
+    if (user.role !== Role.ADMIN) {
+      throw new WsException('Only administrators can activate a quiz room.');
+    }
 
-  //   // Notify room members (Admin dashboard & participants) who joined
-  //   this.server.to(data.roomId).emit('participant_joined_room', {
-  //     userId: user.sub,
-  //     socketId: client.id,
-  //     timestamp: new Date(),
-  //   });
+    const room = await this.quizService.activateRoom(data.roomId, user.sub);
 
-  //   return {
-  //     event: 'joined_room_ack',
-  //     data: {
-  //       roomId: data.roomId,
-  //       message: 'Successfully connected to quiz room.',
-  //     },
-  //   };
-  // }
+    // Put admin into the Socket.IO room
+    await client.join(room.roomId);
+
+    // Get the latest state
+    const roomState = await this.quizService.getRoomState(room.roomId);
+
+    client.emit('room_state', roomState);
+
+    // Tell everyone currently connected to this room
+    this.server.to(room.roomId).emit('room_activated', {
+      room: roomState,
+      activatedBy: user.sub,
+      timestamp: new Date(),
+    });
+
+    return {
+      event: 'room_activation_ack',
+      data: {
+        roomId: room.roomId,
+        status: room.status,
+        message: 'Quiz room activated successfully.',
+      },
+    };
+  }
 
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('join_room')
-  // async handleJoinRoom(
-  //   @MessageBody() data: { roomId: string },
-  //   @ConnectedSocket() client: Socket,
-  // ) {
-  //   const user = client.data.user;
-
-  //   const room = await this.quizService.validateParticipantCanJoinRoom(
-  //     data.roomId,
-  //     user.sub,
-  //   );
-
-  //   await client.join(room.roomId);
-
-  //   await this.quizService.registerParticipantSocket(
-  //     room.roomId,
-  //     user.sub,
-  //     client.id,
-  //   );
-
-  //   this.server.to(room.roomId).emit('participant_joined_room', {
-  //     userId: user.sub,
-  //     timestamp: new Date(),
-  //   });
-
-  //   return {
-  //     event: 'joined_room_ack',
-  //     data: {
-  //       roomId: room.roomId,
-  //       message: 'Successfully connected to quiz room.',
-  //     },
-  //   };
-  // }
   async handleJoinRoom(
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,

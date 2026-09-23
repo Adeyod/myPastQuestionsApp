@@ -16,18 +16,26 @@ export class QuizRoomRepository {
 
   async createRoom(payload: {
     quizId: Types.ObjectId;
+    hostId: Types.ObjectId;
     roomId: string;
     status: QuizRoomStatus;
     currentRound: number;
     currentQuestionIndex: -1;
   }): Promise<QuizRoomDocument> {
-    const { quizId, roomId, status, currentRound, currentQuestionIndex } =
-      payload;
+    const {
+      quizId,
+      roomId,
+      status,
+      hostId,
+      currentRound,
+      currentQuestionIndex,
+    } = payload;
 
     const response = await new this.quizRoomModel({
       quizId,
       roomId,
       status,
+      hostId,
       currentRound,
       currentQuestionIndex,
     }).save();

@@ -93,7 +93,7 @@ export class QuizRepository {
       .findByIdAndUpdate(
         quizId,
         { $addToSet: { joined_users: userId } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
 

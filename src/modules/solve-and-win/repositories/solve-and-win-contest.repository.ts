@@ -209,7 +209,7 @@ export class SolveAndWinContestRepository {
           $set: data,
         },
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       )
@@ -234,7 +234,7 @@ export class SolveAndWinContestRepository {
           },
         },
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       )
@@ -258,7 +258,7 @@ export class SolveAndWinContestRepository {
           },
         },
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       )
@@ -291,7 +291,7 @@ export class SolveAndWinContestRepository {
   //         },
   //       },
   //       {
-  //         new: true,
+  //         returnDocument: 'after',
   //         runValidators: true,
   //       },
   //     )
@@ -409,7 +409,7 @@ export class SolveAndWinContestRepository {
   //         },
   //       },
   //       {
-  //         new: true,
+  //         returnDocument: 'after',
   //         runValidators: true,
   //       },
   //     )
