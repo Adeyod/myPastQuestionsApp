@@ -64,7 +64,7 @@ export class QuizService {
           message: `Room cannot be activated because its current status is ${room.status}.`,
           code: `${room.status}`,
           success: false,
-          status: 403,
+          status: 400,
         });
       }
     }
