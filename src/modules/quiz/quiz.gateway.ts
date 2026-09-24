@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { UseFilters, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -12,11 +12,13 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { WsExceptionFilter } from '../../common/filters/ws-exception.filter';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { WsJwtGuard } from '../auth/guards/ws-jwt.guard';
 import { Role } from '../users/schemas/user.schema';
 import { QuizService } from './quiz.service';
 
+@UseFilters(WsExceptionFilter)
 @WebSocketGateway({
   cors: { origin: '*' },
   namespace: '/quiz',

@@ -41,15 +41,32 @@ export class QuizService {
     if (!room) {
       throw new NotFoundException({
         success: false,
+        code: 'ROOM_NOT_FOUND',
         message: 'Quiz room not found.',
         status: 404,
       });
     }
 
+    if (room.hostId.toString() !== adminUserId) {
+      throw new ForbiddenException({
+        code: 'NOT_ROOM_HOST',
+        message: 'You are not authorized to activate this quiz room.',
+        success: false,
+        status: 403,
+      });
+    }
+
     if (room.status !== QuizRoomStatus.WAITING) {
-      throw new BadRequestException(
-        `Room cannot be activated because its current status is ${room.status}.`,
-      );
+      if (room.status === QuizRoomStatus.IN_PROGRESS) {
+        return room;
+      } else {
+        throw new BadRequestException({
+          message: `Room cannot be activated because its current status is ${room.status}.`,
+          code: `${room.status}`,
+          success: false,
+          status: 403,
+        });
+      }
     }
 
     room.status = QuizRoomStatus.IN_PROGRESS;
