@@ -111,11 +111,14 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       user.sub.toString(),
     );
 
+    console.log('activate_room room:', room);
     // Put admin into the Socket.IO room
     await client.join(room.roomId);
 
     // Get the latest state
     const roomState = await this.quizService.getRoomState(room.roomId);
+
+    console.log('activate_room roomState:', roomState);
 
     client.emit('room_state', roomState);
 
@@ -156,6 +159,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       user.sub,
     );
 
+    console.log('room:', room);
+
     // 2. Join the Socket.IO room
     await client.join(room.roomId);
 
@@ -168,6 +173,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // 4. Get the current persistent state of the quiz room
     const roomState = await this.quizService.getRoomState(room.roomId);
+
+    console.log('join_room roomState:', roomState);
 
     // 5. Send the current state ONLY to this newly connected socket
     client.emit('room_state', roomState);
@@ -203,6 +210,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       data.quizId,
       data.roundNumber,
     );
+
+    console.log('start_round questions:', questions);
 
     // Emit questions directly to all clients in the room
     this.server.to(data.roomId).emit('round_started', {

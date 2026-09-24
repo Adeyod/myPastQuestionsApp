@@ -577,7 +577,7 @@ export class AuthService {
     const payload = { sub: id, email, role, plans };
 
     const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: process.env.NODE_ENV === 'production' ? '15m' : '3d',
+      expiresIn: process.env.NODE_ENV === 'production' ? '1d' : '3d',
     });
 
     return accessToken;
