@@ -95,58 +95,150 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('activate_room')
+  // async handleActivateRoom(
+  //   @MessageBody() data: { roomId: string },
+  //   @ConnectedSocket() client: Socket,
+  // ) {
+  //   const user: JwtUser = client.data.user;
+
+  //   // Verify user is an admin
+  //   if (user.role !== Role.ADMIN) {
+  //     throw new WsException('Only administrators can activate a quiz room.');
+  //   }
+
+  //   const room = await this.quizService.activateRoom(
+  //     data.roomId,
+  //     user.sub.toString(),
+  //   );
+
+  //   console.log('activate_room room:', room);
+  //   // Put admin into the Socket.IO room
+  //   await client.join(room.roomId);
+
+  //   // Get the latest state
+  //   const roomState = await this.quizService.getRoomState(room.roomId);
+
+  //   console.log('activate_room roomState:', roomState);
+
+  //   client.emit('room_state', roomState);
+
+  //   // Tell everyone currently connected to this room
+  //   this.server.to(room.roomId).emit('room_activated', {
+  //     room: roomState,
+  //     activatedBy: user.sub,
+  //     timestamp: new Date(),
+  //   });
+
+  //   client.emit('room_activation_ack', {
+  //     roomId: room.roomId,
+  //     quizId: room.quizId,
+  //     role: user.role,
+  //     status: room.status,
+  //     message: 'Quiz room activated successfully.',
+  //   });
+
+  //   // return {
+  //   //   event: 'room_activation_ack',
+  //   //   data: {
+  //   //     roomId: room.roomId,
+  //   //     quizId: room.quizId,
+  //   //     role: user.role,
+  //   //     status: room.status,
+  //   //     message: 'Quiz room activated successfully.',
+  //   //   },
+  //   // };
+  // }
   async handleActivateRoom(
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const user: JwtUser = client.data.user;
+    console.log('========================================');
+    console.log('ACTIVATE_ROOM EVENT RECEIVED');
+    console.log('Socket ID:', client.id);
+    console.log('Payload:', data);
+    console.log('Socket user:', client.data.user);
+    console.log('========================================');
 
-    // Verify user is an admin
-    if (user.role !== Role.ADMIN) {
-      throw new WsException('Only administrators can activate a quiz room.');
+    try {
+      const user: JwtUser = client.data.user;
+
+      console.log('STEP 1 - User:', user);
+
+      if (!user?.sub) {
+        console.error('STEP 1 FAILED - No authenticated user');
+        throw new WsException('Authenticated user not found.');
+      }
+
+      console.log('STEP 2 - User role:', user.role);
+      console.log('STEP 2 - Expected role:', Role.ADMIN);
+
+      if (user.role !== Role.ADMIN) {
+        console.error('STEP 2 FAILED - User is not admin');
+
+        throw new WsException('Only administrators can activate a quiz room.');
+      }
+
+      console.log('STEP 3 - Calling activateRoom()');
+
+      const room = await this.quizService.activateRoom(
+        data.roomId,
+        user.sub.toString(),
+      );
+
+      console.log('STEP 3 SUCCESS - activateRoom result:', room);
+
+      console.log('STEP 4 - Joining Socket.IO room');
+
+      await client.join(room.roomId);
+
+      console.log('STEP 4 SUCCESS - Joined:', room.roomId);
+
+      console.log('STEP 5 - Getting room state');
+
+      const roomState = await this.quizService.getRoomState(room.roomId);
+
+      console.log('STEP 5 SUCCESS - roomState:', roomState);
+
+      console.log('STEP 6 - Sending room_state');
+
+      client.emit('room_state', roomState);
+
+      console.log('STEP 7 - Sending room_activated');
+
+      this.server.to(room.roomId).emit('room_activated', {
+        room: roomState,
+        activatedBy: user.sub,
+        timestamp: new Date(),
+      });
+
+      console.log('STEP 8 - Returning acknowledgement');
+
+      return {
+        event: 'room_activation_ack',
+        data: {
+          roomId: room.roomId,
+          quizId: room.quizId,
+          role: user.role,
+          status: room.status,
+          message: 'Quiz room activated successfully.',
+        },
+      };
+    } catch (error) {
+      console.error('========================================');
+      console.error('ACTIVATE_ROOM FAILED');
+      console.error('Error:', error);
+      console.error(
+        'Error message:',
+        error instanceof Error ? error.message : error,
+      );
+      console.error(
+        'Error stack:',
+        error instanceof Error ? error.stack : 'No stack',
+      );
+      console.error('========================================');
+
+      throw error;
     }
-
-    const room = await this.quizService.activateRoom(
-      data.roomId,
-      user.sub.toString(),
-    );
-
-    console.log('activate_room room:', room);
-    // Put admin into the Socket.IO room
-    await client.join(room.roomId);
-
-    // Get the latest state
-    const roomState = await this.quizService.getRoomState(room.roomId);
-
-    console.log('activate_room roomState:', roomState);
-
-    client.emit('room_state', roomState);
-
-    // Tell everyone currently connected to this room
-    this.server.to(room.roomId).emit('room_activated', {
-      room: roomState,
-      activatedBy: user.sub,
-      timestamp: new Date(),
-    });
-
-    client.emit('room_activation_ack', {
-      roomId: room.roomId,
-      quizId: room.quizId,
-      role: user.role,
-      status: room.status,
-      message: 'Quiz room activated successfully.',
-    });
-
-    // return {
-    //   event: 'room_activation_ack',
-    //   data: {
-    //     roomId: room.roomId,
-    //     quizId: room.quizId,
-    //     role: user.role,
-    //     status: room.status,
-    //     message: 'Quiz room activated successfully.',
-    //   },
-    // };
   }
 
   @UseGuards(WsJwtGuard)
