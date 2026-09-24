@@ -129,16 +129,24 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       timestamp: new Date(),
     });
 
-    return {
-      event: 'room_activation_ack',
-      data: {
-        roomId: room.roomId,
-        quizId: room.quizId,
-        role: user.role,
-        status: room.status,
-        message: 'Quiz room activated successfully.',
-      },
-    };
+    client.emit('room_activation_ack', {
+      roomId: room.roomId,
+      quizId: room.quizId,
+      role: user.role,
+      status: room.status,
+      message: 'Quiz room activated successfully.',
+    });
+
+    // return {
+    //   event: 'room_activation_ack',
+    //   data: {
+    //     roomId: room.roomId,
+    //     quizId: room.quizId,
+    //     role: user.role,
+    //     status: room.status,
+    //     message: 'Quiz room activated successfully.',
+    //   },
+    // };
   }
 
   @UseGuards(WsJwtGuard)
