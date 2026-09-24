@@ -99,14 +99,17 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const user = client.data.user;
+    const user: JwtUser = client.data.user;
 
     // Verify user is an admin
     if (user.role !== Role.ADMIN) {
       throw new WsException('Only administrators can activate a quiz room.');
     }
 
-    const room = await this.quizService.activateRoom(data.roomId, user.sub);
+    const room = await this.quizService.activateRoom(
+      data.roomId,
+      user.sub.toString(),
+    );
 
     // Put admin into the Socket.IO room
     await client.join(room.roomId);
@@ -127,6 +130,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       event: 'room_activation_ack',
       data: {
         roomId: room.roomId,
+        quizId: room.quizId,
+        role: user.role,
         status: room.status,
         message: 'Quiz room activated successfully.',
       },
