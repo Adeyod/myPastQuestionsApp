@@ -170,6 +170,8 @@ export class SolveAndWinContentBlock {
 
 @Schema({ _id: true })
 export class SolveAndWinOption {
+  _id!: Types.ObjectId;
+
   @Prop({
     required: true,
     trim: true,

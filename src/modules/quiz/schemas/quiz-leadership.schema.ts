@@ -3,39 +3,114 @@ import { HydratedDocument, Types } from 'mongoose';
 
 @Schema({ _id: false })
 export class LeaderboardEntry {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'User',
+    required: true,
+  })
   userId!: Types.ObjectId;
 
-  @Prop({ required: true, default: 0 })
-  score!: number;
+  // Points earned during THIS round
+  @Prop({
+    type: Number,
+    required: true,
+    default: 0,
+  })
+  roundScore!: number;
 
-  @Prop({ required: true, default: 0 })
+  // Participant's cumulative score after THIS round
+  @Prop({
+    type: Number,
+    required: true,
+    default: 0,
+  })
+  totalScore!: number;
+
+  // Number of questions answered
+  @Prop({
+    type: Number,
+    required: true,
+    default: 0,
+  })
+  answeredQuestions!: number;
+
+  // Number answered correctly
+  @Prop({
+    type: Number,
+    required: true,
+    default: 0,
+  })
+  correctAnswers!: number;
+
+  // Total time spent answering questions in this round
+  @Prop({
+    type: Number,
+    required: true,
+    default: 0,
+  })
   timeTakenInSeconds!: number;
 
-  @Prop({ required: true, default: 0 })
+  // Position in this round
+  @Prop({
+    type: Number,
+    required: true,
+    default: 0,
+  })
   rank!: number;
 
-  @Prop({ required: true, default: false })
-  isEliminated!: boolean;
-
-  @Prop({ required: true, default: false })
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
   isTied!: boolean;
+
+  @Prop({
+    type: Number,
+    default: null,
+  })
+  tieGroup?: number | null;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  isEliminated!: boolean;
 }
 
 export type QuizLeaderboardDocument = HydratedDocument<QuizLeaderboard>;
 
 @Schema({ timestamps: true })
 export class QuizLeaderboard {
-  @Prop({ type: Types.ObjectId, ref: 'Quiz', required: true, index: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Quiz',
+    required: true,
+    index: true,
+  })
   quizId!: Types.ObjectId;
 
-  @Prop({ required: true })
+  @Prop({
+    type: Number,
+    required: true,
+  })
   roundNumber!: number;
 
-  @Prop({ type: [LeaderboardEntry], required: true })
+  @Prop({
+    type: [LeaderboardEntry],
+    default: [],
+  })
   entries!: LeaderboardEntry[];
 
-  @Prop({ default: false })
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  hasTie!: boolean;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
   hasTieBreakOccurred!: boolean;
 }
 

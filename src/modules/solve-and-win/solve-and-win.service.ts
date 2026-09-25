@@ -174,6 +174,39 @@ export class SolveAndWinService {
     return response;
   }
 
+  async findSolveAndWinQuestionById(questionId: string) {
+    const id = new Types.ObjectId(questionId);
+
+    const response =
+      await this.solveAndWinQuestionRepo.findSolveAndWinQuestionById(id);
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Question not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
+  }
+  async findSolveAndWinQuestionsByIds(questionIds: Types.ObjectId[]) {
+    const response =
+      await this.solveAndWinQuestionRepo.findSolveAndWinQuestionsByIds(
+        questionIds,
+      );
+
+    if (response.length === 0) {
+      throw new NotFoundException({
+        message: 'Questions not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
+  }
+
   async findSolveAndWinContestByIdWithSubjects(contestId: string) {
     const id = new Types.ObjectId(contestId);
 

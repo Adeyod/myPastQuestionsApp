@@ -166,6 +166,31 @@ export class QuizParticipantRepository {
     return response;
   }
 
+  async incrementScoreAndTime(
+    quizId: Types.ObjectId,
+    userId: Types.ObjectId,
+    scoreAwarded: number,
+    timeTakenInSeconds: number,
+  ): Promise<QuizParticipantDocument | null> {
+    const response = await this.participantModel.findOneAndUpdate(
+      {
+        quizId,
+        userId,
+      },
+      {
+        $inc: {
+          totalScore: scoreAwarded,
+          totalTimeTakenInSeconds: timeTakenInSeconds,
+        },
+      },
+      {
+        new: true,
+      },
+    );
+
+    return response;
+  }
+
   // 5. Fetch all active participants currently in a specific status (e.g. IN_ROOM, QUALIFIED, TIE_BREAK)
   async findParticipantsByStatus(
     quizId: Types.ObjectId,

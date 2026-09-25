@@ -187,4 +187,22 @@ export class QuizRepository {
       quizzesObj: quizzes,
     };
   }
+
+  async isQuestionInRound(
+    quizId: Types.ObjectId,
+    roundNumber: number,
+    questionId: Types.ObjectId,
+  ): Promise<boolean> {
+    const exists = await this.quizModel.exists({
+      _id: quizId,
+      round_information: {
+        $elemMatch: {
+          round_number: roundNumber,
+          questionIds: questionId,
+        },
+      },
+    });
+
+    return !!exists;
+  }
 }

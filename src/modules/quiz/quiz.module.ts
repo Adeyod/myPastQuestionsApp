@@ -7,11 +7,14 @@ import { UsersModule } from '../users/users.module';
 import { QuizController } from './quiz.controller';
 import { QuizGateway } from './quiz.gateway';
 import { QuizService } from './quiz.service';
+import { QuizAnswerRepository } from './repositories/quiz-answer.repository';
 import { QuizLeaderboardRepository } from './repositories/quiz-leaderboard.repository';
 import { QuizParticipantRepository } from './repositories/quiz-participation.repository';
+import { QuizQuestionWinnerRepository } from './repositories/quiz-question-winner.repository';
 import { QuizRoomRepository } from './repositories/quiz-room.repository';
 import { QuizVoteRepository } from './repositories/quiz-vote.repository';
 import { QuizRepository } from './repositories/quiz.repository';
+import { QuizAnswer, QuizAnswerSchema } from './schemas/quiz-answer.schema';
 import {
   QuizLeaderboard,
   QuizLeaderboardSchema,
@@ -20,6 +23,10 @@ import {
   QuizParticipant,
   QuizParticipantSchema,
 } from './schemas/quiz-participant.schema';
+import {
+  QuizQuestionWinner,
+  QuizQuestionWinnerSchema,
+} from './schemas/quiz-question-winner.schema';
 import { QuizRoom, QuizRoomSchema } from './schemas/quiz-room.schema';
 import { QuizVote, QuizVoteSchema } from './schemas/quiz-vote.schema';
 import { Quiz, QuizSchema } from './schemas/quiz.schema';
@@ -31,6 +38,8 @@ import { Quiz, QuizSchema } from './schemas/quiz.schema';
       { name: QuizParticipant.name, schema: QuizParticipantSchema },
       { name: QuizVote.name, schema: QuizVoteSchema },
       { name: Quiz.name, schema: QuizSchema },
+      { name: QuizAnswer.name, schema: QuizAnswerSchema },
+      { name: QuizQuestionWinner.name, schema: QuizQuestionWinnerSchema },
       { name: QuizRoom.name, schema: QuizRoomSchema },
     ]),
     UserSessionModule,
@@ -47,6 +56,8 @@ import { Quiz, QuizSchema } from './schemas/quiz.schema';
     QuizVoteRepository,
     QuizGateway,
     QuizRoomRepository,
+    QuizAnswerRepository,
+    QuizQuestionWinnerRepository,
   ],
 })
 export class QuizModule {}

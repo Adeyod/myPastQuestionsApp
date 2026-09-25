@@ -36,6 +36,13 @@ export class RoundInformation {
 
   @Prop({ required: true, default: 0 })
   exit_reward!: number;
+
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'SolveAndWinQuestion',
+    default: [],
+  })
+  questionIds!: Types.ObjectId[];
 }
 
 @Schema({ _id: false })
@@ -51,6 +58,13 @@ export class FinalRoundInformation {
 
   @Prop({ required: true, default: 0 })
   second_position_reward!: number;
+
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'SolveAndWinQuestion',
+    default: [],
+  })
+  questionIds!: Types.ObjectId[];
 }
 
 export type QuizDocument = HydratedDocument<Quiz>;
