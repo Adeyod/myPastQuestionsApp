@@ -11,6 +11,7 @@ import { JwtUser } from '../../common/types/jwt-user.type';
 import { checkExpiration, generateRefCode } from '../../common/utils/helper';
 import { PlanCode } from '../plans/schemas/plan.schema';
 import { SolveAndWinService } from '../solve-and-win/solve-and-win.service';
+import { Role } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
 import { CreateQuizDto } from './dtos/create-quiz.dto';
 import { CastVoteDto, SyncLeaderboardDto } from './dtos/join-quiz.dto';
@@ -430,7 +431,10 @@ export class QuizService {
     };
   }
 
-  async validateParticipantCanJoinRoom(roomId: string, userId: string) {
+  async validateParticipantCanJoinRoom(roomId: string, user: JwtUser) {
+    const userId = user.sub.toString();
+    const userRole = user.role;
+
     const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
     if (!room) {
@@ -463,7 +467,7 @@ export class QuizService {
       (id) => id.toString() === userId,
     );
 
-    if (!isParticipant) {
+    if (userRole !== Role.ADMIN && !isParticipant) {
       throw new ForbiddenException({
         message: 'You are not registered for this quiz contest.',
         status: 403,

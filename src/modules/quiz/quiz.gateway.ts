@@ -300,7 +300,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 1. Validate that the user is allowed to join this room
     const room = await this.quizService.validateParticipantCanJoinRoom(
       data.roomId,
-      user.sub,
+      user,
     );
 
     console.log('room:', room);
