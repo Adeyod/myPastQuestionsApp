@@ -15,6 +15,14 @@ import { Server, Socket } from 'socket.io';
 import { WsExceptionFilter } from '../../common/filters/ws-exception.filter';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { WsJwtGuard } from '../auth/guards/ws-jwt.guard';
+import {
+  SolveAndWinContentBlock,
+  SolveAndWinDifficulty,
+  SolveAndWinExamSection,
+  SolveAndWinOption,
+  SolveAndWinQuestionType,
+} from '../solve-and-win/schemas/solve-and-win-question.schema';
+import { SolveAndWinService } from '../solve-and-win/solve-and-win.service';
 import { Role } from '../users/schemas/user.schema';
 import { QuizService } from './quiz.service';
 
@@ -29,6 +37,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly quizService: QuizService,
+    private readonly solveAndWinService: SolveAndWinService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -140,6 +149,110 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
         status: room.status,
         message: 'Quiz room activated successfully.',
       },
+    };
+  }
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('start_questions')
+  async handleStartQuestion(
+    @MessageBody()
+    data: {
+      quizId: string;
+      roomId: string;
+      roundNumber: number;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const user: JwtUser = client.data.user;
+
+    if (!user?.sub) {
+      throw new WsException('Authenticated user not found.');
+    }
+
+    if (user.role !== Role.ADMIN) {
+      throw new WsException('Only administrators can activate a quiz room.');
+    }
+
+    const roundQuestions = await this.quizService.getRoundQuestions(
+      data.quizId,
+      data.roundNumber,
+    );
+
+    return {
+      event: 'getting_room_questions_ack',
+      data: {
+        message: 'Quiz round questions fetched successfully.',
+        questions: roundQuestions,
+        quizId: data.quizId,
+        roomId: data.roomId,
+        roundNumber: data.roundNumber,
+      },
+    };
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('display_next_question')
+  async handleSendActiveQuestion(
+    @MessageBody()
+    data: {
+      quizId: string;
+      roomId: string;
+      question: {
+        id: string;
+        subjectId: string;
+        content: SolveAndWinContentBlock[];
+        question: string;
+        questionNumber: number;
+        options: SolveAndWinOption[];
+        section: SolveAndWinExamSection;
+        questionType: SolveAndWinQuestionType;
+        isMultipleAnswer: boolean;
+        explanation: string;
+        explanationSteps: string[];
+        difficulty: SolveAndWinDifficulty;
+        passageId?: string;
+        instruction?: string;
+        media?: SolveAndWinContentBlock;
+      };
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const user: JwtUser = client.data.user;
+
+    if (user?.role !== Role.ADMIN) {
+      throw new WsException('Only administrators can push active questions.');
+    }
+
+    const questionExist =
+      await this.solveAndWinService.findSolveAndWinQuestionById(
+        data.question.id,
+      );
+
+    const roomId = data.roomId;
+
+    // Broadcast ONLY the active question to all participants in the room
+    this.server.to(roomId).emit('new_question_displayed', {
+      quizId: data.quizId,
+      id: data.question.id,
+      subjectId: data.question.subjectId,
+      content: data.question.content,
+      question: data.question.question,
+      options: data.question.options,
+      section: data.question.section,
+      questionType: data.question.questionType,
+      isMultipleAnswer: data.question.isMultipleAnswer,
+      explanation: data.question.explanation,
+      explanationSteps: data.question.explanationSteps,
+      difficulty: data.question.difficulty,
+      passageId: data.question.passageId,
+      instruction: data.question.instruction,
+      media: data.question.media,
+      startTime: new Date(),
+      questionNumber: data.question.questionNumber,
+    });
+
+    return {
+      success: true,
+      message: `Question ${data.question.questionNumber} pushed to room.`,
     };
   }
 

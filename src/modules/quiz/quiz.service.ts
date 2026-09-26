@@ -1285,6 +1285,7 @@ export class QuizService {
     return {
       success: true,
       data: {
+        leaderboardData: updatedLeaderboard,
         answerId: quizAnswer._id,
         quizId: room.quizId,
         roomId: room.roomId,
