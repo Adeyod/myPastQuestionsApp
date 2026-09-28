@@ -47,7 +47,7 @@ export class QuizService {
       throw new NotFoundException({
         success: false,
         code: 'ROOM_NOT_FOUND',
-        message: 'Quiz room not found during room activation.',
+        message: 'Quiz room not found.',
         status: 404,
       });
     }
@@ -414,7 +414,7 @@ export class QuizService {
 
     if (!room) {
       throw new NotFoundException({
-        message: 'Quiz room not found when getting room.',
+        message: 'Quiz room not found.',
         success: false,
         status: 404,
       });
@@ -440,8 +440,7 @@ export class QuizService {
     if (!room) {
       throw new NotFoundException({
         success: false,
-        message:
-          'Quiz room not found when validating participant can join room.',
+        message: 'Quiz room not found.',
       });
     }
 
@@ -504,7 +503,7 @@ export class QuizService {
     if (!room) {
       throw new NotFoundException({
         success: false,
-        message: `Quiz room not found when registering participant socket. RoomID: ${roomId}`,
+        message: `Quiz room not found.`,
       });
     }
 
@@ -562,6 +561,54 @@ export class QuizService {
     await this.quizRoomRepo.saveQuizRoom(room);
 
     return participant;
+  }
+  async registerAdminSocket(roomId: string, userId: string, socketId: string) {
+    const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
+
+    console.log('room:', room);
+    console.log('roomId:', roomId);
+
+    if (!room) {
+      throw new NotFoundException({
+        success: false,
+        message: `Quiz room not found.`,
+      });
+    }
+
+    const existingAdmin = room.admins?.find(
+      (admin) => admin.userId.toString() === userId,
+    );
+
+    /*
+     * Admin already exists in this room.
+     *
+     * This is most likely a reconnection, so update
+     * the socket ID instead of creating another admin.
+     */
+    if (existingAdmin) {
+      existingAdmin.socketId = socketId;
+      existingAdmin.connected = true;
+
+      await this.quizRoomRepo.saveQuizRoom(room);
+
+      return existingAdmin;
+    }
+
+    /*
+     * New admin.
+     */
+    const admin = {
+      userId: new Types.ObjectId(userId),
+      socketId,
+      joinedAt: new Date(),
+      connected: true,
+    };
+
+    room.admins.push(admin);
+
+    await this.quizRoomRepo.saveQuizRoom(room);
+
+    return admin;
   }
 
   // async registerParticipantSocket(
@@ -901,7 +948,7 @@ export class QuizService {
       throw new NotFoundException({
         success: false,
         code: 'ROOM_NOT_FOUND',
-        message: 'Quiz room not found when submitting answer.',
+        message: 'Quiz room not found.',
         status: 404,
       });
     }

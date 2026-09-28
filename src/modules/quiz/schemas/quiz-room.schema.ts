@@ -76,6 +76,22 @@ export class QuizRoom {
     default: [],
   })
   spectators!: Types.ObjectId[];
+
+  @Prop({
+    type: [
+      {
+        userId: {
+          type: Types.ObjectId,
+          ref: 'User',
+        },
+        socketId: String,
+        joinedAt: Date,
+        connected: Boolean,
+      },
+    ],
+    default: [],
+  })
+  admins!: any[];
 }
 
 export const QuizRoomSchema = SchemaFactory.createForClass(QuizRoom);

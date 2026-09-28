@@ -291,7 +291,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const user = client.data.user;
+    const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
       throw new WsException('Authenticated user not found.');
@@ -309,12 +309,21 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     await client.join(room.roomId);
 
     // 3. Register/update this participant's socket connection
-    await this.quizService.registerParticipantSocket(
-      // room.quizId.toString(),
-      room.roomId,
-      user.sub,
-      client.id,
-    );
+    if (user.role === Role.ADMIN) {
+      await this.quizService.registerAdminSocket(
+        // room.quizId.toString(),
+        room.roomId,
+        user.sub.toString(),
+        client.id,
+      );
+    } else {
+      await this.quizService.registerParticipantSocket(
+        // room.quizId.toString(),
+        room.roomId,
+        user.sub.toString(),
+        client.id,
+      );
+    }
 
     // 4. Get the current persistent state of the quiz room
     const roomState = await this.quizService.getRoomState(room.roomId);
