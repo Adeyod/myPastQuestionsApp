@@ -504,7 +504,7 @@ export class QuizService {
     if (!room) {
       throw new NotFoundException({
         success: false,
-        message: 'Quiz room not found when registering participant socket.',
+        message: `Quiz room not found when registering participant socket. RoomID: ${roomId}`,
       });
     }
 
