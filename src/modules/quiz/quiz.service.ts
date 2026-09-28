@@ -499,6 +499,7 @@ export class QuizService {
     const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
     console.log('room:', room);
+    console.log('roomId:', roomId);
 
     if (!room) {
       throw new NotFoundException({
