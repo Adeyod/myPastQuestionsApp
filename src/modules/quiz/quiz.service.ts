@@ -47,7 +47,7 @@ export class QuizService {
       throw new NotFoundException({
         success: false,
         code: 'ROOM_NOT_FOUND',
-        message: 'Quiz room not found.',
+        message: 'Quiz room not found during room activation.',
         status: 404,
       });
     }
@@ -414,7 +414,7 @@ export class QuizService {
 
     if (!room) {
       throw new NotFoundException({
-        message: 'Quiz room not found.',
+        message: 'Quiz room not found when getting room.',
         success: false,
         status: 404,
       });
@@ -440,7 +440,8 @@ export class QuizService {
     if (!room) {
       throw new NotFoundException({
         success: false,
-        message: 'Quiz room not found.',
+        message:
+          'Quiz room not found when validating participant can join room.',
       });
     }
 
@@ -500,7 +501,7 @@ export class QuizService {
     if (!room) {
       throw new NotFoundException({
         success: false,
-        message: 'Quiz room not found.',
+        message: 'Quiz room not found when registering participant socket.',
       });
     }
 
@@ -897,7 +898,7 @@ export class QuizService {
       throw new NotFoundException({
         success: false,
         code: 'ROOM_NOT_FOUND',
-        message: 'Quiz room not found.',
+        message: 'Quiz room not found when submitting answer.',
         status: 404,
       });
     }
