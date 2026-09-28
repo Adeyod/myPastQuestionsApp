@@ -310,7 +310,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // 3. Register/update this participant's socket connection
     await this.quizService.registerParticipantSocket(
-      room.quizId.toString(),
+      // room.quizId.toString(),
+      room.roomId,
       user.sub,
       client.id,
     );
