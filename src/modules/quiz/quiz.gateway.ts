@@ -11,6 +11,7 @@ import {
   WebSocketServer,
   WsException,
 } from '@nestjs/websockets';
+import { Types } from 'mongoose';
 import { Server, Socket } from 'socket.io';
 import { WsExceptionFilter } from '../../common/filters/ws-exception.filter';
 import { JwtUser } from '../../common/types/jwt-user.type';
@@ -346,6 +347,30 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomId: room.roomId,
         message: 'Successfully connected to quiz room.',
       },
+    };
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('get_room_doc')
+  async handleGetRoom(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const user: JwtUser = client.data.user;
+
+    if (!user?.sub) {
+      throw new WsException('Authenticated user not found.');
+    }
+
+    const roomDoc = await this.quizService.getRoomDocumentForAdmin(
+      data.roomId,
+      new Types.ObjectId(user.sub.toString()),
+    );
+
+    // 3. Return acknowledging response with the room data
+    return {
+      event: 'get_room_ack',
+      data: roomDoc,
     };
   }
 

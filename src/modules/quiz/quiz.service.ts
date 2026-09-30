@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
@@ -429,6 +430,27 @@ export class QuizService {
       questionStartedAt: room.questionStartedAt,
       questionEndsAt: room.questionEndsAt,
     };
+  }
+  async getRoomDocumentForAdmin(roomId: string, userId: Types.ObjectId) {
+    const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
+
+    if (!room) {
+      throw new NotFoundException({
+        message: 'Quiz room not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (room.hostId.toString() !== userId.toString()) {
+      throw new UnauthorizedException({
+        message: 'You are not the host of this quiz.',
+        success: false,
+        status: 401,
+      });
+    }
+
+    return room;
   }
 
   async validateParticipantCanJoinRoom(roomId: string, user: JwtUser) {
