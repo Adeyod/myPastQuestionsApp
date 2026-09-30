@@ -534,6 +534,9 @@ export class QuizService {
      * the socket ID instead of creating another participant.
      */
     if (existingParticipant) {
+      console.log(
+        `This participant is existing in the participant array.${existingParticipant}`,
+      );
       existingParticipant.socketId = socketId;
       existingParticipant.connected = true;
 
