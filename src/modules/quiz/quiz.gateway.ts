@@ -118,6 +118,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException('Authenticated user not found.');
     }
 
+    console.log('user inside activate room...:', user);
+
     if (user.role !== Role.ADMIN) {
       console.error('STEP 2 FAILED - User is not admin');
 
