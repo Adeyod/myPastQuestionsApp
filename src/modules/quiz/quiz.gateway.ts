@@ -277,6 +277,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const user: JwtUser = client.data.user;
 
+    console.log('participant_selected_answer payload:', data);
+
     if (!user?.sub) {
       throw new WsException('Authenticated user not found.');
     }

@@ -1039,6 +1039,9 @@ export class QuizService {
       });
     }
 
+    console.log('participant.currentRound:', participant.currentRound);
+    console.log('roundNumber:', roundNumber);
+
     if (participant.currentRound !== roundNumber) {
       throw new BadRequestException({
         success: false,
