@@ -1062,10 +1062,6 @@ export class QuizService {
       });
     }
 
-    console.log('participant.currentRound:', participant.currentRound);
-    console.log('room.currentRound:', room.currentRound);
-    console.log('roundNumber:', roundNumber);
-
     /*
      * ============================================================
      * 3. VALIDATE ROUND
@@ -1080,10 +1076,6 @@ export class QuizService {
         status: 400,
       });
     }
-
-    console.log('participant.currentRound:', participant.currentRound);
-    console.log('room.currentRound:', room.currentRound);
-    console.log('roundNumber:', roundNumber);
 
     if (participant.currentRound !== roundNumber) {
       throw new BadRequestException({
@@ -1198,21 +1190,43 @@ export class QuizService {
       });
     }
 
-    /*
-     * ============================================================
-     * 7. DETERMINE WHETHER THE ANSWER IS CORRECT
-     * ============================================================
-     */
-
-    // const normalizedSelectedAnswer = selectedAnswer.trim().toUpperCase();
-
-    // const normalizedCorrectAnswer = question.correctAnswer.trim().toUpperCase();
-
     const selectedAnswerObjectId = new Types.ObjectId(selectedAnswerId);
 
     const answerBelongsToQuestion = question.options.some(
       (option) => option._id.toString() === selectedAnswerObjectId.toString(),
     );
+
+    console.log('================ ANSWER DEBUG ================');
+
+    console.log('questionId:', question._id.toString());
+
+    console.log('selectedAnswerId:', selectedAnswerId);
+
+    console.log('selectedAnswerObjectId:', selectedAnswerObjectId.toString());
+
+    console.log(
+      'options:',
+      question.options.map((option) => ({
+        id: option._id,
+        idString: option._id?.toString(),
+        text: option.value,
+      })),
+    );
+
+    console.log(
+      'option IDs:',
+      question.options.map((option) => option._id?.toString()),
+    );
+
+    console.log(
+      'MATCH:',
+      question.options.some(
+        (option) =>
+          option._id?.toString() === selectedAnswerObjectId.toString(),
+      ),
+    );
+
+    console.log('==============================================');
 
     if (!answerBelongsToQuestion) {
       throw new BadRequestException({
@@ -1227,38 +1241,9 @@ export class QuizService {
         correctAnswerId.toString() === selectedAnswerObjectId.toString(),
     );
 
-    // const isCorrect = normalizedSelectedAnswer === normalizedCorrectAnswer;
-
-    /*
-     * Default:
-     *
-     * Every answer receives zero points.
-     *
-     * A correct answer will only receive points if the participant
-     * successfully claims QuizQuestionWinner.
-     */
-
     const points = 1;
     let scoreAwarded = 0;
     let isFirstCorrectAnswer = false;
-
-    /*
-     * ============================================================
-     * 8. CLAIM QUESTION WINNER
-     * ============================================================
-     *
-     * THIS IS THE CRITICAL PART.
-     *
-     * We only attempt to create QuizQuestionWinner when the answer
-     * is correct.
-     *
-     * The unique database index on:
-     *
-     * quizId + roundNumber + questionId
-     *
-     * guarantees that only one participant can successfully
-     * claim the points.
-     */
 
     if (isCorrect) {
       try {
@@ -1272,24 +1257,11 @@ export class QuizService {
           awardedAt: answeredAt,
         });
 
-        /*
-         * If the insert succeeds, this participant is the first
-         * correct participant.
-         */
-
         if (winner) {
           scoreAwarded = points;
           isFirstCorrectAnswer = true;
         }
       } catch (error) {
-        /*
-         * MongoDB duplicate-key error means another participant
-         * has already claimed this question.
-         *
-         * Therefore this participant is still correct, but receives
-         * zero points.
-         */
-
         if (!this.isDuplicateKeyError(error)) {
           throw error;
         }
@@ -1298,24 +1270,6 @@ export class QuizService {
         isFirstCorrectAnswer = false;
       }
     }
-
-    /*
-     * ============================================================
-     * 9. SAVE QUIZ ANSWER
-     * ============================================================
-     *
-     * IMPORTANT:
-     *
-     * Even if another participant already won the points, we still
-     * record this answer.
-     *
-     * For example:
-     *
-     * A → correct → 10 points
-     * B → correct → 0 points
-     *
-     * B's answer is still a correct answer.
-     */
 
     const quizAnswer = await this.quizAnswerRepo.createParticipantQuizAnswer({
       quizId: room.quizId,
@@ -1340,14 +1294,6 @@ export class QuizService {
       });
     }
 
-    /*
-     * ============================================================
-     * 10. UPDATE QUIZ PARTICIPANT
-     * ============================================================
-     *
-     * totalScore is cumulative across all rounds.
-     */
-
     const updatedParticipant = await this.participantRepo.incrementScoreAndTime(
       room.quizId,
       participant.userId,
@@ -1363,18 +1309,6 @@ export class QuizService {
         status: 404,
       });
     }
-
-    /*
-     * ============================================================
-     * 11. UPDATE QUIZ LEADERBOARD
-     * ============================================================
-     *
-     * The leaderboard contains the participant's summary for THIS
-     * round.
-     *
-     * roundScore = points earned in this round
-     * totalScore = cumulative score after this answer
-     */
 
     const updatedLeaderboard =
       await this.leaderboardRepo.upsertAndIncrementEntry({
