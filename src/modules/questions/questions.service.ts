@@ -48,8 +48,6 @@ export class QuestionsService {
       getPracticeQuestionsDto.mode,
     );
 
-    console.log('practiceMode:', practiceMode);
-
     if (!practiceMode.isActive) {
       throw new BadRequestException({
         message: 'This practice mode is currently unavailable.',

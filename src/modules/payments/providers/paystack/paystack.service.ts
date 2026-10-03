@@ -85,13 +85,6 @@ export class PaystackService implements IPaymentProvider {
       },
     );
 
-    console.log('response:', response);
-    console.log('response.data.data:', response.data.data);
-    console.log(
-      'response.data.data.recipient_code:',
-      response.data.data.recipient_code,
-    );
-
     return response.data.data.recipient_code;
   }
 
@@ -139,10 +132,6 @@ export class PaystackService implements IPaymentProvider {
       },
     );
 
-    console.log('response:', response);
-    console.log('response.data:', response.data);
-    console.log('response.data.data:', response.data.data);
-
     return response.data.data;
   }
 
@@ -152,7 +141,6 @@ export class PaystackService implements IPaymentProvider {
 
     const response = await axios(url, { headers });
 
-    console.log('response:', response);
     return response;
   }
 
@@ -162,7 +150,6 @@ export class PaystackService implements IPaymentProvider {
 
     const response = await axios(url, { headers });
 
-    console.log('response:', response);
     return response;
   }
 

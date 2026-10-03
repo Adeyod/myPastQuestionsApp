@@ -52,7 +52,6 @@ export class PaymentsRepository {
 
     const amountInKobo = planObj.priceInKobo;
 
-    console.log('amountInKobo:', amountInKobo);
     if (!amountInKobo) {
       throw new BadRequestException({
         message: 'Invalid Plan selected.',
@@ -112,7 +111,6 @@ export class PaymentsRepository {
     session?: ClientSession,
   ): Promise<PaymentDocument | null> {
     const paidAt = new Date(Date.now());
-    console.log('paidAt:', paidAt);
     const payment = await this.paymentModel.findByIdAndUpdate(
       paymentId,
       {
@@ -338,8 +336,6 @@ export class PaymentsRepository {
   //       amountInKobo: { $exists: false },
   //     })
   //     .lean()) as unknown as LegacyPayment[];
-
-  //   console.log(`Found ${payments.length} payments to migrate.`);
 
   //   let migratedCount = 0;
 

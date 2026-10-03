@@ -72,8 +72,6 @@ export class AuthService {
 
     const newUser = await this.usersRepository.create(payload);
 
-    console.log('newUser:', newUser);
-
     const token = generateCode(6);
     const input = {
       user: newUser._id,
@@ -82,18 +80,15 @@ export class AuthService {
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     };
     const userToken = await this.tokensRepository.create(input);
-    console.log('userToken:', userToken);
 
     const findWallet = await this.walletsRepository.findWalletByUserId(
       newUser._id.toString(),
     );
-    console.log('findWallet:', findWallet);
 
     if (!findWallet) {
       const newWallet = await this.walletsRepository.createWallet(
         newUser._id.toString(),
       );
-      console.log('newWallet:', newWallet);
     }
 
     const mailResponse = await this.mailService.sendVerificationEmail(
@@ -101,7 +96,6 @@ export class AuthService {
       newUser.firstName,
       userToken.token,
     );
-    console.log('mailResponse:', mailResponse);
 
     return {
       data: null,
@@ -260,8 +254,6 @@ export class AuthService {
 
   async loginUser(loginDto: LoginDto): Promise<AuthResponseDto> {
     const { email, password, deviceId, deviceName } = loginDto;
-
-    console.log('loginDto:', loginDto);
 
     const user = await this.usersRepository.findByEmail(email);
 

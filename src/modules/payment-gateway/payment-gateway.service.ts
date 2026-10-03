@@ -22,8 +22,6 @@ export class PaymentGatewayService {
   }
 
   async handleWebhook(provider: PaymentProvider, req: Request) {
-    console.log('req:', req);
-    console.log('provider:', provider);
     const handler = this.providerMap[provider];
 
     if (!handler) {
@@ -37,7 +35,6 @@ export class PaymentGatewayService {
     const providerResponse = await handler.handleWebhook(req);
 
     const event = providerResponse.event;
-    console.log('event:', event);
 
     switch (event) {
       case 'charge.success':

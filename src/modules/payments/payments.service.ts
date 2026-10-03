@@ -374,28 +374,21 @@ export class PaymentsService {
           session,
         );
 
-      console.log('payment:', payment);
-
       if (!payment) throw new NotFoundException('Payment not found');
 
-      // 🔐 Idempotency guard
       if (payment.status === PaymentStatus.SUCCESSFUL) {
         await session.abortTransaction();
         return { message: 'Already processed' };
       }
 
-      // Verify with provider
       const verifyResponse =
         await this.providerMap[payment.provider].verifyPayment(reference);
-
-      console.log('verifyResponse:', verifyResponse);
 
       if (verifyResponse.status !== 'success') {
         await session.abortTransaction();
         return { message: 'Verification failed' };
       }
 
-      // ✅ Atomic update + business logic
       payment.status = PaymentStatus.SUCCESSFUL;
       payment.verified = true;
       await payment.save({ session });
@@ -418,8 +411,6 @@ export class PaymentsService {
       payment.userId,
       session,
     );
-
-    console.log('userExist:', userExist);
 
     if (!userExist) {
       throw new NotFoundException('User not found');

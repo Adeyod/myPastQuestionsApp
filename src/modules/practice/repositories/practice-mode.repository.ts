@@ -120,8 +120,6 @@ export class PracticeModeRepository implements OnModuleInit {
   async seedDefaultPracticeModes(): Promise<void> {
     const existingPracticeModes = await this.practiceModeModel.countDocuments();
 
-    console.log('existingPracticeModes:', existingPracticeModes);
-
     if (existingPracticeModes > 0) {
       console.log(
         'Practice modes already exist. Skipping practice mode seeding.',
@@ -129,8 +127,6 @@ export class PracticeModeRepository implements OnModuleInit {
 
       return;
     }
-
-    console.log('I want to seed practice modes into the database...');
 
     const defaultPracticeModes = [
       {
@@ -161,7 +157,6 @@ export class PracticeModeRepository implements OnModuleInit {
 
     const response =
       await this.practiceModeModel.insertMany(defaultPracticeModes);
-    console.log('response:', response);
 
     console.log('Default practice modes seeded successfully.');
   }

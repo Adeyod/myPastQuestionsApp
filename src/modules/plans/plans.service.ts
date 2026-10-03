@@ -84,8 +84,6 @@ export class PlansService {
 
     const response = await this.getPlanByCode(planCode);
 
-    console.log('response:', response);
-
     return response;
   }
 }

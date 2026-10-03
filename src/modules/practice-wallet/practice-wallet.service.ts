@@ -101,16 +101,12 @@ export class PracticeWalletService {
         session,
       );
 
-    console.log('wallet:', wallet);
-
     if (data.practiceId) {
       const existingTransaction =
         await this.practicePointTransactionRepository.findByPracticeId(
           new Types.ObjectId(data.practiceId),
           session,
         );
-
-      console.log('existingTransaction:', existingTransaction);
 
       if (existingTransaction) {
         throw new BadRequestException({
@@ -126,8 +122,6 @@ export class PracticeWalletService {
       data.points,
       session,
     );
-
-    console.log('updatedWallet:', updatedWallet);
 
     if (!updatedWallet) {
       throw new BadRequestException({
@@ -152,8 +146,6 @@ export class PracticeWalletService {
         },
         session,
       );
-
-    console.log('response:', response);
 
     return updatedWallet;
   }
