@@ -1190,6 +1190,8 @@ export class QuizService {
       });
     }
 
+    console.log('I have passed the first error that stopped me...');
+
     const selectedAnswerObjectId = new Types.ObjectId(selectedAnswerId);
 
     const answerBelongsToQuestion = question.options.some(
