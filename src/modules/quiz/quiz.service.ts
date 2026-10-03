@@ -1024,6 +1024,10 @@ export class QuizService {
       });
     }
 
+    console.log('participant.currentRound:', participant.currentRound);
+    console.log('room.currentRound:', room.currentRound);
+    console.log('roundNumber:', roundNumber);
+
     /*
      * ============================================================
      * 3. VALIDATE ROUND
@@ -1040,6 +1044,7 @@ export class QuizService {
     }
 
     console.log('participant.currentRound:', participant.currentRound);
+    console.log('room.currentRound:', room.currentRound);
     console.log('roundNumber:', roundNumber);
 
     if (participant.currentRound !== roundNumber) {
