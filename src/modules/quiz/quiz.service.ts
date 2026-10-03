@@ -678,6 +678,16 @@ export class QuizService {
       });
     }
 
+    const room = await this.quizRoomRepo.findRoomByQuizId(quiz._id);
+
+    if (!room) {
+      throw new NotFoundException({
+        message: 'Room does not exist for this quiz yet.',
+        success: false,
+        status: 404,
+      });
+    }
+
     const roundInfo = quiz.round_information.find(
       (r) => r.round_number === roundNumber,
     );
@@ -721,6 +731,9 @@ export class QuizService {
     roundInfo.questionIds = questionIds;
 
     quiz.current_round = roundNumber;
+    room.currentRound = roundNumber;
+
+    await this.quizRoomRepo.saveQuizRoom(room);
     await this.quizRepo.save(quiz);
 
     return questions;

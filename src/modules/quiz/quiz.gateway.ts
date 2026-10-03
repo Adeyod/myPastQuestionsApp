@@ -252,8 +252,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       questionNumber: data.question.questionNumber,
     };
 
-    console.log('emittedQuestion:', emittedQuestion);
-
     // Broadcast ONLY the active question to all participants in the room
     this.server.to(roomId).emit('new_question_displayed', emittedQuestion);
 

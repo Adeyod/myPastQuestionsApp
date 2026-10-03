@@ -54,6 +54,13 @@ export class QuizRoomRepository {
     });
   }
 
+  async findRoomByQuizId(
+    quizId: Types.ObjectId,
+  ): Promise<QuizRoomDocument | null> {
+    const response = await this.quizRoomModel.findOne({ quizId }).exec();
+
+    return response;
+  }
   async findRoomByRoomId(roomId: string): Promise<QuizRoomDocument | null> {
     const response = await this.quizRoomModel.findOne({ roomId }).exec();
 

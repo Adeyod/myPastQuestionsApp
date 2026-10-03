@@ -18,8 +18,6 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3000;
   app.setGlobalPrefix('/api/v1');
 
-  console.log('port:', port);
-
   const questionsQueue = app.get<Queue>(getQueueToken('questions-sync'));
   const mailQueue = app.get<Queue>(getQueueToken('mail'));
 
