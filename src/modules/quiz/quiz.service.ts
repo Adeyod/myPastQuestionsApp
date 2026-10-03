@@ -1189,10 +1189,7 @@ export class QuizService {
      * Reject answers that arrived after the question timer ended.
      */
 
-    if (
-      room.questionEndsAt &&
-      answeredAt.getTime() > room.questionEndsAt.getTime()
-    ) {
+    if (room.questionEndsAt && answeredAt > room.questionEndsAt) {
       throw new BadRequestException({
         success: false,
         code: 'TIME_EXPIRED',

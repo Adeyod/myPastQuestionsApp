@@ -82,8 +82,12 @@ export class QuizRoomRepository {
       durationInSeconds: number;
     },
   ): Promise<QuizRoomDocument | null> {
+    const GRACE_PERIOD_MS = 2 * 1000;
+
     const endsAt = new Date(
-      data.startedAt.getTime() + data.durationInSeconds * 1000,
+      data.startedAt.getTime() +
+        data.durationInSeconds * 1000 +
+        GRACE_PERIOD_MS,
     );
 
     const response = await this.quizRoomModel.findOneAndUpdate(
@@ -95,6 +99,9 @@ export class QuizRoomRepository {
           questionStartedAt: data.startedAt,
           questionEndsAt: endsAt,
         },
+      },
+      {
+        returnDocument: 'after',
       },
     );
 
