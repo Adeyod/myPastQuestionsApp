@@ -232,26 +232,30 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const roomId = data.roomId;
 
-    // Broadcast ONLY the active question to all participants in the room
-    this.server.to(roomId).emit('new_question_displayed', {
+    const emittedQuestion = {
       quizId: data.quizId,
       id: data.question.id,
-      subjectId: data.question.subjectId,
-      content: data.question.content,
-      question: data.question.question,
-      options: data.question.options,
-      section: data.question.section,
-      questionType: data.question.questionType,
-      isMultipleAnswer: data.question.isMultipleAnswer,
-      explanation: data.question.explanation,
-      explanationSteps: data.question.explanationSteps,
-      difficulty: data.question.difficulty,
-      passageId: data.question.passageId,
-      instruction: data.question.instruction,
-      media: data.question.media,
+      subjectId: questionExist.subjectId,
+      content: questionExist.content,
+      question: questionExist.question,
+      options: questionExist.options,
+      section: questionExist.section,
+      questionType: questionExist.questionType,
+      isMultipleAnswer: questionExist.isMultipleAnswer,
+      explanation: questionExist.explanation,
+      explanationSteps: questionExist.explanationSteps,
+      difficulty: questionExist.difficulty,
+      passageId: questionExist.passageId,
+      instruction: questionExist.instruction,
+      media: questionExist.media,
       startTime: new Date(),
       questionNumber: data.question.questionNumber,
-    });
+    };
+
+    console.log('emittedQuestion:', emittedQuestion);
+
+    // Broadcast ONLY the active question to all participants in the room
+    this.server.to(roomId).emit('new_question_displayed', emittedQuestion);
 
     return {
       success: true,
