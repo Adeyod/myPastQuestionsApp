@@ -14,15 +14,12 @@ export class MailService {
   private app_name = 'Past Question App';
 
   private async sendMail(data: SendEmailJob) {
-    console.log('🚀 Adding email job...', data);
-
     await this.mailQueue.add('send_email', data, {
       attempts: 3,
       backoff: { type: 'exponential', delay: 5000 },
       removeOnComplete: true,
       removeOnFail: false,
     });
-    console.log('✅ Job added');
 
     return { message: `Email job added to queue for ${data.to}` };
   }
@@ -77,9 +74,7 @@ export class MailService {
       opts: defaultJobOpts,
     }));
 
-    console.log(`Adding ${jobs.length} bulk email jobs...`);
     await this.mailQueue.addBulk(jobs);
-    console.log('Bulk jobs added');
 
     return {
       message: `Bulk email jobs queued successfully for ${recipients.length} users.`,

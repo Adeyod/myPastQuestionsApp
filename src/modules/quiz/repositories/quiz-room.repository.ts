@@ -72,4 +72,32 @@ export class QuizRoomRepository {
 
     return response;
   }
+
+  async updateRoomCurrentQuestion(
+    roomId: string,
+    data: {
+      questionId: Types.ObjectId;
+      questionNumber: number;
+      startedAt: Date;
+      durationInSeconds: number;
+    },
+  ): Promise<QuizRoomDocument | null> {
+    const endsAt = new Date(
+      data.startedAt.getTime() + data.durationInSeconds * 1000,
+    );
+
+    const response = await this.quizRoomModel.findOneAndUpdate(
+      { roomId },
+      {
+        $set: {
+          currentQuestionId: data.questionId,
+          currentQuestionNumber: data.questionNumber,
+          questionStartedAt: data.startedAt,
+          questionEndsAt: endsAt,
+        },
+      },
+    );
+
+    return response;
+  }
 }

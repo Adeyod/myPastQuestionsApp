@@ -144,9 +144,6 @@ async function bootstrap() {
 
   await app.listen(port, () => {
     console.log(`Server listening on port: ${port}`);
-    console.log(
-      `Bull Board available at http://localhost:${port}/admin/queues`,
-    );
   });
 }
 bootstrap().catch((error) => {

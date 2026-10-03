@@ -54,7 +54,6 @@ export class MongoExceptionFilter implements ExceptionFilter {
         .join(', ');
     }
 
-    console.log('exception instance:', exception);
     response.status(status).json({
       success: false,
       status,

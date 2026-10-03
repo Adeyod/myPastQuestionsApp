@@ -26,7 +26,6 @@ export class AccountsService {
     const existingAccount =
       await this.accountsRepository.getUserAccount(userId);
 
-    console.log('existingAccount:', existingAccount);
     if (existingAccount) {
       throw new ConflictException({
         message: 'User already has an account.',
@@ -42,15 +41,12 @@ export class AccountsService {
         bankCode,
       });
 
-    console.log('transferRecipientCode:', transferRecipientCode);
-
     const response = await this.accountsRepository.createAccount(
       userId,
       createAccountDto,
       transferRecipientCode,
     );
 
-    console.log('response:', response);
     return response;
   }
 
@@ -69,7 +65,6 @@ export class AccountsService {
 
     const id = new Types.ObjectId(userId);
     const account = await this.accountsRepository.getUserAccount(id);
-    console.log('account:', account);
 
     if (!account) {
       throw new NotFoundException({
@@ -103,7 +98,6 @@ export class AccountsService {
       id,
       session,
     );
-    console.log('account:', account);
 
     if (!account) {
       throw new NotFoundException({
@@ -126,14 +120,10 @@ export class AccountsService {
         bankCode,
       );
 
-    console.log('paystackResponse:', paystackResponse);
-
     return paystackResponse.data.data;
   }
   async fetchBankCodes() {
     const paystackResponse = await this.paystackService.paystackBankCodes();
-
-    console.log('paystackResponse:', paystackResponse);
 
     return paystackResponse.data.data;
   }

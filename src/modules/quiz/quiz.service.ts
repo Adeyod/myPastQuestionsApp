@@ -739,6 +739,31 @@ export class QuizService {
     return questions;
   }
 
+  async updateRoomCurrentQuestion(
+    roomId: string,
+    data: {
+      questionId: Types.ObjectId;
+      questionNumber: number;
+      startedAt: Date;
+      durationInSeconds: number;
+    },
+  ) {
+    const response = await this.quizRoomRepo.updateRoomCurrentQuestion(
+      roomId,
+      data,
+    );
+
+    if (!response) {
+      throw new BadRequestException({
+        message: 'Unable to update quiz room.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    return response;
+  }
+
   // 4. Save/Sync Leaderboard state & perform round removal
   // async syncLeaderboardAndPruneParticipants(dto: SyncLeaderboardDto) {
   //   const quizId = new Types.ObjectId(dto.quizId);

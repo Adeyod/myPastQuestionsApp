@@ -114,8 +114,6 @@ export class DeviceSessionGuard implements CanActivate {
       userId.toString(),
     );
 
-    console.log('session:', session);
-
     // 2. Check if session exists AND is marked active
     if (!session) {
       throw new UnauthorizedException({

@@ -225,12 +225,23 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException('Only administrators can push active questions.');
     }
 
+    const quiz = await this.quizService.findQuizById(data.quizId);
+
     const questionExist =
       await this.solveAndWinService.findSolveAndWinQuestionById(
         data.question.id,
       );
 
     const roomId = data.roomId;
+
+    const startTime = new Date();
+
+    await this.quizService.updateRoomCurrentQuestion(roomId, {
+      questionId: questionExist._id,
+      questionNumber: data.question.questionNumber,
+      startedAt: startTime,
+      durationInSeconds: quiz.time_per_question,
+    });
 
     const emittedQuestion = {
       quizId: data.quizId,
@@ -248,7 +259,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       passageId: questionExist.passageId,
       instruction: questionExist.instruction,
       media: questionExist.media,
-      startTime: new Date(),
+      startTime,
+      questionDuration: quiz.time_per_question,
       questionNumber: data.question.questionNumber,
     };
 

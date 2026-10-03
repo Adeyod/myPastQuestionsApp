@@ -48,6 +48,12 @@ export class QuizRoom {
   @Prop({ default: -1 })
   currentQuestionIndex!: number;
 
+  @Prop({ type: String })
+  currentQuestionId?: string;
+
+  @Prop({ type: Number })
+  currentQuestionNumber?: number;
+
   @Prop({ type: Date })
   questionStartedAt?: Date;
 

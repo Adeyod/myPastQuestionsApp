@@ -18,8 +18,6 @@ export class AccountsRepository {
   ): Promise<AccountDocument> {
     const { bankName, accountNumber, accountName } = createAccountDto;
 
-    console.log('userId:', userId);
-    console.log('userId type:', typeof userId);
     const account = await new this.accountModel({
       accountName,
       accountNumber,
@@ -28,7 +26,6 @@ export class AccountsRepository {
       transferRecipientCode,
     }).save();
 
-    console.log('account:', account);
     return account;
   }
 
