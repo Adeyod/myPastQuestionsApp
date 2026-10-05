@@ -118,8 +118,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException('Authenticated user not found.');
     }
 
-    console.log('user inside activate room...:', user);
-
     if (user.role !== Role.ADMIN) {
       console.error('STEP 2 FAILED - User is not admin');
 
@@ -287,11 +285,11 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const user: JwtUser = client.data.user;
 
-    console.log('participant_selected_answer payload:', data);
-
     if (!user?.sub) {
       throw new WsException('Authenticated user not found.');
     }
+
+    console.log('participant_selected_answer data:', data);
 
     const response = await this.quizService.submitAnswer(
       data.roomId,
@@ -300,6 +298,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       data.questionId,
       data.selectedAnswerId,
     );
+    console.log('participant_selected_answer response:', response);
 
     return response;
   }
@@ -321,8 +320,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       data.roomId,
       user,
     );
-
-    console.log('room:', room);
 
     // 2. Join the Socket.IO room
     await client.join(room.roomId);
@@ -346,8 +343,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // 4. Get the current persistent state of the quiz room
     const roomState = await this.quizService.getRoomState(room.roomId);
-
-    console.log('join_room roomState:', roomState);
 
     // 5. Send the current state ONLY to this newly connected socket
     client.emit('room_state', roomState);
@@ -407,8 +402,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       data.quizId,
       data.roundNumber,
     );
-
-    console.log('start_round questions:', questions);
 
     // Emit questions directly to all clients in the room
     this.server.to(data.roomId).emit('round_started', {
