@@ -111,6 +111,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log('activate_room data:', data);
+
     const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
@@ -167,6 +169,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log('start_question data:', data);
     const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
@@ -231,6 +234,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log('display_next_question data:', data);
     const user: JwtUser = client.data.user;
 
     if (user?.role !== Role.ADMIN) {
@@ -309,6 +313,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const user: JwtUser = client.data.user;
 
+    console.log('participant_selected_answer data:', data);
+
     if (!user?.sub) {
       throw new WsException('Authenticated user not found.');
     }
@@ -326,7 +332,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException('Selected Answer ID not found.');
     }
 
-    console.log('participant_selected_answer data:', data);
     console.log('running participant selected answer...');
 
     const response = await this.quizService.submitAnswer(
@@ -347,6 +352,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log('join_room data:', data);
     const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
@@ -411,6 +417,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log('get_room_doc data:', data);
+
     const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
@@ -444,6 +452,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       roundNumber: number;
     },
   ) {
+    console.log('start_round data:', data);
     if (!data.roomId) {
       throw new WsException('Room ID not found.');
     }
@@ -471,6 +480,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleSyncLeaderboard(
     @MessageBody() data: { roomId: string; leaderboard: any },
   ) {
+    console.log('sync_leaderboard data:', data);
     if (!data.roomId) {
       throw new WsException('Room ID not found.');
     }
@@ -492,6 +502,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log('request_tiebreaker_question data:', data);
     if (!data.roomId) {
       throw new WsException('Room ID not found.');
     }
@@ -534,6 +545,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       eliminatedUserIds: string[]; // IDs selected by admin for removal
     },
   ) {
+    console.log('resolve_tiebreaker_eliminations data:', data);
+
     if (!data.roomId) {
       throw new WsException('Room ID not found.');
     }
