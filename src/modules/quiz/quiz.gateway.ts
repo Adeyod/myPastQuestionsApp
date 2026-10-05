@@ -327,6 +327,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     console.log('participant_selected_answer data:', data);
+    console.log('running participant selected answer...');
 
     const response = await this.quizService.submitAnswer(
       data.roomId,
