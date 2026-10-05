@@ -124,6 +124,10 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException('Only administrators can activate a quiz room.');
     }
 
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+
     const room = await this.quizService.activateRoom(
       data.roomId,
       user.sub.toString(),
@@ -171,6 +175,16 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (user.role !== Role.ADMIN) {
       throw new WsException('Only administrators can activate a quiz room.');
+    }
+
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+    if (!data.roundNumber) {
+      throw new WsException('Round number not found.');
+    }
+    if (!data.quizId) {
+      throw new WsException('Quiz ID not found.');
     }
 
     const roundQuestions = await this.quizService.getRoundQuestions(
@@ -221,6 +235,16 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (user?.role !== Role.ADMIN) {
       throw new WsException('Only administrators can push active questions.');
+    }
+
+    if (!data.quizId) {
+      throw new WsException('Quiz ID not found.');
+    }
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+    if (!data.question) {
+      throw new WsException('Question not found.');
     }
 
     const quiz = await this.quizService.findQuizById(data.quizId);
@@ -289,6 +313,19 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException('Authenticated user not found.');
     }
 
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+    if (!data.roundNumber) {
+      throw new WsException('Round number not found.');
+    }
+    if (!data.questionId) {
+      throw new WsException('Question ID not found.');
+    }
+    if (!data.selectedAnswerId) {
+      throw new WsException('Selected Answer ID not found.');
+    }
+
     console.log('participant_selected_answer data:', data);
 
     const response = await this.quizService.submitAnswer(
@@ -313,6 +350,10 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!user?.sub) {
       throw new WsException('Authenticated user not found.');
+    }
+
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
     }
 
     // 1. Validate that the user is allowed to join this room
@@ -375,6 +416,10 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException('Authenticated user not found.');
     }
 
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+
     const roomDoc = await this.quizService.getRoomDocumentForAdmin(
       data.roomId,
       new Types.ObjectId(user.sub.toString()),
@@ -398,6 +443,16 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       roundNumber: number;
     },
   ) {
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+    if (!data.roundNumber) {
+      throw new WsException('Round number not found.');
+    }
+    if (!data.quizId) {
+      throw new WsException('Quiz ID not found.');
+    }
+
     const questions = await this.quizService.getRoundQuestions(
       data.quizId,
       data.roundNumber,
@@ -415,6 +470,13 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleSyncLeaderboard(
     @MessageBody() data: { roomId: string; leaderboard: any },
   ) {
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+    if (!data.leaderboard) {
+      throw new WsException('leaderboard not found.');
+    }
+
     this.server.to(data.roomId).emit('leaderboard_updated', data.leaderboard);
   }
 
@@ -429,6 +491,16 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
     @ConnectedSocket() client: Socket,
   ) {
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+    if (!data.quizId) {
+      throw new WsException('Quiz ID not found.');
+    }
+    if (!data.tiedUserIds || data.tiedUserIds.length <= 1) {
+      throw new WsException('Tied user IDs not found.');
+    }
+
     // Service fetches 1 extra question for the quiz subject
     const tiebreakerQuestion = await this.quizService.getTiebreakerQuestion(
       data.quizId,
@@ -461,6 +533,19 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       eliminatedUserIds: string[]; // IDs selected by admin for removal
     },
   ) {
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+    if (!data.quizId) {
+      throw new WsException('Quiz ID not found.');
+    }
+    if (!data.roundNumber) {
+      throw new WsException('Round number not found.');
+    }
+    if (!data.eliminatedUserIds || data.eliminatedUserIds.length < 1) {
+      throw new WsException('Eliminated user IDs not found.');
+    }
+
     // 1. Database mutation: move IDs from joined_users to spectator_array
     await this.quizService.pruneEliminatedUsers(
       data.quizId,
