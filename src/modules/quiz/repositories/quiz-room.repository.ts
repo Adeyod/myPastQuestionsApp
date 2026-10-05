@@ -66,7 +66,7 @@ export class QuizRoomRepository {
       .findOne({ roomId: roomId.trim() })
       .exec();
 
-    console.log('findRoomByRoomId repo:', findRoomByRoomId);
+    console.log('findRoomByRoomId repo:', response);
 
     return response;
   }
