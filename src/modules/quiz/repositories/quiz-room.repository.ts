@@ -62,9 +62,10 @@ export class QuizRoomRepository {
     return response;
   }
   async findRoomByRoomId(roomId: string): Promise<QuizRoomDocument | null> {
-    const response = await this.quizRoomModel
-      .findOne({ roomId: roomId.trim() })
-      .exec();
+    console.log('roomId:', roomId);
+    const id = roomId.trim();
+
+    const response = await this.quizRoomModel.findOne({ roomId: id }).exec();
 
     console.log('findRoomByRoomId repo:', response);
 

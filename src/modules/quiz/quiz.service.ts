@@ -1002,6 +1002,12 @@ export class QuizService {
     questionId: string,
     selectedAnswerId: string,
   ) {
+    console.log('submitAnswer service roomId:', roomId);
+    console.log('submitAnswer service userId:', userId);
+    console.log('submitAnswer service roundNumber:', roundNumber);
+    console.log('submitAnswer service questionId:', questionId);
+    console.log('submitAnswer service selectedAnswerId:', selectedAnswerId);
+
     const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
     console.log('submitAnswer service room:', room);
