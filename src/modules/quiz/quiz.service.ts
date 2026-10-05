@@ -1004,6 +1004,8 @@ export class QuizService {
   ) {
     const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
+    console.log('submitAnswer service room:', room);
+
     if (!room) {
       throw new NotFoundException({
         success: false,
