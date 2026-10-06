@@ -1336,12 +1336,6 @@ export class QuizService {
         entry.userId.toString() === new Types.ObjectId(userId).toString(),
     );
 
-    /*
-     * ============================================================
-     * 12. RETURN RESULT
-     * ============================================================
-     */
-
     const selectedAnswer = question.options.find(
       (option) => option._id.toString() === selectedAnswerObjectId.toString(),
     );
@@ -1355,25 +1349,13 @@ export class QuizService {
         roomId: room.roomId,
         roundNumber,
         questionId,
-
         selectedAnswer: selectedAnswer,
-
         isCorrect,
-
-        /*
-         * true only if this participant successfully claimed
-         * the points for being the first correct answer.
-         */
         isFirstCorrectAnswer,
-
         scoreAwarded,
-
         roundScore: leaderboardEntry?.roundScore ?? scoreAwarded,
-
         totalScore: updatedParticipant.totalScore,
-
         timeTakenInSeconds,
-
         message: isCorrect
           ? isFirstCorrectAnswer
             ? 'Correct answer. You received the points for being the first correct participant.'
@@ -1381,6 +1363,24 @@ export class QuizService {
           : 'Incorrect answer.',
       },
     };
+  }
+
+  async getFastestCorrectParticipant(
+    quizId: string,
+    roomId: string,
+    questionId: string,
+  ) {
+    const winner = await this.quizAnswerRepo.getFastestCorrectParticipant(
+      quizId,
+      roomId,
+      questionId,
+    );
+
+    if (!winner) {
+      return null;
+    }
+
+    return winner;
   }
 
   private isDuplicateKeyError(error: unknown): boolean {

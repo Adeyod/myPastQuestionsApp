@@ -313,8 +313,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const user: JwtUser = client.data.user;
 
-    console.log('participant_selected_answer data:', data);
-
     if (!user?.sub) {
       throw new WsException('Authenticated user not found.');
     }
@@ -341,9 +339,56 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       data.questionId,
       data.selectedAnswerId,
     );
-    console.log('participant_selected_answer response:', response);
+    if (response.data.isFirstCorrectAnswer) {
+      console.log('I want to braodcast a winner to the participant');
+      await this.broadcastFastestCorrectWinner(
+        response.data.quizId.toString(),
+        data.roomId,
+        data.questionId,
+      );
+    }
 
     return response;
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('get_question_fastest_winner')
+  async handleGetQuestionFastestWinner(
+    @MessageBody()
+    data: {
+      quizId: string;
+      roomId: string;
+      questionId: string;
+    },
+  ) {
+    console.log('get_question_fastest_winner data:', data);
+
+    if (!data.quizId) {
+      throw new WsException('Quiz ID is not found.');
+    }
+
+    if (!data.roomId) {
+      throw new WsException('Room ID is not found.');
+    }
+
+    if (!data.questionId) {
+      throw new WsException('Question ID is not found.');
+    }
+
+    const winner = await this.quizService.getFastestCorrectParticipant(
+      data.quizId,
+      data.roomId,
+      data.questionId,
+    );
+
+    return {
+      event: 'get_question_fastest_winner_ack',
+      data: {
+        quizId: data.quizId,
+        roomId: data.roomId,
+        winner,
+      },
+    };
   }
 
   @UseGuards(WsJwtGuard)
@@ -577,6 +622,25 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       success: true,
       message: 'Eliminated participants successfully moved to spectators.',
     };
+  }
+
+  private async broadcastFastestCorrectWinner(
+    quizId: string,
+    roomId: string,
+    questionId: string,
+  ) {
+    const winner = await this.quizService.getFastestCorrectParticipant(
+      quizId,
+      roomId,
+      questionId,
+    );
+
+    this.server.to(roomId).emit('question_fastest_winner', {
+      quizId,
+      roomId,
+      questionId,
+      winner,
+    });
   }
 
   private extractToken(client: Socket): string | null {

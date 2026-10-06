@@ -25,6 +25,27 @@ export class QuizAnswerRepository {
 
     return response;
   }
+  async getFastestCorrectParticipant(
+    quizId: string,
+    userId: string,
+    questionId: string,
+  ): Promise<QuizAnswerDocument | null> {
+    const quiz = new Types.ObjectId(quizId);
+    const question = new Types.ObjectId(questionId);
+    const user = new Types.ObjectId(userId);
+
+    const response = await this.quizAnswerModel
+      .findOne({
+        quizId: quiz,
+        userId: user,
+        questionId: question,
+        isFirstCorrectAnswer: true,
+      })
+      .populate('userId', 'firstName lastName email image')
+      .exec();
+
+    return response;
+  }
 
   async createParticipantQuizAnswer(payload: {
     quizId: Types.ObjectId;
