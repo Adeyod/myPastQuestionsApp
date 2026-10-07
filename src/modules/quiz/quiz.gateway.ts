@@ -637,12 +637,23 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       questionId,
     );
 
-    this.server.to(roomId).emit('question_fastest_winner', {
+    const payload = {
       quizId,
       roomId,
       questionId,
       winner,
-    });
+    };
+
+    console.log('\n========== FASTEST WINNER BROADCAST ==========');
+    console.log('Event:', 'question_fastest_winner');
+    console.log('Room ID:', roomId);
+    console.log('Payload:');
+    console.dir(payload, { depth: null });
+    console.log('JSON Payload:');
+    console.log(JSON.stringify(payload, null, 2));
+    console.log('==============================================\n');
+
+    this.server.to(roomId).emit('question_fastest_winner', payload);
   }
 
   private extractToken(client: Socket): string | null {
