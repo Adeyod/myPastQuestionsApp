@@ -1370,9 +1370,19 @@ export class QuizService {
     roomId: string,
     questionId: string,
   ) {
+    const roomExist = await this.quizRoomRepo.findRoomByRoomId(roomId);
+
+    if (!roomExist) {
+      throw new NotFoundException({
+        message: 'Room not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
     const winner = await this.quizAnswerRepo.getFastestCorrectParticipant(
       quizId,
-      roomId,
+      roomExist._id.toString(),
       questionId,
     );
 

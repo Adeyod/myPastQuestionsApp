@@ -27,17 +27,17 @@ export class QuizAnswerRepository {
   }
   async getFastestCorrectParticipant(
     quizId: string,
-    userId: string,
+    roomId: string,
     questionId: string,
   ): Promise<QuizAnswerDocument | null> {
     const quiz = new Types.ObjectId(quizId);
     const question = new Types.ObjectId(questionId);
-    const user = new Types.ObjectId(userId);
+    const room = new Types.ObjectId(roomId);
 
     const response = await this.quizAnswerModel
       .findOne({
         quizId: quiz,
-        userId: user,
+        roomId: room,
         questionId: question,
         isFirstCorrectAnswer: true,
       })
