@@ -660,7 +660,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       },
     };
 
-    this.server.to(roomId).emit('question_completed', payload);
+    this.server.to(roomId).emit('get_question_fastest_winner', payload);
   }
 
   private extractToken(client: Socket): string | null {
