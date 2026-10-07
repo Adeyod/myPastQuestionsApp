@@ -466,7 +466,6 @@ export class AuthService {
   }) {
     const { email, sub, role, plans } = user;
 
-    console.log('requestAccessToken user:', user);
     const accessToken = this.generateAccessTokens(email, sub, role, plans);
 
     return accessToken;
@@ -524,7 +523,6 @@ export class AuthService {
       .trim() as string;
     const refreshToken = req.headers['x-refresh-token'] as string;
 
-    console.log('logout user:', accessToken);
     const deleteRefreshToken =
       await this.refreshTokensService.deleteRefreshToken(
         refreshToken,

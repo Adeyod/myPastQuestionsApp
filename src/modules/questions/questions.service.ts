@@ -71,13 +71,9 @@ export class QuestionsService {
       getPracticeQuestionsDto.examType,
     );
 
-    console.log('userWallet:', userWallet);
-
     const totalAmountInKobo =
       plan.pricePerPracticeQuestionInKobo *
       getPracticeQuestionsDto.questionCount;
-    console.log('totalAmountInKobo:', totalAmountInKobo);
-    console.log('userWallet.balance:', userWallet.balanceInKobo);
 
     if (userWallet.balanceInKobo < totalAmountInKobo) {
       throw new BadRequestException({
@@ -91,7 +87,7 @@ export class QuestionsService {
       await this.questionsRepository.getPracticeQuestionBySubjectId(
         getPracticeQuestionsDto,
       );
-    console.log('response:', response);
+
     if (!response.questions || response.questions.length === 0) {
       throw new BadRequestException({
         message: 'No questions found for the specified criteria.',
@@ -112,8 +108,6 @@ export class QuestionsService {
         subjectId: getPracticeQuestionsDto.subjectId,
         session,
       });
-
-      console.log('chargeWallet:', chargeWallet);
 
       const questionLength = response.questions.length;
 
@@ -150,7 +144,6 @@ export class QuestionsService {
         ...response,
       };
 
-      console.log('input:', input);
       return input;
     } catch (error) {
       await session.abortTransaction();
@@ -273,11 +266,7 @@ export class QuestionsService {
       examType,
     };
     const questions = await this.questionsRepository.getPaidQuestions(input);
-    console.log(
-      'service questions:',
-      questions.map((q) => q.apiQuestionId),
-    );
-    console.log('service questions length:', questions.length);
+
     return questions;
   }
 

@@ -80,15 +80,9 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     const user = client.data.user;
-
-    console.log(`Authenticated socket connected: ${client.id}`, user?.sub);
-
-    console.log(`Socket Client Connected: ${client.id}`);
   }
 
   async handleDisconnect(client: Socket) {
-    console.log(`Socket Client Disconnected: ${client.id}`);
-
     const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
@@ -111,18 +105,13 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('activate_room data:', data);
-
     const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
-      console.error('STEP 1 FAILED - No authenticated user');
       throw new WsException('Authenticated user not found.');
     }
 
     if (user.role !== Role.ADMIN) {
-      console.error('STEP 2 FAILED - User is not admin');
-
       throw new WsException('Only administrators can activate a quiz room.');
     }
 
@@ -169,7 +158,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('start_question data:', data);
     const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
