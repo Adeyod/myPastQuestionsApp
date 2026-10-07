@@ -3,6 +3,17 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { QuizAnswer, QuizAnswerDocument } from '../schemas/quiz-answer.schema';
 
+type PopulatedUser = {
+  _id: Types.ObjectId;
+  firstName: string;
+  lastName: string;
+  email: string;
+};
+
+type FastestCorrectParticipant = Omit<QuizAnswer, 'userId'> & {
+  userId: PopulatedUser;
+};
+
 @Injectable()
 export class QuizAnswerRepository {
   constructor(
@@ -25,11 +36,34 @@ export class QuizAnswerRepository {
 
     return response;
   }
+  // async getFastestCorrectParticipant(
+  //   quizId: string,
+  //   roomId: string,
+  //   questionId: string,
+  // ): Promise<FastestCorrectParticipant | null> {
+  //   const quiz = new Types.ObjectId(quizId);
+  //   const question = new Types.ObjectId(questionId);
+  //   const room = new Types.ObjectId(roomId);
+
+  //   const response = await this.quizAnswerModel
+  //     .findOne({
+  //       quizId: quiz,
+  //       roomId: room,
+  //       questionId: question,
+  //       isFirstCorrectAnswer: true,
+  //     })
+  //     .populate('userId', 'firstName lastName email')
+  //     .lean()
+  //     .exec();
+
+  //   return response;
+  // }
+
   async getFastestCorrectParticipant(
     quizId: string,
     roomId: string,
     questionId: string,
-  ): Promise<QuizAnswerDocument | null> {
+  ): Promise<FastestCorrectParticipant | null> {
     const quiz = new Types.ObjectId(quizId);
     const question = new Types.ObjectId(questionId);
     const room = new Types.ObjectId(roomId);
@@ -41,7 +75,8 @@ export class QuizAnswerRepository {
         questionId: question,
         isFirstCorrectAnswer: true,
       })
-      .populate('userId', 'firstName lastName email image')
+      .populate<{ userId: PopulatedUser }>('userId', 'firstName lastName email')
+      .lean()
       .exec();
 
     return response;
