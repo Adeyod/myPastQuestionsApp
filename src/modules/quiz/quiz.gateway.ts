@@ -341,9 +341,12 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       data.questionId,
       data.selectedAnswerId,
     );
+
+    client.emit('participant_answer_submitted', response);
+
     if (response.data.isFirstCorrectAnswer) {
       console.log('I want to braodcast a winner to the participant');
-      await this.broadcastFastestCorrectWinner(
+      const res = await this.broadcastFastestCorrectWinner(
         response.data.quizId.toString(),
         data.roomId,
         data.questionId,
@@ -637,31 +640,27 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       questionId,
     );
 
+    if (!winner) {
+      return;
+    }
+
     const payload = {
       quizId,
       roomId,
       questionId,
-      winner,
+
+      reason: 'FIRST_CORRECT_ANSWER',
+
+      winner: {
+        userId: winner.userId._id.toString(),
+        firstName: winner.userId.firstName,
+        lastName: winner.userId.lastName,
+        timeTakenInSeconds: winner.timeTakenInSeconds,
+        scoreAwarded: winner.scoreAwarded,
+      },
     };
 
-    console.log('winner:', winner);
-
-    console.log('\n========== FASTEST WINNER BROADCAST ==========');
-    console.log('Event:', 'question_fastest_winner');
-    console.log('Room ID:', roomId);
-    console.log('Quiz ID:', quizId);
-    console.log('Question ID:', questionId);
-
-    console.log('Winner type:', typeof winner);
-    console.log('Winner constructor:', winner?.constructor?.name);
-
-    if (winner && typeof winner === 'object') {
-      console.log('Winner keys:', Object.keys(winner));
-    }
-
-    console.log('==============================================\n');
-
-    this.server.to(roomId).emit('question_fastest_winner', payload);
+    this.server.to(roomId).emit('question_completed', payload);
   }
 
   private extractToken(client: Socket): string | null {
