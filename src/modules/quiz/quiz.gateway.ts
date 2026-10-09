@@ -514,19 +514,29 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // Sync leaderboard calculated by frontend
-  @SubscribeMessage('sync_leaderboard')
-  handleSyncLeaderboard(
-    @MessageBody() data: { roomId: string; leaderboard: any },
+  @SubscribeMessage('get_quiz_room_leaderboard')
+  async handleGetQuizRoomLeaderboard(
+    @MessageBody()
+    data: {
+      roundNumber: number;
+      roomId: string;
+      quizId: string;
+    },
   ) {
-    console.log('sync_leaderboard data:', data);
+    console.log('get_quiz_room_leaderboard data:', data);
     if (!data.roomId) {
       throw new WsException('Room ID not found.');
     }
-    if (!data.leaderboard) {
-      throw new WsException('leaderboard not found.');
+    if (!data.quizId) {
+      throw new WsException('Quiz ID not found.');
     }
 
-    this.server.to(data.roomId).emit('leaderboard_updated', data.leaderboard);
+    const response = await this.quizService.getQuizRoomLeaderboard(
+      data.quizId,
+      data.roundNumber,
+    );
+
+    this.server.to(data.roomId).emit('leaderboard_fetched', response);
   }
 
   @UseGuards(WsJwtGuard)

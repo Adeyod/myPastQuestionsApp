@@ -1365,6 +1365,35 @@ export class QuizService {
     };
   }
 
+  async getQuizRoomLeaderboard(quizId: string, roundNumber: number) {
+    const id = new Types.ObjectId(quizId);
+
+    const quizExist = await this.quizRepo.findQuizById(id);
+
+    if (!quizExist) {
+      throw new NotFoundException({
+        message: 'Quiz not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const leaderboard = await this.leaderboardRepo.findByQuizAndRound(
+      id,
+      roundNumber,
+    );
+
+    if (!leaderboard) {
+      throw new NotFoundException({
+        message: 'This quiz round does not have leaderboard yet.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return leaderboard;
+  }
+
   async getFastestCorrectParticipant(
     quizId: string,
     roomId: string,
