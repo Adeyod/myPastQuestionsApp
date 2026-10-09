@@ -69,7 +69,6 @@ export class QuizLeaderboardRepository {
       isEliminated,
     } = payload;
 
-    // 1. Try to update an existing participant entry.
     const existingLeaderboard = await this.leaderboardModel.findOneAndUpdate(
       {
         quizId,
@@ -97,7 +96,6 @@ export class QuizLeaderboardRepository {
       return existingLeaderboard;
     }
 
-    // 2. Leaderboard doesn't contain this participant yet.
     const entry: LeaderboardEntry = {
       userId,
       roundScore,
@@ -111,7 +109,6 @@ export class QuizLeaderboardRepository {
       tieGroup: null,
     };
 
-    // 3. Try to add the participant to an existing leaderboard.
     const updatedLeaderboard = await this.leaderboardModel.findOneAndUpdate(
       {
         quizId,
@@ -126,7 +123,7 @@ export class QuizLeaderboardRepository {
         },
       },
       {
-        new: true,
+        returnDocument: 'after',
       },
     );
 
@@ -134,7 +131,6 @@ export class QuizLeaderboardRepository {
       return updatedLeaderboard;
     }
 
-    // 4. No leaderboard exists yet. Create it.
     try {
       return await this.leaderboardModel.create({
         quizId,
@@ -144,8 +140,6 @@ export class QuizLeaderboardRepository {
         hasTieBreakOccurred: false,
       });
     } catch (error: any) {
-      // Another request may have created the leaderboard
-      // at exactly the same time.
       if (error?.code === 11000) {
         const leaderboard = await this.leaderboardModel.findOneAndUpdate(
           {

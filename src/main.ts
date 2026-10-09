@@ -35,17 +35,12 @@ async function bootstrap() {
 
   const roomId = 'QUIZ_ROOM_6aabdeb6c2ec85fde18e4185_1790182547850';
   const userId = '69b6e2d1c2500fccbbfbe3cb';
+  const quizId = '6aabdeb6c2ec85fde18e4185';
   const roundNumber = 1;
   const questionId = '6aa00de4b180c475fe319822';
   const selectedAnswerId = '6aa00de4b180c475fe319741';
 
-  // await repo.submitAnswer(
-  //   roomId,
-  //   userId,
-  //   roundNumber,
-  //   questionId,
-  //   selectedAnswerId,
-  // );
+  // await repo.getQuizRoomLeaderboard(quizId, roundNumber);
   // await repo.findByEmail('ayodejiadebolu@gmail.com');
 
   // Create Bull Board

@@ -74,7 +74,12 @@ export class QuizRoom {
     ],
     default: [],
   })
-  participants!: any[];
+  participants!: {
+    userId: Types.ObjectId;
+    socketId: string;
+    connected: boolean;
+    joinedAt: Date;
+  }[];
 
   @Prop({
     type: [Types.ObjectId],

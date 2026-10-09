@@ -540,6 +540,78 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @UseGuards(WsJwtGuard)
+  @SubscribeMessage('enable_top_winner_to_solve_tie')
+  async handleTellingTopWinnerToBreakTie(
+    @MessageBody()
+    data: {
+      quizId: string;
+      roomId: string;
+      roundNumber: number;
+      topWinnerId: string;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    console.log('enable_top_winner_to_solve_tie data:', data);
+
+    const user: JwtUser = client.data.user;
+    if (user?.role !== Role.ADMIN) {
+      throw new WsException('Only administrators can trigger tie resolution.');
+    }
+
+    if (!data.roomId) {
+      throw new WsException('Room ID not found.');
+    }
+
+    if (!data.quizId) {
+      throw new WsException('Quiz ID not found.');
+    }
+
+    if (!data.roundNumber) {
+      throw new WsException('Round number not found.');
+    }
+
+    if (!data.topWinnerId) {
+      throw new WsException('Top winner ID not found.');
+    }
+
+    const isLegitTopWinner = await this.quizService.verifyRoundTopWinner(
+      data.quizId,
+      data.roundNumber,
+      data.topWinnerId,
+    );
+
+    const response =
+      await this.quizService.allowRoundTopWinnerToSelectParticipantToGoToNextRound(
+        data,
+      );
+
+    const winnerSocketId = await this.quizService.getParticipantSocketId(
+      data.roomId,
+      isLegitTopWinner.userId.toString(),
+    );
+
+    if (!winnerSocketId) {
+      throw new WsException(
+        'Top winner is not currently connected to the room.',
+      );
+    }
+
+    this.server
+      .to(winnerSocketId.socketId)
+      .emit('select_participants_to_be_removed', {
+        quizId: data.quizId,
+        roomId: data.roomId,
+        roundNumber: data.roundNumber,
+        participantsWithLeastTie: response,
+      });
+
+    return {
+      success: true,
+      message: 'Top winner successfully notified to resolve tie.',
+    };
+  }
+
+  @UseGuards(WsJwtGuard)
   @SubscribeMessage('request_tiebreaker_question')
   async handleRequestTiebreakerQuestion(
     @MessageBody()

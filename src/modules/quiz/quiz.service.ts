@@ -23,6 +23,7 @@ import { QuizQuestionWinnerRepository } from './repositories/quiz-question-winne
 import { QuizRoomRepository } from './repositories/quiz-room.repository';
 import { QuizVoteRepository } from './repositories/quiz-vote.repository';
 import { QuizRepository } from './repositories/quiz.repository';
+import { QuizLeaderboardDocument } from './schemas/quiz-leadership.schema';
 import { ParticipantStatus } from './schemas/quiz-participant.schema';
 import { QuizRoomStatus } from './schemas/quiz-room.schema';
 import { QuizStatus } from './schemas/quiz.schema';
@@ -1002,12 +1003,6 @@ export class QuizService {
     questionId: string,
     selectedAnswerId: string,
   ) {
-    console.log('submitAnswer service roomId:', roomId);
-    console.log('submitAnswer service userId:', userId);
-    console.log('submitAnswer service roundNumber:', roundNumber);
-    console.log('submitAnswer service questionId:', questionId);
-    console.log('submitAnswer service selectedAnswerId:', selectedAnswerId);
-
     const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
     console.log('submitAnswer service room:', room);
@@ -1020,11 +1015,6 @@ export class QuizService {
         status: 404,
       });
     }
-
-    /*
-     * The participant should only be allowed to answer while
-     * a round is actively running.
-     */
 
     if (room.status !== QuizRoomStatus.IN_PROGRESS) {
       throw new BadRequestException({
@@ -1049,11 +1039,6 @@ export class QuizService {
       });
     }
 
-    /*
-     * Eliminated/disqualified/completed participants cannot
-     * submit answers.
-     */
-
     if (
       participant.status === ParticipantStatus.ELIMINATED ||
       participant.status === ParticipantStatus.DISQUALIFIED ||
@@ -1066,12 +1051,6 @@ export class QuizService {
         status: 403,
       });
     }
-
-    /*
-     * ============================================================
-     * 3. VALIDATE ROUND
-     * ============================================================
-     */
 
     if (room.currentRound !== roundNumber) {
       throw new BadRequestException({
@@ -1091,12 +1070,6 @@ export class QuizService {
       });
     }
 
-    /*
-     * ============================================================
-     * 4. VALIDATE QUESTION
-     * ============================================================
-     */
-
     const question =
       await this.questionService.findSolveAndWinQuestionById(questionId);
 
@@ -1108,18 +1081,6 @@ export class QuizService {
         status: 404,
       });
     }
-
-    /*
-     * IMPORTANT:
-     *
-     * Existence of the question is not enough.
-     *
-     * We must make sure the submitted question is actually the
-     * question currently being asked in this room.
-     *
-     * How you perform this check depends on how your Quiz/round
-     * question structure is currently implemented.
-     */
 
     const isQuestionInCurrentRound = await this.quizRepo.isQuestionInRound(
       room.quizId,
@@ -1136,12 +1097,6 @@ export class QuizService {
       });
     }
 
-    /*
-     * ============================================================
-     * 5. CHECK WHETHER PARTICIPANT ALREADY ANSWERED
-     * ============================================================
-     */
-
     const existingAnswer = await this.quizAnswerRepo.findParticipantAnswer(
       room.quizId,
       roundNumber,
@@ -1157,12 +1112,6 @@ export class QuizService {
         status: 409,
       });
     }
-
-    /*
-     * ============================================================
-     * 6. CALCULATE SERVER-SIDE TIME
-     * ============================================================
-     */
 
     if (!room.questionStartedAt) {
       throw new BadRequestException({
@@ -1182,10 +1131,6 @@ export class QuizService {
       ),
     );
 
-    /*
-     * Reject answers that arrived after the question timer ended.
-     */
-
     if (room.questionEndsAt && answeredAt > room.questionEndsAt) {
       throw new BadRequestException({
         success: false,
@@ -1195,45 +1140,11 @@ export class QuizService {
       });
     }
 
-    console.log('I have passed the first error that stopped me...');
-
     const selectedAnswerObjectId = new Types.ObjectId(selectedAnswerId);
 
     const answerBelongsToQuestion = question.options.some(
       (option) => option._id.toString() === selectedAnswerObjectId.toString(),
     );
-
-    console.log('================ ANSWER DEBUG ================');
-
-    console.log('questionId:', question._id.toString());
-
-    console.log('selectedAnswerId:', selectedAnswerId);
-
-    console.log('selectedAnswerObjectId:', selectedAnswerObjectId.toString());
-
-    console.log(
-      'options:',
-      question.options.map((option) => ({
-        id: option._id,
-        idString: option._id?.toString(),
-        text: option.value,
-      })),
-    );
-
-    console.log(
-      'option IDs:',
-      question.options.map((option) => option._id?.toString()),
-    );
-
-    console.log(
-      'MATCH:',
-      question.options.some(
-        (option) =>
-          option._id?.toString() === selectedAnswerObjectId.toString(),
-      ),
-    );
-
-    console.log('==============================================');
 
     if (!answerBelongsToQuestion) {
       throw new BadRequestException({
@@ -1391,7 +1302,99 @@ export class QuizService {
       });
     }
 
+    console.log('leaderboard:', leaderboard);
+
     return leaderboard;
+  }
+
+  async allowRoundTopWinnerToSelectParticipantToGoToNextRound(payload: {
+    quizId: string;
+    roomId: string;
+    roundNumber: number;
+    topWinnerId: string;
+  }) {
+    const { roundNumber, quizId } = payload;
+
+    const quiz = new Types.ObjectId(quizId);
+
+    const roomExist = await this.quizRoomRepo.findRoomByQuizId(quiz);
+
+    if (!roomExist) {
+      throw new NotFoundException({
+        message: 'Room not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const leaderboard = await this.leaderboardRepo.findByQuizAndRound(
+      quiz,
+      roundNumber,
+    );
+
+    if (!leaderboard) {
+      throw new NotFoundException({
+        message: 'This quiz round does not have leaderboard yet.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const listOfParticipantsToBeRemoved =
+      this.getEntriesByRoundScore(leaderboard);
+
+    return listOfParticipantsToBeRemoved;
+  }
+
+  async getParticipantSocketId(roomId: string, topWinnerId: string) {
+    const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
+
+    if (!room) {
+      throw new NotFoundException({
+        message: 'Room not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const topWinnerSocketId = room.participants.find(
+      (p) => p.userId.toString() === topWinnerId,
+    );
+
+    return topWinnerSocketId;
+  }
+
+  async verifyRoundTopWinner(
+    quizId: string,
+    roundNumber: number,
+    topWinnerId: string,
+  ) {
+    const quiz = new Types.ObjectId(quizId);
+
+    const leaderboard = await this.leaderboardRepo.findByQuizAndRound(
+      quiz,
+      roundNumber,
+    );
+
+    if (!leaderboard) {
+      throw new NotFoundException({
+        message: 'This quiz round does not have leaderboard yet.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const topWinner = this.getTopRoundScoreEntry(leaderboard);
+
+    if (topWinner?.userId.toString() !== topWinnerId) {
+      throw new ConflictException({
+        message: 'The specified user is not the top winner of this round.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    return topWinner;
   }
 
   async getFastestCorrectParticipant(
@@ -1420,6 +1423,50 @@ export class QuizService {
     }
 
     return winner;
+  }
+
+  private getTopRoundScoreEntry(leaderboard: QuizLeaderboardDocument) {
+    if (
+      !leaderboard ||
+      !leaderboard.entries ||
+      leaderboard.entries.length === 0
+    ) {
+      return null;
+    }
+
+    const sortedEntries = [...leaderboard.entries].sort((a, b) => {
+      if (b.roundScore !== a.roundScore) {
+        return b.roundScore - a.roundScore;
+      }
+
+      return a.timeTakenInSeconds - b.timeTakenInSeconds;
+    });
+
+    return sortedEntries[0];
+  }
+
+  private getEntriesByRoundScore(leaderboard: QuizLeaderboardDocument) {
+    if (
+      !leaderboard ||
+      !leaderboard.entries ||
+      leaderboard.entries.length === 0
+    ) {
+      return [];
+    }
+
+    const entries = leaderboard.entries;
+
+    const uniqueScores = [
+      ...new Set(entries.map((e: any) => e.roundScore)),
+    ].sort((a: any, b: any) => a - b);
+
+    if (uniqueScores.length === 0) {
+      return [];
+    }
+
+    const lowestScore = uniqueScores[0];
+
+    return entries.filter((entry: any) => entry.roundScore === lowestScore);
   }
 
   private isDuplicateKeyError(error: unknown): boolean {
