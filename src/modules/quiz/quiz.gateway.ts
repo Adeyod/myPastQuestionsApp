@@ -650,10 +650,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { success: true, message: 'Tie-breaker question dispatched.' };
   }
 
-  /**
-   * 2. Admin finalizes tie-breaker (via Voting OR Tie Question results)
-   * Prunes eliminated user IDs from joined_users -> spectator_array in DB and syncs room.
-   */
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('resolve_tiebreaker_eliminations')
   async handleResolveTiebreakerEliminations(
