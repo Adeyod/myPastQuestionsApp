@@ -1002,9 +1002,7 @@ export class QuizService {
       }
     }
 
-    if (userRole === Role.ADMIN && room.hostId.toString() !== userId) {
-      return;
-    } else {
+    if (userRole === Role.ADMIN) {
       const updateRoom =
         await this.quizRoomRepo.updateAdminRoomConnectionStatus(
           userId,
