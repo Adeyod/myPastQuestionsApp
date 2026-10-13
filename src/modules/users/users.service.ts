@@ -48,6 +48,11 @@ export class UsersService {
 
     return others;
   }
+  async findUserByUserId(id: Types.ObjectId) {
+    const user = await this.usersRepository.findById(id);
+
+    return user;
+  }
 
   async findUserByEmail(email: string): Promise<UserResponseDto> {
     const user = await this.usersRepository.findByEmail(email);

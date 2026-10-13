@@ -24,8 +24,11 @@ import { QuizRoomRepository } from './repositories/quiz-room.repository';
 import { QuizVoteRepository } from './repositories/quiz-vote.repository';
 import { QuizRepository } from './repositories/quiz.repository';
 import { QuizLeaderboardDocument } from './schemas/quiz-leadership.schema';
-import { ParticipantStatus } from './schemas/quiz-participant.schema';
-import { QuizRoomStatus } from './schemas/quiz-room.schema';
+import {
+  ParticipantStatus,
+  QuizParticipantDocument,
+} from './schemas/quiz-participant.schema';
+import { QuizRoomDocument, QuizRoomStatus } from './schemas/quiz-room.schema';
 import { QuizStatus } from './schemas/quiz.schema';
 
 @Injectable()
@@ -402,6 +405,7 @@ export class QuizService {
     });
 
     quiz.room_id = roomId;
+    quiz.status = QuizStatus.IN_PROGRESS;
     await this.quizRepo.save(quiz);
 
     return {
@@ -951,17 +955,72 @@ export class QuizService {
     return question;
   }
 
-  async markParticipantDisconnected(userId: string, socketId: string) {
+  async markParticipantDisconnected(
+    roomId: string,
+    user: JwtUser,
+    socketId: string,
+  ) {
+    const userId = user.sub.toString();
+    const userRole = user.role;
+
     const id = new Types.ObjectId(userId);
 
-    const participant = await this.participantRepo.findParticipantAndUpdate(
-      id,
-      socketId,
-    );
+    const userExist = await this.usersService.findUserByUserId(id);
 
-    if (participant) {
-      return participant;
+    if (!userExist) {
+      return;
     }
+
+    let participant: QuizParticipantDocument | null = null;
+    let updatedRoom: QuizRoomDocument | null = null;
+
+    const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
+
+    if (!room) {
+      return;
+    }
+
+    if (userRole !== Role.ADMIN) {
+      const res = await this.participantRepo.findParticipantAndUpdate(
+        id,
+        socketId,
+      );
+
+      if (res) {
+        participant = res;
+      }
+
+      const updateRoom =
+        await this.quizRoomRepo.updateParticipantRoomConnectionStatus(
+          userId,
+          socketId,
+          roomId,
+        );
+
+      if (updateRoom) {
+        updatedRoom = updateRoom;
+      }
+    }
+
+    if (userRole === Role.ADMIN && room.hostId.toString() !== userId) {
+      return;
+    } else {
+      const updateRoom =
+        await this.quizRoomRepo.updateAdminRoomConnectionStatus(
+          userId,
+          socketId,
+          roomId,
+        );
+
+      if (updateRoom) {
+        updatedRoom = updateRoom;
+      }
+    }
+
+    const firstName = userExist.firstName;
+    const lastName = userExist.lastName;
+
+    return { participant, updatedRoom, firstName, lastName };
   }
 
   /**

@@ -102,7 +102,12 @@ export class QuizRoom {
     ],
     default: [],
   })
-  admins!: any[];
+  admins!: {
+    userId: Types.ObjectId;
+    socketId: string;
+    connected: boolean;
+    joinedAt: Date;
+  }[];
 }
 
 export const QuizRoomSchema = SchemaFactory.createForClass(QuizRoom);

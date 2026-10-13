@@ -31,6 +31,8 @@ import { QuizService } from './quiz.service';
 @WebSocketGateway({
   cors: { origin: '*' },
   namespace: '/quiz',
+  pingInterval: 25000,
+  pingTimeout: 20000,
 })
 export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -84,16 +86,29 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleDisconnect(client: Socket) {
     const user: JwtUser = client.data.user;
+    const roomId: string | undefined = client.data.roomId;
 
-    if (!user?.sub) {
+    if (!user?.sub || !roomId) {
       return;
     }
 
     try {
-      await this.quizService.markParticipantDisconnected(
-        user.sub.toString(),
+      const disconnected = await this.quizService.markParticipantDisconnected(
+        roomId,
+        user,
         client.id,
       );
+
+      if (!disconnected) {
+        return;
+      }
+
+      this.server.to(roomId).emit('participant_disconnected', {
+        userId: user.sub.toString(),
+        firstName: disconnected.firstName,
+        lastName: disconnected.lastName,
+        timestamp: new Date(),
+      });
     } catch (error) {
       console.error('Unable to update participant disconnect state:', error);
     }
@@ -401,45 +416,38 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException('Room ID not found.');
     }
 
-    // 1. Validate that the user is allowed to join this room
     const room = await this.quizService.validateParticipantCanJoinRoom(
       data.roomId,
       user,
     );
 
-    // 2. Join the Socket.IO room
+    client.data.roomId = room.roomId;
+
     await client.join(room.roomId);
 
-    // 3. Register/update this participant's socket connection
     if (user.role === Role.ADMIN) {
       await this.quizService.registerAdminSocket(
-        // room.quizId.toString(),
         room.roomId,
         user.sub.toString(),
         client.id,
       );
     } else {
       await this.quizService.registerParticipantSocket(
-        // room.quizId.toString(),
         room.roomId,
         user.sub.toString(),
         client.id,
       );
     }
 
-    // 4. Get the current persistent state of the quiz room
     const roomState = await this.quizService.getRoomState(room.roomId);
 
-    // 5. Send the current state ONLY to this newly connected socket
     client.emit('room_state', roomState);
 
-    // 6. Notify everyone else/current participants that someone joined
     this.server.to(room.roomId).emit('participant_joined_room', {
       userId: user.sub,
       timestamp: new Date(),
     });
 
-    // 7. Acknowledge the join request
     return {
       event: 'joined_room_ack',
       data: {

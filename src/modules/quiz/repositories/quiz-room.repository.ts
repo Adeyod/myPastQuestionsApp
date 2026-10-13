@@ -112,4 +112,65 @@ export class QuizRoomRepository {
 
     return response;
   }
+
+  async updateParticipantRoomConnectionStatus(
+    roomId: string,
+    userId: string,
+    socketId: string,
+  ): Promise<QuizRoomDocument | null> {
+    const userObjectId = new Types.ObjectId(userId);
+
+    const response = await this.quizRoomModel.findOneAndUpdate(
+      {
+        roomId,
+        participants: {
+          $elemMatch: {
+            userId: userObjectId,
+            socketId,
+            connected: true,
+          },
+        },
+      },
+      {
+        $set: {
+          'participants.$.connected': false,
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return response;
+  }
+  async updateAdminRoomConnectionStatus(
+    roomId: string,
+    userId: string,
+    socketId: string,
+  ): Promise<QuizRoomDocument | null> {
+    const userObjectId = new Types.ObjectId(userId);
+
+    const response = await this.quizRoomModel.findOneAndUpdate(
+      {
+        roomId,
+        admins: {
+          $elemMatch: {
+            userId: userObjectId,
+            socketId,
+            connected: true,
+          },
+        },
+      },
+      {
+        $set: {
+          'participants.$.connected': false,
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return response;
+  }
 }
