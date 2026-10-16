@@ -33,6 +33,25 @@ export class TransactionsRepository {
     ]);
   }
 
+  async updateWithPaymentURL(
+    transactionId: string,
+    authorizationUrl: string,
+    providerReference: string,
+  ): Promise<TransactionDocument | null> {
+    const id = new Types.ObjectId(transactionId);
+
+    const update = await this.transactionModel.findByIdAndUpdate(
+      id,
+      {
+        authorizationUrl: authorizationUrl,
+        providerReference: providerReference,
+      },
+      { returnDocument: 'after' },
+    );
+
+    return update;
+  }
+
   async createTransaction(transactionCreationDto: TransactionCreationDto) {
     const {
       walletId,
@@ -40,6 +59,7 @@ export class TransactionsRepository {
       description,
       transactionType,
       category,
+      reference,
       referredUserId,
       referralLevel,
       withdrawalId,
@@ -52,6 +72,7 @@ export class TransactionsRepository {
       type: transactionType,
       description,
       category,
+      reference,
       referredUserId,
       referralLevel,
       withdrawalId: withdrawalId && new Types.ObjectId(withdrawalId),

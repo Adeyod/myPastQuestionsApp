@@ -13,6 +13,7 @@ export enum PaymentStatus {
 
 export enum WebhookProcessionTransactionType {
   PAYMENT = 'PAYMENT',
+  FUND_WALLET = 'FUND_WALLET',
   WITHDRAWAL = 'WITHDRAWAL',
 }
 

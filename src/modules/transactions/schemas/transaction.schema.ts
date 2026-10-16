@@ -1,5 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import {
+  PaymentProvider,
+  PaymentStatus,
+} from '../../payments/schemas/payment.schema';
 
 export type TransactionDocument = Transaction & Document;
 
@@ -30,6 +34,34 @@ export class Transaction {
 
   @Prop({ type: String, required: true })
   description!: string;
+
+  @Prop({ type: String })
+  reference?: string;
+
+  @Prop()
+  providerReference?: string; // paystack or other provider reference
+
+  @Prop()
+  authorizationUrl?: string; // paystack or other provider authorization_url
+
+  @Prop({
+    type: String,
+    enum: PaymentProvider,
+    default: PaymentProvider.PAYSTACK,
+  })
+  provider?: PaymentProvider;
+
+  @Prop({
+    type: String,
+    enum: PaymentStatus,
+    default: PaymentStatus.PENDING,
+  })
+  status!: PaymentStatus;
+
+  @Prop({
+    default: false,
+  })
+  verified!: boolean;
 
   @Prop({
     type: String,

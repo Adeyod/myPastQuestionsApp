@@ -1,6 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CompanyWalletModule } from '../company-wallet/company-wallet.module';
+import { PaymentsModule } from '../payments/payments.module';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import { WalletsRepository } from './repositories/wallets.repository';
@@ -13,6 +14,7 @@ import { WalletsService } from './wallets.service';
     MongooseModule.forFeature([{ name: Wallet.name, schema: WalletSchema }]),
     UserSessionModule,
     CompanyWalletModule,
+    forwardRef(() => PaymentsModule),
     forwardRef(() => TransactionsModule),
   ],
   controllers: [WalletsController],

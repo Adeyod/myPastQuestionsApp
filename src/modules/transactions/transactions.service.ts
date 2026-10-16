@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   forwardRef,
   Inject,
@@ -13,6 +14,10 @@ import { Role } from '../users/schemas/user.schema';
 import { WalletsRepository } from '../wallets/repositories/wallets.repository';
 import { TransactionResponseDto } from './dto/transaction-response.dto';
 import { TransactionsRepository } from './repositories/transaction.repository';
+import {
+  TransactionCategoryEnum,
+  TransactionType,
+} from './schemas/transaction.schema';
 
 @Injectable()
 export class TransactionsService {
@@ -115,5 +120,57 @@ export class TransactionsService {
     }
 
     return transactions;
+  }
+
+  async createTransaction(
+    walletId: string,
+    amountInKobo: number,
+    description: string,
+    category: TransactionCategoryEnum,
+    transactionType: TransactionType,
+    reference: string,
+  ) {
+    const payload = {
+      walletId,
+      amountInKobo,
+      description,
+      category,
+      transactionType,
+      reference,
+    };
+    const response =
+      await this.transactionsRepository.createTransaction(payload);
+
+    if (!response) {
+      throw new BadRequestException({
+        message: 'Unable to create transaction record.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    return response;
+  }
+
+  async updateTransactionByTransactionId(
+    transactionId: string,
+    paymentUrl: string,
+    providerReference: string,
+  ) {
+    const transaction = await this.transactionsRepository.updateWithPaymentURL(
+      transactionId,
+      paymentUrl,
+      providerReference,
+    );
+
+    if (!transaction) {
+      throw new NotFoundException({
+        message: 'Transaction not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return transaction;
   }
 }

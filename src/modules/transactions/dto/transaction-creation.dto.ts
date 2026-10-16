@@ -40,6 +40,13 @@ export class TransactionCreationDto {
   @IsString({ message: 'Description must be a string' })
   description!: string;
 
+  @ApiPropertyOptional({
+    description: 'This is the reference for mostly funding of wallet.',
+    example: '',
+  })
+  @IsString({ message: 'Reference must be a string' })
+  reference?: string;
+
   @ApiProperty({
     description: 'This is the transaction type for this particular transaction',
     example: TransactionType.CREDIT,

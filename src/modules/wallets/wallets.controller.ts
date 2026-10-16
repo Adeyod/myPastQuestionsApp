@@ -1,9 +1,11 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -20,7 +22,9 @@ import { DeviceSessionGuard } from '../../common/guards/device-session.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import type { JwtUser } from '../../common/types/jwt-user.type';
+import { PaymentProvider } from '../payments/schemas/payment.schema';
 import { Role } from '../users/schemas/user.schema';
+import { FundUserWalletDto } from './dto/fund-wallet.dto';
 import { WalletsService } from './wallets.service';
 
 @Controller('wallets')
@@ -178,6 +182,52 @@ export class WalletsController {
     @GetCurrentUser() user: JwtUser,
   ) {
     const response = await this.walletsService.getWalletBalance(walletId, user);
+    console.log('response:', response);
+    return response;
+  }
+  @Post('fund-wallet-by-walletId/:walletId/:provider')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Wallet funding link generated successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generate wallet funding link for the user.',
+    description:
+      'This is the endpoint for generating funding link for the user. It can be used by the user that owns the account.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Wallet funding link generated successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to generate wallet funding link.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async fundUserWalletFromPaymentGatewayProvider(
+    @Param('walletId') walletId: string,
+    @Param('provider') provider: PaymentProvider,
+    @Body() fundUserWalletDto: FundUserWalletDto,
+    @GetCurrentUser() user: JwtUser,
+  ) {
+    const response =
+      await this.walletsService.fundUserWalletFromPaymentGatewayProvider(
+        walletId,
+        fundUserWalletDto.amountInKobo,
+        provider,
+        user,
+      );
     console.log('response:', response);
     return response;
   }
