@@ -114,6 +114,8 @@ export class MonnifyService implements IPaymentProvider {
     const authString = `${this.apiKey}:${this.secret}`;
     const base64AuthString = Buffer.from(authString).toString('base64');
 
+    console.log('callback URL:', this.redirectUrl);
+
     const response = await axios.post(
       `${this.baseUrl}/api/v1/merchant/transactions/init-transaction`,
       {
