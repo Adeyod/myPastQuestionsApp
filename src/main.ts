@@ -13,7 +13,10 @@ import { GlobalResponseInterceptor } from './common/interceptor/global-response.
 import { QuizService } from './modules/quiz/quiz.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
 
   const port = process.env.PORT ?? 3000;
   app.setGlobalPrefix('/api/v1');

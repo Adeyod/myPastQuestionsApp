@@ -10,6 +10,14 @@ export enum WithdrawalStatus {
   FAILED = 'FAILED',
 }
 
+export type UpdateWithdrawalStatusPayload = {
+  status: WithdrawalStatus;
+  providerReference?: string;
+  metadata?: Record<string, any>;
+  failureReason?: string;
+  paidAt?: Date;
+};
+
 @Schema({ timestamps: true })
 export class Withdrawal {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
@@ -36,6 +44,12 @@ export class Withdrawal {
     default: WithdrawalStatus.PENDING,
   })
   status!: WithdrawalStatus;
+
+  @Prop({ required: true })
+  destinationAccountNumber!: string;
+
+  @Prop({ required: true })
+  destinationAccountName!: string;
 
   @Prop({ type: Object })
   metadata?: Record<string, any>;

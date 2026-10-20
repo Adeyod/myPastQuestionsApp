@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { WalletsModule } from '../wallets/wallets.module';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
+import { MonnifyService } from './providers/monnify/monnify.service';
 import { PaystackService } from './providers/paystack/paystack.service';
 import { PaymentsRepository } from './repositories/payment.repository';
 import { Payment, PaymentSchema } from './schemas/payment.schema';
@@ -21,7 +22,17 @@ import { Payment, PaymentSchema } from './schemas/payment.schema';
     forwardRef(() => ReferralsModule),
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService, PaymentsRepository, PaystackService],
-  exports: [PaymentsService, PaymentsRepository, PaystackService],
+  providers: [
+    PaymentsService,
+    PaymentsRepository,
+    PaystackService,
+    MonnifyService,
+  ],
+  exports: [
+    PaymentsService,
+    PaymentsRepository,
+    PaystackService,
+    MonnifyService,
+  ],
 })
 export class PaymentsModule {}

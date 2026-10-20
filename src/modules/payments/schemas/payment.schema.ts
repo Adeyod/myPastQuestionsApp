@@ -19,6 +19,7 @@ export enum WebhookProcessionTransactionType {
 
 export enum PaymentProvider {
   PAYSTACK = 'paystack',
+  MONNIFY = 'monnify',
   // FLUTTERWAVE = 'flutterwave',
 }
 @Schema({ timestamps: true })

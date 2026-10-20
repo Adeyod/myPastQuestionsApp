@@ -4,6 +4,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  type RawBodyRequest,
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
@@ -17,7 +18,7 @@ export class PaymentGatewayController {
   @HttpCode(HttpStatus.OK)
   async handleWebhook(
     @Param('provider') provider: PaymentProvider,
-    @Req() req: Request,
+    @Req() req: RawBodyRequest<Request>,
   ) {
     return await this.paymentGatewayService.handleWebhook(provider, req);
   }

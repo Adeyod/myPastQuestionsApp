@@ -3,9 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import crypto from 'crypto';
 import { Request } from 'express';
-import { UsersRepository } from '../../../../modules/users/repositories/users.repository';
-import { WalletsRepository } from '../../../../modules/wallets/repositories/wallets.repository';
-import { PaymentsRepository } from '../../repositories/payment.repository';
 import { WebhookProcessionTransactionType } from '../../schemas/payment.schema';
 import {
   IPaymentProvider,
@@ -16,12 +13,7 @@ import {
 export class PaystackService implements IPaymentProvider {
   private readonly baseUrl = 'https://api.paystack.co';
   private readonly secret = process.env.PAYSTACK_TEST_SECRET_KEY;
-  constructor(
-    private paymentsRepository: PaymentsRepository,
-    private usersRepository: UsersRepository,
-    private walletsRepository: WalletsRepository,
-    private configService: ConfigService,
-  ) {
+  constructor(private configService: ConfigService) {
     this.secret = this.configService.get<string>('PAYSTACK_TEST_SECRET_KEY');
   }
 
@@ -51,7 +43,7 @@ export class PaystackService implements IPaymentProvider {
     };
   }
 
-  async verifyPayment(reference: string): Promise<any> {
+  async verifyTransaction(reference: string): Promise<any> {
     const response = await axios.get(
       `${this.baseUrl}/transaction/verify/${reference}`,
       {

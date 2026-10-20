@@ -329,6 +329,17 @@ export class PaymentsRepository {
     return paymentTransaction;
   }
 
+  async findByInternalReferenceWithSession(
+    reference: string,
+    session: ClientSession,
+  ): Promise<PaymentDocument | null> {
+    const response = await this.paymentModel
+      .findOne({ reference })
+      .session(session);
+
+    return response;
+  }
+
   // async migratePaymentAmountsToKobo() {
   //   const payments = (await this.paymentModel
   //     .find({

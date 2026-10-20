@@ -14,8 +14,8 @@ import { PlanCode } from '../plans/schemas/plan.schema';
 import { ReferralsService } from '../referrals/referrals.service';
 import { UsersRepository } from '../users/repositories/users.repository';
 import { Role } from '../users/schemas/user.schema';
-import { WalletsRepository } from '../wallets/repositories/wallets.repository';
 import { IPaymentProvider } from './providers/interfaces/provider.interface';
+import { MonnifyService } from './providers/monnify/monnify.service';
 import { PaystackService } from './providers/paystack/paystack.service';
 import { PaymentsRepository } from './repositories/payment.repository';
 import {
@@ -32,8 +32,8 @@ export class PaymentsService {
   constructor(
     @InjectConnection() private readonly connection: Connection,
     private readonly paymentsRepository: PaymentsRepository,
-    private readonly walletsRepository: WalletsRepository,
     private readonly paystackService: PaystackService,
+    private readonly monnifyService: MonnifyService,
     private readonly plansService: PlansService,
     private readonly referralsService: ReferralsService,
     // private readonly flutterwaveService: flutterwaveService,
@@ -41,6 +41,7 @@ export class PaymentsService {
   ) {
     this.providerMap = {
       [PaymentProvider.PAYSTACK]: this.paystackService,
+      [PaymentProvider.MONNIFY]: this.monnifyService,
       // [PaymentProvider.FLUTTERWAVE]: this.flutterwaveService
     };
   }
@@ -139,6 +140,9 @@ export class PaymentsService {
       ref: createIntent.reference,
       // reference: createIntent.reference,
       userId: findUser._id.toString(),
+      userName: `${findUser.firstName} ${findUser.lastName}`,
+      paymentDescription: 'Plan subscription',
+      currencyCode: 'NGN',
       type: WebhookProcessionTransactionType.PAYMENT,
     });
 
@@ -149,85 +153,6 @@ export class PaymentsService {
     );
     return providerResponse;
   }
-
-  // async verifyPayment(reference: string, user: JwtUser) {
-  //   // 1️⃣ CHECK DB FIRST (faster + avoids unnecessary provider calls)
-  //   const transaction =
-  //     await this.paymentsRepository.findPaymentTransactionByReference(
-  //       reference,
-  //     );
-
-  //   if (!transaction) {
-  //     throw new NotFoundException({
-  //       message: 'Transaction not found.',
-  //       success: false,
-  //       status: 404,
-  //     });
-  //   }
-
-  //   // Ownership check
-  //   if (transaction.userId.toString() !== user.sub.toString()) {
-  //     throw new ForbiddenException({
-  //       message: 'You are not authorized to access this transaction.',
-  //       success: false,
-  //       status: 403,
-  //     });
-  //   }
-
-  //   // 2️⃣ IDEMPOTENCY CHECK (webhook might have already processed it)
-  //   if (transaction.status === 'SUCCESSFUL') {
-  //     return {
-  //       message: 'Payment already verified.',
-  //       success: true,
-  //       status: 200,
-  //       data: transaction,
-  //     };
-  //   }
-
-  //   const provider = transaction.provider;
-  //   const handler = this.providerMap[provider];
-
-  //   if (!handler) {
-  //     throw new BadRequestException({
-  //       message: 'Unsupported provider.',
-  //       success: false,
-  //       status: 400,
-  //     });
-  //   }
-
-  //   // 3️⃣ VERIFY WITH PROVIDER (fallback if webhook hasn't hit yet)
-  //   const providerRes = await handler.verifyPayment(reference);
-
-  //   if (!providerRes || providerRes.status !== 'success') {
-  //     throw new BadRequestException({
-  //       message: 'Payment not successful yet.',
-  //       success: false,
-  //       status: 400,
-  //     });
-  //   }
-
-  //   // 4️⃣ VALIDATE DATA INTEGRITY
-  //   if (transaction.amount !== providerRes.amount) {
-  //     throw new BadRequestException({
-  //       message: 'Payment details mismatch.',
-  //       success: false,
-  //       status: 400,
-  //     });
-  //   }
-
-  //   // 5️⃣ ONLY UPDATE STATUS (DO NOT CALL BUSINESS LOGIC)
-  //   transaction.status = PaymentStatus.SUCCESSFUL;
-  //   // transaction.providerResponse = providerRes;
-
-  //   await transaction.save();
-
-  //   return {
-  //     message: 'Payment verified successfully.',
-  //     success: true,
-  //     status: 200,
-  //     provider: transaction?.provider,
-  //   };
-  // }
 
   async verifyPayment(reference: string, user: JwtUser) {
     // 1️⃣ Check DB first
@@ -275,7 +200,7 @@ export class PaymentsService {
       });
     }
 
-    const providerRes = await handler.verifyPayment(reference);
+    const providerRes = await handler.verifyTransaction(reference);
 
     if (!providerRes || providerRes.status !== 'success') {
       return {
@@ -357,11 +282,18 @@ export class PaymentsService {
     return payments;
   }
 
-  async handlePaymentWebhook(providerResponse: any) {
-    const {
-      reference,
-      metadata: { amount, userId },
-    } = providerResponse.data;
+  async handlePaymentWebhook(
+    provider: PaymentProvider,
+    userId: string,
+    reference: string,
+  ) {
+    if (!reference) {
+      throw new BadRequestException({
+        message: 'Missing payment reference.',
+        success: false,
+        status: 400,
+      });
+    }
 
     const session = await this.connection.startSession();
     session.startTransaction();
@@ -374,23 +306,69 @@ export class PaymentsService {
           session,
         );
 
-      if (!payment) throw new NotFoundException('Payment not found');
+      if (!payment) {
+        throw new NotFoundException({
+          message: 'Payment not found',
+          success: false,
+          status: 404,
+        });
+      }
+
+      if (payment.provider !== provider) {
+        throw new BadRequestException({
+          message: 'Payment provider does not match the stored transaction.',
+          success: false,
+          status: 400,
+        });
+      }
 
       if (payment.status === PaymentStatus.SUCCESSFUL) {
         await session.abortTransaction();
         return { message: 'Already processed' };
       }
 
-      const verifyResponse =
-        await this.providerMap[payment.provider].verifyPayment(reference);
+      const verifyReference =
+        payment.provider === PaymentProvider.MONNIFY
+          ? payment.reference
+          : payment.providerReference;
 
-      if (verifyResponse.status !== 'success') {
+      const verifyResponse =
+        await this.providerMap[payment.provider].verifyTransaction(
+          verifyReference,
+        );
+
+      let verifiedAmountInKobo: number;
+      let isSuccessful: boolean;
+
+      if (payment.provider === PaymentProvider.MONNIFY) {
+        isSuccessful = verifyResponse?.paymentStatus === 'PAID';
+        verifiedAmountInKobo = Math.round(
+          Number(verifyResponse?.amountPaid) * 100,
+        );
+      } else {
+        isSuccessful = verifyResponse?.status === 'success';
+        verifiedAmountInKobo = Number(verifyResponse?.amount);
+      }
+
+      if (!isSuccessful) {
         await session.abortTransaction();
-        return { message: 'Verification failed' };
+        return { message: 'Payment verification failed.' };
+      }
+
+      if (
+        !Number.isFinite(verifiedAmountInKobo) ||
+        verifiedAmountInKobo !== payment.amountInKobo
+      ) {
+        throw new BadRequestException({
+          message: 'Payment amount does not match the stored transaction.',
+          success: false,
+          status: 400,
+        });
       }
 
       payment.status = PaymentStatus.SUCCESSFUL;
       payment.verified = true;
+      payment.paidAt = new Date();
       await payment.save({ session });
 
       await this.processSuccessfulPayment(payment, session);
@@ -399,10 +377,12 @@ export class PaymentsService {
 
       return { message: 'Payment processed' };
     } catch (error) {
-      await session.abortTransaction();
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       throw error;
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
 
@@ -428,88 +408,4 @@ export class PaymentsService {
       )
       .catch(console.error);
   }
-
-  // async handlePaymentWebhook(providerResponse: any) {
-  //   const {
-  //     reference,
-  //     metadata: { amount, userId },
-  //   } = providerResponse.data;
-
-  //   const amt = Number(String(amount).replace(/,/g, ''));
-
-  //   if (isNaN(amt)) {
-  //     throw new BadRequestException({
-  //       message: 'Invalid amount provided.',
-  //       status: 400,
-  //       success: false,
-  //     });
-  //   }
-
-  //   const userObjectId = new Types.ObjectId(userId);
-
-  //   const payment = await this.paymentsRepository.getPaymentByRefAndUserId(
-  //     reference,
-  //     userObjectId,
-  //   );
-
-  //   if (!payment) {
-  //     throw new NotFoundException({
-  //       message: 'Payment document not found.',
-  //       status: 404,
-  //       success: false,
-  //     });
-  //   }
-
-  //   if (payment.verified) {
-  //     return { message: 'Payment already processed.' };
-  //   }
-
-  //   const verifyResponse =
-  //     await this.providerMap[PaymentProvider.PAYSTACK].verifyPayment(reference);
-
-  //   if (verifyResponse.status !== 'success') {
-  //     return { message: 'Payment verification failed.' };
-  //   }
-
-  //   const session = await this.connection.startSession();
-  //   session.startTransaction();
-
-  //   try {
-  //     await this.paymentsRepository.updatePaymentStatusUsingPaymentId(
-  //       payment._id,
-  //       PaymentStatus.SUCCESSFUL,
-  //       session,
-  //     );
-
-  //     const userExist = await this.usersRepository.findById(userObjectId);
-
-  //     if (!userExist) {
-  //       throw new NotFoundException({
-  //         message: 'User not found',
-  //         status: 404,
-  //         success: false,
-  //       });
-  //     }
-
-  //     userExist.plans.push(payment.plan);
-  //     await userExist.save({ session });
-
-  //     await session.commitTransaction();
-
-  //     payment.verified = true;
-  //     await payment.save({ session });
-
-  //     // safe async
-  //     this.referralsService
-  //       .processReferralReward(userExist._id.toString(), amt / 100)
-  //       .catch(console.error);
-
-  //     return { message: 'Payment processed' };
-  //   } catch (error) {
-  //     await session.abortTransaction();
-  //     throw error;
-  //   } finally {
-  //     session.endSession();
-  //   }
-  // }
 }

@@ -10,6 +10,7 @@ import { JwtUser } from '../../common/types/jwt-user.type';
 import { generatePaymentReference } from '../../common/utils/helper';
 import { CompanyWalletService } from '../company-wallet/company-wallet.service';
 import { IPaymentProvider } from '../payments/providers/interfaces/provider.interface';
+import { MonnifyService } from '../payments/providers/monnify/monnify.service';
 import { PaystackService } from '../payments/providers/paystack/paystack.service';
 import {
   PaymentProvider,
@@ -21,6 +22,7 @@ import {
 } from '../transactions/schemas/transaction.schema';
 import { TransactionsService } from '../transactions/transactions.service';
 import { Role } from '../users/schemas/user.schema';
+import { UsersService } from '../users/users.service';
 import { WalletsRepository } from './repositories/wallets.repository';
 
 @Injectable()
@@ -30,10 +32,13 @@ export class WalletsService {
     private readonly walletsRepository: WalletsRepository,
     private readonly companyWalletService: CompanyWalletService,
     private readonly paystackService: PaystackService,
+    private readonly monnifyService: MonnifyService,
+    private readonly usersService: UsersService,
     private readonly transactionService: TransactionsService,
   ) {
     this.providerMap = {
       [PaymentProvider.PAYSTACK]: this.paystackService,
+      [PaymentProvider.MONNIFY]: this.monnifyService,
       // [PaymentProvider.FLUTTERWAVE]: this.flutterwaveService
     };
   }
@@ -145,6 +150,8 @@ export class WalletsService {
     provider: PaymentProvider,
     user: JwtUser,
   ) {
+    const findUser = await this.usersService.findUserById(user.sub);
+
     const wallet = await this.walletsRepository.findWalletById(walletId);
 
     if (!wallet) {
@@ -158,7 +165,7 @@ export class WalletsService {
     const description = 'User funding wallet.';
     const category = TransactionCategoryEnum.GENERAL;
     const transactionType = TransactionType.CREDIT;
-    const userId = user.sub;
+    const userId = findUser._id.toString();
     const plan = 'FUND_WALLET';
 
     const input = {
@@ -191,6 +198,9 @@ export class WalletsService {
       amount: amountInKobo,
       ref: reference,
       userId: user.sub.toString(),
+      userName: `${findUser.firstName} ${findUser.lastName}`,
+      paymentDescription: description,
+      currencyCode: 'NGN',
       type: WebhookProcessionTransactionType.FUND_WALLET,
     };
 

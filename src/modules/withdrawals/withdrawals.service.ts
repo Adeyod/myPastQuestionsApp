@@ -1,10 +1,15 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { generatePaymentReference } from '../../common/utils/helper';
 import { AccountsService } from '../accounts/accounts.service';
-import { PaystackService } from '../payments/providers/paystack/paystack.service';
+import { AccountDocument } from '../accounts/schemas/accounts.schema';
+import { MonnifyService } from '../payments/providers/monnify/monnify.service';
 import { WebhookProcessionTransactionType } from '../payments/schemas/payment.schema';
 import { TransactionsRepository } from '../transactions/repositories/transaction.repository';
 import {
@@ -12,6 +17,7 @@ import {
   TransactionType,
 } from '../transactions/schemas/transaction.schema';
 import { WalletsRepository } from '../wallets/repositories/wallets.repository';
+import { WalletDocument } from '../wallets/schemas/wallet.schema';
 import { RequestWithdrawalDto } from './dtos/request-withdrawal.dto';
 import { WithdrawalsRepository } from './repositories/withdrawals.repository';
 import { WithdrawalStatus } from './schemas/withdrawal.schema';
@@ -24,108 +30,16 @@ export class WithdrawalsService {
     private walletsRepo: WalletsRepository,
     private readonly accountsService: AccountsService,
     private transactionsRepo: TransactionsRepository,
-    private paystackService: PaystackService,
+    private monnifyService: MonnifyService,
   ) {}
-
-  // async requestWithdrawal(user: JwtUser, dto: RequestWithdrawalDto) {
-  //   const session = await this.connection.startSession();
-  //   session.startTransaction();
-
-  //   const wallet = await this.walletsRepo.findWalletById(dto.walletId);
-
-  //   if (!wallet || wallet.balance < dto.amount) {
-  //     throw new BadRequestException({
-  //       message: 'Insufficient balance',
-  //       success: false,
-  //       status: 400,
-  //     });
-  //   }
-
-  //   const id = user.sub.toString();
-
-  //   const userAccount = await this.accountsService.getUserAccount(user, id);
-
-  //   const payload = {
-  //     userId: id,
-  //     plan: 'BANK_WITHDRAWAL',
-  //   };
-
-  //   const reference = generatePaymentReference(payload, 'WITHDRAWAL');
-
-  //   // 1. Create withdrawal record
-  //   const withdrawal = await this.withdrawalsRepo.createWithdrawalDocument({
-  //     userId: new Types.ObjectId(id),
-  //     walletId: wallet._id,
-  //     amount: dto.amount,
-  //     reference,
-  //     recipientCode: userAccount.transferRecipientCode,
-  //     status: WithdrawalStatus.PENDING,
-  //   });
-
-  //   console.log('withdrawal:', withdrawal);
-
-  //   // 2. Debit wallet
-  //   wallet.balance -= dto.amount;
-  //   await wallet.save();
-
-  //   const response = await this.transactionsRepo.createTransaction({
-  //     walletId: wallet._id.toString(),
-  //     amount: dto.amount,
-  //     description: 'Withdrawal request',
-  //     transactionType: TransactionType.DEBIT,
-  //     category: TransactionCategoryEnum.GENERAL,
-  //     withdrawalId: withdrawal._id.toString(),
-  //   });
-  //   console.log('response:', response);
-
-  //   try {
-  //     // 3. Call Paystack
-  //     const paystackResponse = await this.paystackService.creditUserBankAccount(
-  //       {
-  //         bankName: userAccount.bankName,
-  //         accountNumber: userAccount.accountNumber,
-  //         accountName: userAccount.accountName,
-  //         recipientCode: userAccount.transferRecipientCode,
-  //         amount: dto.amount,
-  //         walletId: wallet._id.toString(),
-  //         reference,
-  //       },
-  //     );
-  //     console.log('paystackResponse:', paystackResponse);
-
-  //     const updatedWithdrawalStatus = await this.withdrawalsRepo.updateStatus(
-  //       reference,
-  //       {
-  //         status: WithdrawalStatus.PROCESSING,
-  //         providerReference: paystackResponse.reference,
-  //         metadata: response,
-  //       },
-  //     );
-  //     console.log('updatedWithdrawalStatus:', updatedWithdrawalStatus);
-
-  //     return {
-  //       message: 'Withdrawal initiated',
-  //     };
-  //   } catch (error: any) {
-  //     // rollback
-  //     wallet.balance += dto.amount;
-  //     await wallet.save();
-
-  //     await this.withdrawalsRepo.updateStatus(reference, {
-  //       status: WithdrawalStatus.FAILED,
-  //       failureReason: error.message,
-  //     });
-
-  //     throw new BadRequestException('Transfer failed');
-  //   }
-  // }
 
   async requestWithdrawal(user: JwtUser, dto: RequestWithdrawalDto) {
     const session = await this.connection.startSession();
     session.startTransaction();
 
     let withdrawal: any;
-    let wallet: any;
+    let userAccount: AccountDocument;
+    let wallet: WalletDocument | null;
     const id = user.sub.toString();
 
     try {
@@ -136,14 +50,30 @@ export class WithdrawalsService {
       );
 
       if (!wallet || wallet.balanceInKobo < dto.amountInKobo) {
-        throw new BadRequestException('Insufficient balance');
+        throw new BadRequestException({
+          message: 'Insufficient balance',
+          success: false,
+          status: 400,
+        });
       }
 
-      const userAccount = await this.accountsService.getUserAccountWithSession(
+      userAccount = await this.accountsService.getUserAccountWithSession(
         user,
         id,
         session,
       );
+
+      if (
+        !userAccount.accountName ||
+        !userAccount.accountNumber ||
+        !userAccount.transferRecipientCode
+      ) {
+        throw new BadRequestException({
+          message: 'Your bank account details are incomplete.',
+          success: false,
+          status: 400,
+        });
+      }
 
       const reference = generatePaymentReference(
         { userId: id, plan: 'BANK_WITHDRAWAL' },
@@ -159,6 +89,8 @@ export class WithdrawalsService {
             amountInKobo: dto.amountInKobo,
             reference,
             recipientCode: userAccount.transferRecipientCode,
+            destinationAccountName: userAccount.accountName,
+            destinationAccountNumber: userAccount.accountNumber,
             status: WithdrawalStatus.PENDING,
           },
           session,
@@ -191,70 +123,168 @@ export class WithdrawalsService {
       session.endSession();
     }
 
-    // 🚀 PHASE 2: Call Paystack OUTSIDE transaction
+    const claimedWithdrawal = await this.withdrawalsRepo.updateStatus(
+      withdrawal.reference,
+      {
+        status: WithdrawalStatus.PROCESSING,
+      },
+      [WithdrawalStatus.PENDING],
+    );
+
+    if (!claimedWithdrawal) {
+      throw new BadRequestException({
+        message:
+          'This withdrawal is already being processed or its status has changed.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    // 🚀 PHASE 2: Call monnify OUTSIDE transaction
     try {
-      const userAccount = await this.accountsService.getUserAccount(user, id);
+      const monnifyResponse = await this.monnifyService.creditUserBankAccount({
+        bankCode: userAccount.transferRecipientCode,
+        bankName: userAccount.bankName,
+        accountNumber: userAccount.accountNumber,
+        accountName: userAccount.accountName,
+        amountInKobo: dto.amountInKobo,
+        walletId: wallet._id.toString(),
+        reference: withdrawal.reference,
+        type: WebhookProcessionTransactionType.WITHDRAWAL,
+      });
 
-      const paystackResponse = await this.paystackService.creditUserBankAccount(
-        {
-          bankName: userAccount.bankName,
-          accountNumber: userAccount.accountNumber,
-          accountName: userAccount.accountName,
-          recipientCode: userAccount.transferRecipientCode,
-          amount: dto.amountInKobo,
-          walletId: wallet._id.toString(),
-          reference: withdrawal.reference,
-          type: WebhookProcessionTransactionType.WITHDRAWAL,
-        },
-      );
-
-      // ✅ Update to PROCESSING
+      // Update to PROCESSING
       const updatedStatus = await this.withdrawalsRepo.updateStatus(
         withdrawal.reference,
         {
           status: WithdrawalStatus.PROCESSING,
-          providerReference: paystackResponse.reference,
-          metadata: paystackResponse,
+          providerReference:
+            monnifyResponse.transactionReference ?? monnifyResponse.reference,
+          metadata: monnifyResponse,
         },
+        [WithdrawalStatus.PROCESSING],
       );
+
+      if (!updatedStatus) {
+        throw new BadRequestException({
+          message:
+            'Transfer may have been initiated. Reconcile this withdrawal with Monnify.',
+          success: false,
+          status: 400,
+        });
+      }
 
       console.log('updatedStatus:', updatedStatus);
 
       return {
-        message: 'Withdrawal initiated',
+        message: 'Withdrawal initiated and is being processed.',
+        status: updatedStatus.status,
       };
     } catch (error: any) {
-      // Paystack failed → COMPENSATING ACTION
-      const session2 = await this.connection.startSession();
-      session2.startTransaction();
+      // monnify failed → COMPENSATING ACTION
 
       try {
-        // 1️⃣ Mark withdrawal FAILED
-        await this.withdrawalsRepo.updateStatusWithSession(
+        await this.withdrawalsRepo.updateStatus(
           withdrawal.reference,
           {
-            status: WithdrawalStatus.FAILED,
-            failureReason: error.message,
+            status: WithdrawalStatus.PROCESSING,
+            metadata: {
+              initiationOutcome: 'UNKNOWN',
+              reconciliationRequired: true,
+              errorMessage:
+                error instanceof Error
+                  ? error.message
+                  : 'Unknown transfer initiation error',
+            },
           },
-          session2,
+          [WithdrawalStatus.PROCESSING],
         );
-
-        // 2️⃣ Refund wallet
-        await this.walletsRepo.creditUserWallet(
-          withdrawal.userId,
-          withdrawal.amountInKobo,
-          session2,
-        );
-
-        await session2.commitTransaction();
-      } catch (err) {
-        await session2.abortTransaction();
-        throw err;
-      } finally {
-        session2.endSession();
+      } catch {
+        // The withdrawal remains recorded.
+        // Reconcile it using its unique reference before retrying or refunding.
       }
 
-      throw new BadRequestException('Transfer failed');
+      throw new BadRequestException({
+        message:
+          'Your withdrawal request is being checked. Please do not submit it again.',
+        success: false,
+        status: 400,
+      });
+    }
+  }
+
+  async reconcileWithdrawal(reference: string) {
+    const withdrawal = await this.withdrawalsRepo.findByReference(reference);
+
+    if (!withdrawal) {
+      throw new NotFoundException({
+        message: 'Withdrawal not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (
+      withdrawal.status === WithdrawalStatus.SUCCESS ||
+      withdrawal.status === WithdrawalStatus.FAILED
+    ) {
+      return {
+        message: 'Withdrawal has already reached a final status',
+        status: withdrawal.status,
+      };
+    }
+
+    const transfer = await this.monnifyService.getTransferStatus(reference);
+
+    /**
+     * Important: this is a starting point for reconciliation,
+     * not the complete production refund workflow. In particular,
+     * the success branch should also be implemented with an atomic,
+     * idempotent state transition, and the failure branch needs a
+     * MongoDB transaction that marks the withdrawal failed and
+     * credits the wallet exactly once. Your existing
+     * handleWithdrawalFailed() should be refactored to share that
+     * same refund logic.
+     */
+    switch (transfer.status) {
+      case 'SUCCESS':
+      case 'COMPLETED': {
+        const updated = await this.withdrawalsRepo.updateStatus(
+          reference,
+          {
+            status: WithdrawalStatus.SUCCESS,
+            providerReference: transfer.transactionReference,
+            metadata: transfer,
+            paidAt: new Date(),
+          },
+          [WithdrawalStatus.PROCESSING, WithdrawalStatus.PENDING],
+        );
+
+        return {
+          message: updated
+            ? 'Withdrawal confirmed successful'
+            : 'Withdrawal status changed; check its current state.',
+          status: updated?.status,
+        };
+      }
+
+      case 'FAILED':
+      case 'REVERSED':
+      case 'EXPIRED': {
+        return {
+          message:
+            'Monnify reports a failed or reversed transfer. Process the refund transaction.',
+          providerStatus: transfer.status,
+          reference,
+        };
+      }
+
+      default:
+        return {
+          message: 'Transfer is not yet final. Check again later.',
+          providerStatus: transfer.status,
+          reference,
+        };
     }
   }
 
