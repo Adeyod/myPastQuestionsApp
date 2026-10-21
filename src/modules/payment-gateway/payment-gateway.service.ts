@@ -50,9 +50,10 @@ export class PaymentGatewayService {
         eventType === 'SUCCESSFUL_TRANSACTION' &&
         eventData?.paymentStatus === 'PAID'
       ) {
+        console.log('This monnify condition is met.....');
         return this.paymentsService.handlePaymentWebhook(
           PaymentProvider.MONNIFY,
-          eventData.metadata.userId,
+          eventData.metadata.code,
           eventData.transactionReference,
         );
       }

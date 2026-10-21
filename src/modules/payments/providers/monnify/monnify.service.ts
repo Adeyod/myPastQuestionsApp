@@ -111,6 +111,11 @@ export class MonnifyService implements IPaymentProvider {
       userName,
     } = payload;
 
+    const metaObj = {
+      name: userName,
+      code: userId,
+    };
+
     const response = await axios.post(
       `${this.baseUrl}/api/v1/merchant/transactions/init-transaction`,
       {
@@ -122,10 +127,7 @@ export class MonnifyService implements IPaymentProvider {
         currencyCode: currencyCode,
         contractCode: this.contractCode,
         redirectUrl: this.redirectUrl,
-        metadata: {
-          name: userName,
-          code: userId,
-        },
+        metadata: metaObj,
       },
       {
         headers: {

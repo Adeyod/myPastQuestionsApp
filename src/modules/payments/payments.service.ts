@@ -295,6 +295,14 @@ export class PaymentsService {
       });
     }
 
+    if (!userId) {
+      throw new BadRequestException({
+        message: 'Missing User ID.',
+        success: false,
+        status: 400,
+      });
+    }
+
     const session = await this.connection.startSession();
     session.startTransaction();
 
