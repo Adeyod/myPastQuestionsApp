@@ -221,6 +221,7 @@ export class WalletsController {
     @Body() fundUserWalletDto: FundUserWalletDto,
     @GetCurrentUser() user: JwtUser,
   ) {
+    console.log('Wallet controller provider:', provider);
     const response =
       await this.walletsService.fundUserWalletFromPaymentGatewayProvider(
         walletId,

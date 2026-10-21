@@ -51,6 +51,7 @@ export class PaymentsService {
     plan: PlanCode,
     user: JwtUser,
   ) {
+    console.log('provider:', provider);
     const findUser = await this.usersRepository.findById(user.sub);
 
     if (!findUser) {
@@ -317,6 +318,8 @@ export class PaymentsService {
           new Types.ObjectId(userId),
           session,
         );
+
+      console.log('payment:', payment);
 
       if (!payment) {
         throw new NotFoundException({

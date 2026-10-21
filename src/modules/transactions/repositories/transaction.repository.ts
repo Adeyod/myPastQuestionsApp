@@ -62,6 +62,7 @@ export class TransactionsRepository {
       reference,
       referredUserId,
       referralLevel,
+      provider,
       withdrawalId,
     } = transactionCreationDto;
     const id = new Types.ObjectId(walletId);
@@ -75,6 +76,7 @@ export class TransactionsRepository {
       reference,
       referredUserId,
       referralLevel,
+      provider,
       withdrawalId: withdrawalId && new Types.ObjectId(withdrawalId),
     }).save();
 

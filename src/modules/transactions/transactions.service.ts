@@ -9,6 +9,7 @@ import {
 import { Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { JwtUser } from '../../common/types/jwt-user.type';
+import { PaymentProvider } from '../payments/schemas/payment.schema';
 import { UsersRepository } from '../users/repositories/users.repository';
 import { Role } from '../users/schemas/user.schema';
 import { WalletsRepository } from '../wallets/repositories/wallets.repository';
@@ -128,6 +129,7 @@ export class TransactionsService {
     description: string,
     category: TransactionCategoryEnum,
     transactionType: TransactionType,
+    provider: PaymentProvider,
     reference: string,
   ) {
     const payload = {
@@ -136,6 +138,7 @@ export class TransactionsService {
       description,
       category,
       transactionType,
+      provider,
       reference,
     };
     const response =

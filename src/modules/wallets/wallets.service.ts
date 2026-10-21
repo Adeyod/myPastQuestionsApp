@@ -180,6 +180,7 @@ export class WalletsService {
       description,
       category,
       transactionType,
+      provider,
       reference,
     );
 

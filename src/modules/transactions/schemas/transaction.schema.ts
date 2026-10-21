@@ -47,7 +47,6 @@ export class Transaction {
   @Prop({
     type: String,
     enum: PaymentProvider,
-    default: PaymentProvider.PAYSTACK,
   })
   provider?: PaymentProvider;
 

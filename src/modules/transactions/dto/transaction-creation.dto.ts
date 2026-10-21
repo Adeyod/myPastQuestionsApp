@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { Types } from 'mongoose';
+import { PaymentProvider } from '../../payments/schemas/payment.schema';
 import {
   TransactionCategoryEnum,
   TransactionType,
@@ -46,6 +47,14 @@ export class TransactionCreationDto {
   })
   @IsString({ message: 'Reference must be a string' })
   reference?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'This is the payment gateway the user is using to fund his wallet.',
+    example: 'monnify',
+  })
+  @IsString({ message: 'Provider must be a string' })
+  provider?: PaymentProvider;
 
   @ApiProperty({
     description: 'This is the transaction type for this particular transaction',
