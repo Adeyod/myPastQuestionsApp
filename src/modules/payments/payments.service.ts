@@ -287,6 +287,10 @@ export class PaymentsService {
     userId: string,
     reference: string,
   ) {
+    console.log('payment service provider:', provider);
+    console.log('payment service userId:', userId);
+    console.log('payment service reference:', reference);
+
     if (!reference) {
       throw new BadRequestException({
         message: 'Missing payment reference.',
