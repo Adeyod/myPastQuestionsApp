@@ -165,14 +165,12 @@ export class WalletsService {
     const description = 'User funding wallet.';
     const category = TransactionCategoryEnum.GENERAL;
     const transactionType = TransactionType.CREDIT;
-    const userWalletId = wallet._id.toString();
-    const plan = 'FUND_WALLET';
+    const userId = wallet._id.toString();
 
     const input = {
-      plan,
-      userWalletId,
+      userId,
     };
-    const reference = generatePaymentReference(input, 'PAYMENT');
+    const reference = generatePaymentReference(input, 'FUND_WALLET');
 
     const pendingTransaction = await this.transactionService.createTransaction(
       wallet._id.toString(),
@@ -198,7 +196,7 @@ export class WalletsService {
       email: user.email,
       amount: amountInKobo,
       ref: reference,
-      userId: userWalletId,
+      userId: userId,
       userName: `${findUser.firstName} ${findUser.lastName}`,
       paymentDescription: description,
       currencyCode: 'NGN',

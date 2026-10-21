@@ -60,9 +60,11 @@ export class PaymentsRepository {
       });
     }
 
+    const user = userId.toString();
+
     const payload = {
       plan,
-      userId,
+      userId: user,
     };
     const reference = generatePaymentReference(payload, 'PAYMENT');
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);

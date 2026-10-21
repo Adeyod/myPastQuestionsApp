@@ -24,20 +24,25 @@ export const generateRefCode = (): string => {
 };
 
 export const generatePaymentReference = (
-  payload,
-  refType: 'PAYMENT' | 'WITHDRAWAL',
+  payload: {
+    userId: string;
+    plan?: string;
+  },
+  refType: 'PAYMENT' | 'WITHDRAWAL' | 'FUND_WALLET',
 ) => {
   const { userId, plan } = payload;
 
-  if (!userId || !plan) {
+  if (!userId) {
     throw new BadRequestException({
-      message: 'User ID and plan are required.',
+      message: 'User ID is required.',
       success: false,
       status: 400,
     });
   }
 
-  const ref = `${refType}_${plan}_${userId}_${Date.now()}`;
+  const ref = plan
+    ? `${refType}_${plan}_${userId}_${Date.now()}`
+    : `${refType}_${userId}_${Date.now()}`;
 
   return ref;
 };
