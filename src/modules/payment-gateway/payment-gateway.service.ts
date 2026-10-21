@@ -25,7 +25,10 @@ export class PaymentGatewayService {
   }
 
   async handleWebhook(provider: PaymentProvider, req: Request) {
+    console.log('I want to process webhook here... Service function');
     const handler = this.providerMap[provider];
+
+    console.log('handler in service file:', handler);
 
     if (!handler) {
       throw new BadRequestException({
@@ -37,9 +40,12 @@ export class PaymentGatewayService {
 
     const providerResponse = await handler.handleWebhook(req);
 
+    console.log('providerResponse in service file:', providerResponse);
     if (provider === PaymentProvider.MONNIFY) {
       const { eventType, eventData } = providerResponse;
 
+      console.log('eventType in service file:', eventType);
+      console.log('eventData in service file:', eventData);
       if (
         eventType === 'SUCCESSFUL_TRANSACTION' &&
         eventData?.paymentStatus === 'PAID'
