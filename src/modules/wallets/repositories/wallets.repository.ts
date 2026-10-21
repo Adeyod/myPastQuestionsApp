@@ -158,6 +158,24 @@ export class WalletsRepository {
     return walletBal;
   }
 
+  async fundWalletFromBankWithSession(
+    walletId: Types.ObjectId,
+    amountInKobo: number,
+    session: ClientSession,
+  ): Promise<WalletDocument | null> {
+    const response = await this.walletModel.findByIdAndUpdate(
+      walletId,
+      {
+        $inc: { balanceInKobo: amountInKobo },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return response;
+  }
+
   async debitWallet(walletDebitDto: WalletDebitDto) {
     const { walletId, amountInKobo, description } = walletDebitDto;
 

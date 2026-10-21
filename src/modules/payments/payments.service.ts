@@ -12,8 +12,10 @@ import { JwtUser } from '../../common/types/jwt-user.type';
 import { PlansService } from '../plans/plans.service';
 import { PlanCode } from '../plans/schemas/plan.schema';
 import { ReferralsService } from '../referrals/referrals.service';
+import { TransactionsService } from '../transactions/transactions.service';
 import { UsersRepository } from '../users/repositories/users.repository';
 import { Role } from '../users/schemas/user.schema';
+import { WalletsService } from '../wallets/wallets.service';
 import { IPaymentProvider } from './providers/interfaces/provider.interface';
 import { MonnifyService } from './providers/monnify/monnify.service';
 import { PaystackService } from './providers/paystack/paystack.service';
@@ -36,6 +38,8 @@ export class PaymentsService {
     private readonly monnifyService: MonnifyService,
     private readonly plansService: PlansService,
     private readonly referralsService: ReferralsService,
+    private readonly transactionsService: TransactionsService,
+    private readonly walletsService: WalletsService,
     // private readonly flutterwaveService: flutterwaveService,
     private usersRepository: UsersRepository,
   ) {
@@ -312,81 +316,170 @@ export class PaymentsService {
     session.startTransaction();
 
     try {
-      const payment =
+      const userObjectId = new Types.ObjectId(userId);
+
+      const paymentDoc =
         await this.paymentsRepository.getPaymentByRefAndUserIdWithSession(
           reference,
-          new Types.ObjectId(userId),
+          userObjectId,
           session,
         );
 
-      console.log('payment:', payment);
+      console.log('paymentDoc:', paymentDoc);
 
-      if (!payment) {
+      const transactionDoc = paymentDoc
+        ? null
+        : await this.transactionsService.getPendingWalletFundingByRefAndWalletIdWithSession(
+            reference,
+            userObjectId,
+            session,
+          );
+
+      if (!paymentDoc && !transactionDoc) {
         throw new NotFoundException({
-          message: 'Payment not found',
+          message: 'Payment transaction not found',
           success: false,
           status: 404,
         });
       }
 
-      if (payment.provider !== provider) {
-        throw new BadRequestException({
-          message: 'Payment provider does not match the stored transaction.',
-          success: false,
-          status: 400,
-        });
-      }
+      if (paymentDoc) {
+        if (paymentDoc.provider !== provider) {
+          throw new BadRequestException({
+            message: 'Payment provider does not match the stored transaction.',
+            success: false,
+            status: 400,
+          });
+        }
 
-      if (payment.status === PaymentStatus.SUCCESSFUL) {
-        await session.abortTransaction();
-        return { message: 'Already processed' };
-      }
+        if (paymentDoc.status === PaymentStatus.SUCCESSFUL) {
+          await session.abortTransaction();
+          return { message: 'Already processed' };
+        }
 
-      const verifyReference =
-        payment.provider === PaymentProvider.MONNIFY
-          ? payment.reference
-          : payment.providerReference;
+        const verifyReference =
+          paymentDoc.provider === PaymentProvider.MONNIFY
+            ? paymentDoc.reference
+            : paymentDoc.providerReference;
 
-      const verifyResponse =
-        await this.providerMap[payment.provider].verifyTransaction(
-          verifyReference,
+        const verifyResponse =
+          await this.providerMap[paymentDoc.provider].verifyTransaction(
+            verifyReference,
+          );
+
+        let verifiedAmountInKobo: number;
+        let isSuccessful: boolean;
+
+        if (paymentDoc.provider === PaymentProvider.MONNIFY) {
+          isSuccessful = verifyResponse?.paymentStatus === 'PAID';
+          verifiedAmountInKobo = Math.round(
+            Number(verifyResponse?.amountPaid) * 100,
+          );
+        } else {
+          isSuccessful = verifyResponse?.status === 'success';
+          verifiedAmountInKobo = Number(verifyResponse?.amount);
+        }
+
+        if (!isSuccessful) {
+          await session.abortTransaction();
+          return { message: 'Payment verification failed.' };
+        }
+
+        if (
+          !Number.isFinite(verifiedAmountInKobo) ||
+          verifiedAmountInKobo !== paymentDoc.amountInKobo
+        ) {
+          throw new BadRequestException({
+            message: 'Payment amount does not match the stored transaction.',
+            success: false,
+            status: 400,
+          });
+        }
+
+        paymentDoc.status = PaymentStatus.SUCCESSFUL;
+        paymentDoc.verified = true;
+        paymentDoc.paidAt = new Date();
+        await paymentDoc.save({ session });
+
+        await this.processSuccessfulPayment(paymentDoc, session);
+      } else if (transactionDoc) {
+        if (transactionDoc.provider !== provider) {
+          throw new BadRequestException({
+            message: 'Payment provider does not match the stored transaction.',
+            success: false,
+            status: 400,
+          });
+        }
+
+        if (transactionDoc.status === PaymentStatus.SUCCESSFUL) {
+          await session.abortTransaction();
+          return { message: 'Already processed' };
+        }
+
+        const verifyReference =
+          transactionDoc.provider === PaymentProvider.MONNIFY
+            ? transactionDoc.reference
+            : transactionDoc.providerReference;
+
+        if (!verifyReference) {
+          throw new BadRequestException({
+            message: 'Missing provider transaction reference.',
+            success: false,
+            status: 400,
+          });
+        }
+
+        const verifyResponse =
+          await this.providerMap[transactionDoc.provider].verifyTransaction(
+            verifyReference,
+          );
+
+        let verifiedAmountInKobo: number;
+        let isSuccessful: boolean;
+
+        if (transactionDoc.provider === PaymentProvider.MONNIFY) {
+          isSuccessful = verifyResponse?.paymentStatus === 'PAID';
+          verifiedAmountInKobo = Math.round(
+            Number(verifyResponse?.amountPaid) * 100,
+          );
+        } else {
+          isSuccessful = verifyResponse?.status === 'success';
+          verifiedAmountInKobo = Number(verifyResponse?.amount);
+        }
+
+        if (!isSuccessful) {
+          await session.abortTransaction();
+          return { message: 'Payment verification failed.' };
+        }
+
+        if (
+          !Number.isFinite(verifiedAmountInKobo) ||
+          verifiedAmountInKobo !== transactionDoc.amountInKobo
+        ) {
+          throw new BadRequestException({
+            message: 'Payment amount does not match the stored transaction.',
+            success: false,
+            status: 400,
+          });
+        }
+
+        transactionDoc.status = PaymentStatus.SUCCESSFUL;
+        transactionDoc.verified = true;
+
+        await this.walletsService.creditUserWalletByWalletIdAndAmountWithSession(
+          transactionDoc.walletId,
+          transactionDoc.amountInKobo,
+          session,
         );
 
-      let verifiedAmountInKobo: number;
-      let isSuccessful: boolean;
-
-      if (payment.provider === PaymentProvider.MONNIFY) {
-        isSuccessful = verifyResponse?.paymentStatus === 'PAID';
-        verifiedAmountInKobo = Math.round(
-          Number(verifyResponse?.amountPaid) * 100,
-        );
+        await transactionDoc.save({ session });
       } else {
-        isSuccessful = verifyResponse?.status === 'success';
-        verifiedAmountInKobo = Number(verifyResponse?.amount);
-      }
-
-      if (!isSuccessful) {
-        await session.abortTransaction();
-        return { message: 'Payment verification failed.' };
-      }
-
-      if (
-        !Number.isFinite(verifiedAmountInKobo) ||
-        verifiedAmountInKobo !== payment.amountInKobo
-      ) {
         throw new BadRequestException({
-          message: 'Payment amount does not match the stored transaction.',
+          message: 'Unsupported transaction type.',
           success: false,
           status: 400,
         });
       }
-
-      payment.status = PaymentStatus.SUCCESSFUL;
-      payment.verified = true;
-      payment.paidAt = new Date();
-      await payment.save({ session });
-
-      await this.processSuccessfulPayment(payment, session);
 
       await session.commitTransaction();
 

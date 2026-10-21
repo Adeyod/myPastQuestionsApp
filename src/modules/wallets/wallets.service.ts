@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ClientSession } from 'mongoose';
+import { ClientSession, Types } from 'mongoose';
 import { ExamType } from '../../common/enums/exam-type.enum';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { generatePaymentReference } from '../../common/utils/helper';
@@ -165,12 +165,12 @@ export class WalletsService {
     const description = 'User funding wallet.';
     const category = TransactionCategoryEnum.GENERAL;
     const transactionType = TransactionType.CREDIT;
-    const userId = findUser._id.toString();
+    const userWalletId = wallet._id.toString();
     const plan = 'FUND_WALLET';
 
     const input = {
       plan,
-      userId,
+      userWalletId,
     };
     const reference = generatePaymentReference(input, 'PAYMENT');
 
@@ -198,7 +198,7 @@ export class WalletsService {
       email: user.email,
       amount: amountInKobo,
       ref: reference,
-      userId: user.sub.toString(),
+      userId: userWalletId,
       userName: `${findUser.firstName} ${findUser.lastName}`,
       paymentDescription: description,
       currencyCode: 'NGN',
@@ -215,5 +215,27 @@ export class WalletsService {
       );
 
     return providerResponse;
+  }
+
+  async creditUserWalletByWalletIdAndAmountWithSession(
+    walletId: Types.ObjectId,
+    amountInKobo: number,
+    session: ClientSession,
+  ) {
+    const response = await this.walletsRepository.fundWalletFromBankWithSession(
+      walletId,
+      amountInKobo,
+      session,
+    );
+
+    if (!response) {
+      throw new BadRequestException({
+        message: 'Unable to credit wallet.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    return response;
   }
 }

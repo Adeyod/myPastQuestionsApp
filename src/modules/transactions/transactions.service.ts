@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { ClientSession, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { PaymentProvider } from '../payments/schemas/payment.schema';
@@ -175,5 +175,28 @@ export class TransactionsService {
     }
 
     return transaction;
+  }
+
+  async getPendingWalletFundingByRefAndWalletIdWithSession(
+    reference: string,
+    walletId: Types.ObjectId,
+    session: ClientSession,
+  ) {
+    const response =
+      await this.transactionsRepository.getPendingWalletFundingByRefAndWalletIdWithSession(
+        reference,
+        walletId,
+        session,
+      );
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Transaction not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
   }
 }

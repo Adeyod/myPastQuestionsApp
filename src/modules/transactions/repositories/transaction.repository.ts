@@ -112,6 +112,20 @@ export class TransactionsRepository {
     return newTransaction;
   }
 
+  async getPendingWalletFundingByRefAndWalletIdWithSession(
+    reference: string,
+    walletId: Types.ObjectId,
+    session: ClientSession,
+  ): Promise<TransactionDocument | null> {
+    const transaction = await this.transactionModel
+      .findOne({
+        providerReference: reference,
+        walletId: walletId,
+      })
+      .session(session);
+
+    return transaction;
+  }
   async getTransactionById(
     transactionId: string,
   ): Promise<TransactionDocument | null> {
