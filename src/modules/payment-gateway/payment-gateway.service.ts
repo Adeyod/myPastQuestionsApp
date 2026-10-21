@@ -52,7 +52,8 @@ export class PaymentGatewayService {
       ) {
         console.log('This monnify condition is met.....');
         const paymentRef = eventData.paymentReference;
-        const userId = paymentRef.split('_')[3];
+
+        const userId = paymentRef.split('_')[2];
 
         console.log(
           'userID from splitting payment reference in monnify:',
