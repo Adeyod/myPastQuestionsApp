@@ -51,9 +51,17 @@ export class PaymentGatewayService {
         eventData?.paymentStatus === 'PAID'
       ) {
         console.log('This monnify condition is met.....');
+        const paymentRef = eventData.paymentReference;
+        const userId = paymentRef.split('_')[3];
+
+        console.log(
+          'userID from splitting payment reference in monnify:',
+          userId,
+        );
+
         return this.paymentsService.handlePaymentWebhook(
           PaymentProvider.MONNIFY,
-          eventData.metadata.code,
+          userId,
           eventData.transactionReference,
         );
       }
