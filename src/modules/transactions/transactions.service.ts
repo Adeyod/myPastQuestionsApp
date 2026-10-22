@@ -199,4 +199,37 @@ export class TransactionsService {
 
     return response;
   }
+
+  async getTransactionByInHouseReference(reference: string) {
+    const response =
+      await this.transactionsRepository.getTransactionByInHouseReference(
+        reference,
+      );
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Transaction not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
+  }
+  async getTransactionByProviderReference(reference: string) {
+    const response =
+      await this.transactionsRepository.getTransactionByProviderReference(
+        reference,
+      );
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Transaction not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
+  }
 }

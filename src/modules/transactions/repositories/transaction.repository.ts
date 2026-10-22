@@ -136,6 +136,25 @@ export class TransactionsRepository {
     return transaction;
   }
 
+  async getTransactionByInHouseReference(
+    reference: string,
+  ): Promise<TransactionDocument | null> {
+    const response = await this.transactionModel.findOne({
+      reference: reference,
+    });
+
+    return response;
+  }
+  async getTransactionByProviderReference(
+    reference: string,
+  ): Promise<TransactionDocument | null> {
+    const response = await this.transactionModel.findOne({
+      providerReference: reference,
+    });
+
+    return response;
+  }
+
   async getAllUserTransactionsByWalletId(
     walletId: Types.ObjectId,
     queryWithPaginationDto: QueryWithPaginationDto,

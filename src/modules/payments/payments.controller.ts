@@ -155,7 +155,7 @@ export class PaymentsController {
     return this.paymentsService.getAllPayments(queryWithPaginationDto);
   }
 
-  @Get('verify-payment/:reference')
+  @Get('verify-payment/:provider/:reference')
   @UseGuards(JwtAuthGuard, DeviceSessionGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
@@ -185,9 +185,10 @@ export class PaymentsController {
     description: 'Internal server error',
   })
   async verifyPayment(
+    @Param('provider') provider: PaymentProvider,
     @Param('reference') reference: string,
     @GetCurrentUser() user: JwtUser,
   ) {
-    return await this.paymentsService.verifyPayment(reference, user);
+    return await this.paymentsService.verifyPayment(provider, reference, user);
   }
 }

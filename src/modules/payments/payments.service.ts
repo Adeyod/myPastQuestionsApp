@@ -12,6 +12,7 @@ import { JwtUser } from '../../common/types/jwt-user.type';
 import { PlansService } from '../plans/plans.service';
 import { PlanCode } from '../plans/schemas/plan.schema';
 import { ReferralsService } from '../referrals/referrals.service';
+import { TransactionDocument } from '../transactions/schemas/transaction.schema';
 import { TransactionsService } from '../transactions/transactions.service';
 import { UsersRepository } from '../users/repositories/users.repository';
 import { Role } from '../users/schemas/user.schema';
@@ -159,14 +160,39 @@ export class PaymentsService {
     return providerResponse;
   }
 
-  async verifyPayment(reference: string, user: JwtUser) {
-    // 1️⃣ Check DB first
-    const transaction =
-      await this.paymentsRepository.findPaymentTransactionByReference(
-        reference,
-      );
+  async verifyPayment(
+    provider: PaymentProvider,
+    reference: string,
+    user: JwtUser,
+  ) {
+    let transactionDoc: TransactionDocument | null = null;
+    let paymentDoc: PaymentDocument | null = null;
 
-    if (!transaction) {
+    if (provider === PaymentProvider.MONNIFY) {
+      paymentDoc =
+        await this.paymentsRepository.findPaymentTransactionByInHouseReference(
+          reference,
+        );
+
+      transactionDoc = paymentDoc
+        ? null
+        : await this.transactionsService.getTransactionByInHouseReference(
+            reference,
+          );
+    } else if (provider === PaymentProvider.PAYSTACK) {
+      paymentDoc =
+        await this.paymentsRepository.findPaymentTransactionByProviderReference(
+          reference,
+        );
+
+      transactionDoc = paymentDoc
+        ? null
+        : await this.transactionsService.getTransactionByProviderReference(
+            reference,
+          );
+    }
+
+    if (!paymentDoc && !transactionDoc) {
       throw new NotFoundException({
         message: 'Transaction not found.',
         success: false,
@@ -174,27 +200,38 @@ export class PaymentsService {
       });
     }
 
-    // 2️⃣ Ownership check
-    if (transaction.userId.toString() !== user.sub.toString()) {
-      throw new ForbiddenException({
-        message: 'You are not authorized to access this transaction.',
-        success: false,
-        status: 403,
-      });
-    }
+    if (paymentDoc) {
+      // 2️⃣ Ownership check
+      if (paymentDoc.userId.toString() !== user.sub.toString()) {
+        throw new ForbiddenException({
+          message: 'You are not authorized to access this transaction.',
+          success: false,
+          status: 403,
+        });
+      }
 
-    // 3️⃣ If webhook already processed it → RETURN immediately
-    if (transaction.status === PaymentStatus.SUCCESSFUL) {
-      return {
-        message: 'Payment already verified.',
-        success: true,
-        status: 200,
-        data: transaction,
-      };
+      // 3️⃣ If webhook already processed it → RETURN immediately
+      if (paymentDoc.status === PaymentStatus.SUCCESSFUL) {
+        return {
+          message: 'Payment already verified.',
+          success: true,
+          status: 200,
+          data: paymentDoc,
+        };
+      }
+    } else if (transactionDoc) {
+      // 3️⃣ If webhook already processed it → RETURN immediately
+      if (transactionDoc.status === PaymentStatus.SUCCESSFUL) {
+        return {
+          message: 'Payment already verified.',
+          success: true,
+          status: 200,
+          data: transactionDoc,
+        };
+      }
     }
 
     // 4️⃣ Fallback: verify with provider (NO DB WRITE)
-    const provider = transaction.provider;
     const handler = this.providerMap[provider];
 
     if (!handler) {
@@ -207,7 +244,7 @@ export class PaymentsService {
 
     const providerRes = await handler.verifyTransaction(reference);
 
-    if (!providerRes || providerRes.status !== 'success') {
+    if (!providerRes) {
       return {
         message: 'Payment not successful yet.',
         success: false,
@@ -215,16 +252,46 @@ export class PaymentsService {
       };
     }
 
-    // 5️⃣ Validate integrity
-    if (transaction.amountInKobo !== providerRes.amount) {
-      throw new BadRequestException({
-        message: 'Payment details mismatch.',
+    if (
+      provider === PaymentProvider.PAYSTACK &&
+      providerRes.status !== 'success'
+    ) {
+      return {
+        message: 'Payment not successful yet.',
         success: false,
         status: 400,
-      });
+      };
     }
 
-    // IMPORTANT: DO NOT UPDATE DATABASE HERE
+    if (
+      provider === PaymentProvider.MONNIFY &&
+      providerRes.paymentStatus !== 'PAID'
+    ) {
+      return {
+        message: 'Payment not successful yet.',
+        success: false,
+        status: 400,
+      };
+    }
+
+    if (paymentDoc) {
+      // 5️⃣ Validate integrity
+      if (paymentDoc.amountInKobo !== providerRes.amount) {
+        throw new BadRequestException({
+          message: 'Payment details mismatch.',
+          success: false,
+          status: 400,
+        });
+      }
+    } else if (transactionDoc) {
+      if (transactionDoc.amountInKobo !== providerRes.amount) {
+        throw new BadRequestException({
+          message: 'Payment details mismatch.',
+          success: false,
+          status: 400,
+        });
+      }
+    }
 
     return {
       message:
@@ -232,7 +299,7 @@ export class PaymentsService {
       success: true,
       status: 200,
       paymentStatus: 'SUCCESS_PENDING_WEBHOOK',
-      provider: transaction.provider,
+      provider,
     };
   }
 

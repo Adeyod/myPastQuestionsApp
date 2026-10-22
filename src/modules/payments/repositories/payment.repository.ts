@@ -321,11 +321,20 @@ export class PaymentsRepository {
     return response;
   }
 
-  async findPaymentTransactionByReference(
+  async findPaymentTransactionByProviderReference(
     reference: string,
   ): Promise<PaymentDocument | null> {
     const paymentTransaction = await this.paymentModel.findOne({
       providerReference: reference,
+    });
+
+    return paymentTransaction;
+  }
+  async findPaymentTransactionByInHouseReference(
+    reference: string,
+  ): Promise<PaymentDocument | null> {
+    const paymentTransaction = await this.paymentModel.findOne({
+      reference: reference,
     });
 
     return paymentTransaction;
