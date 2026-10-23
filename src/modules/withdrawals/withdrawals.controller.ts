@@ -65,6 +65,7 @@ export class WithdrawalsController {
     @GetCurrentUser() user: JwtUser,
     @Body() dto: RequestWithdrawalDto,
   ) {
+    console.log('trying to request for withdrawal to my local bank account.');
     const response = await this.withdrawalsService.requestWithdrawal(user, dto);
 
     return response;

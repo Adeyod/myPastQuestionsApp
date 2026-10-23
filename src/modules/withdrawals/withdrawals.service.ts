@@ -84,6 +84,8 @@ export class WithdrawalsService {
         });
       }
 
+      console.log('userAccount:', userAccount);
+
       const reference = generatePaymentReference(
         { userId: id, plan: 'BANK_WITHDRAWAL' },
         'WITHDRAWAL',
@@ -104,6 +106,8 @@ export class WithdrawalsService {
           session,
         );
 
+      console.log('withdrawal:', withdrawal);
+
       wallet.balanceInKobo -= dto.amountInKobo;
       await wallet.save({ session });
 
@@ -119,6 +123,8 @@ export class WithdrawalsService {
           },
           session,
         );
+
+      console.log('transaction:', transaction);
 
       await session.commitTransaction();
     } catch (error) {

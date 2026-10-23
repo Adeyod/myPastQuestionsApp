@@ -351,6 +351,8 @@ export class MonnifyService implements IPaymentProvider {
         status: 500,
       });
     }
+
+    console.log('Monnify data.responseBody:', data.responseBody);
     return data.responseBody;
   }
 
