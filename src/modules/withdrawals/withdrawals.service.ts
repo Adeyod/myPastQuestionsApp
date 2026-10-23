@@ -92,13 +92,13 @@ export class WithdrawalsService {
         'WITHDRAWAL',
       );
 
-      if (reference.length > 64) {
-        throw new BadRequestException({
-          message: 'Unable to generate a valid withdrawal reference.',
-          success: false,
-          status: 400,
-        });
-      }
+      // if (reference.length > 64) {
+      //   throw new BadRequestException({
+      //     message: 'Unable to generate a valid withdrawal reference.',
+      //     success: false,
+      //     status: 400,
+      //   });
+      // }
 
       withdrawal =
         await this.withdrawalsRepo.createWithdrawalDocumentWithSession(
