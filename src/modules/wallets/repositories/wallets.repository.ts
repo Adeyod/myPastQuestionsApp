@@ -45,6 +45,20 @@ export class WalletsRepository {
 
     return wallet;
   }
+  async findWalletByIdAndUserIdWithSession(
+    walletId: string,
+    userId: string,
+    session: ClientSession,
+  ): Promise<WalletDocument | null> {
+    const id = new Types.ObjectId(walletId);
+    const user = new Types.ObjectId(userId);
+
+    const wallet = await this.walletModel
+      .findOne({ _id: id, userId: user })
+      .session(session);
+
+    return wallet;
+  }
   async findWalletByIdWithSession(
     walletId: string,
     session: ClientSession,

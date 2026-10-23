@@ -72,6 +72,7 @@ export class WalletsService {
 
     return debitWallet;
   }
+
   async findWalletByUserId(userId: string, user: JwtUser) {
     if (user.role !== Role.ADMIN) {
       if (user.sub.toString() !== userId) {

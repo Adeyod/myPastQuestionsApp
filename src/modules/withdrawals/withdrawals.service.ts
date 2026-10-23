@@ -34,6 +34,14 @@ export class WithdrawalsService {
   ) {}
 
   async requestWithdrawal(user: JwtUser, dto: RequestWithdrawalDto) {
+    if (!Number.isSafeInteger(dto.amountInKobo) || dto.amountInKobo <= 0) {
+      throw new BadRequestException({
+        message: 'Withdrawal amount must be a positive valid number.',
+        success: false,
+        status: 400,
+      });
+    }
+
     const session = await this.connection.startSession();
     session.startTransaction();
 
@@ -43,9 +51,9 @@ export class WithdrawalsService {
     const id = user.sub.toString();
 
     try {
-      // Fetch wallet WITH session
-      wallet = await this.walletsRepo.findWalletByIdWithSession(
+      wallet = await this.walletsRepo.findWalletByIdAndUserIdWithSession(
         dto.walletId,
+        user.sub.toString(),
         session,
       );
 
@@ -80,7 +88,6 @@ export class WithdrawalsService {
         'WITHDRAWAL',
       );
 
-      // Create withdrawal
       withdrawal =
         await this.withdrawalsRepo.createWithdrawalDocumentWithSession(
           {
@@ -96,11 +103,9 @@ export class WithdrawalsService {
           session,
         );
 
-      // Debit wallet
       wallet.balanceInKobo -= dto.amountInKobo;
       await wallet.save({ session });
 
-      // Create transaction log
       const transaction =
         await this.transactionsRepo.createTransactionWithSession(
           {
@@ -114,7 +119,6 @@ export class WithdrawalsService {
           session,
         );
 
-      // COMMIT FIRST (CRITICAL)
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
@@ -140,7 +144,6 @@ export class WithdrawalsService {
       });
     }
 
-    // 🚀 PHASE 2: Call monnify OUTSIDE transaction
     try {
       const monnifyResponse = await this.monnifyService.creditUserBankAccount({
         bankCode: userAccount.transferRecipientCode,
@@ -153,7 +156,6 @@ export class WithdrawalsService {
         type: WebhookProcessionTransactionType.WITHDRAWAL,
       });
 
-      // Update to PROCESSING
       const updatedStatus = await this.withdrawalsRepo.updateStatus(
         withdrawal.reference,
         {
@@ -271,12 +273,20 @@ export class WithdrawalsService {
       case 'FAILED':
       case 'REVERSED':
       case 'EXPIRED': {
-        return {
-          message:
-            'Monnify reports a failed or reversed transfer. Process the refund transaction.',
-          providerStatus: transfer.status,
-          reference,
-        };
+        return await this.handleWithdrawalFailed({
+          data: {
+            reference,
+            transactionReference: transfer.transactionReference,
+            status: transfer.status,
+            metadata: transfer,
+          },
+        });
+        // return {
+        //   message:
+        //     'Monnify reports a failed or reversed transfer. Process the refund transaction.',
+        //   providerStatus: transfer.status,
+        //   reference,
+        // };
       }
 
       default:
@@ -289,10 +299,15 @@ export class WithdrawalsService {
   }
 
   async handleWithdrawalSuccess(providerResponse: any) {
-    const {
-      reference,
-      metadata: { withdrawalId },
-    } = providerResponse.data;
+    const { reference } = providerResponse.data;
+
+    if (!reference) {
+      throw new BadRequestException({
+        message: 'Missing withdrawal reference',
+        success: false,
+        status: 400,
+      });
+    }
 
     const withdrawal = await this.withdrawalsRepo.findByReference(reference);
 
@@ -304,17 +319,44 @@ export class WithdrawalsService {
       return { message: 'Already processed' };
     }
 
-    withdrawal.status = WithdrawalStatus.SUCCESS;
-    await withdrawal.save();
+    if (withdrawal.status === WithdrawalStatus.FAILED) {
+      return {
+        message:
+          'Withdrawal is already marked as failed. Reconciliation is required.',
+        status: withdrawal.status,
+      };
+    }
 
-    return { message: 'Withdrawal successful' };
+    const updated = await this.withdrawalsRepo.updateStatus(
+      reference,
+      {
+        status: WithdrawalStatus.SUCCESS,
+        providerReference: providerResponse.data.transactionReference,
+        metadata: providerResponse,
+        paidAt: new Date(),
+      },
+      [WithdrawalStatus.PROCESSING, WithdrawalStatus.PENDING],
+    );
+
+    if (!updated) {
+      return {
+        message: 'Withdrawal status changed. Check its current state.',
+      };
+    }
+
+    return { message: 'Withdrawal successful', status: updated.status };
   }
 
   async handleWithdrawalFailed(providerResponse: any) {
-    const {
-      reference,
-      metadata: { withdrawalId },
-    } = providerResponse.data;
+    const { reference } = providerResponse.data;
+
+    if (!reference) {
+      throw new BadRequestException({
+        message: 'Missing withdrawal reference.',
+        success: false,
+        status: 400,
+      });
+    }
 
     const session = await this.connection.startSession();
     session.startTransaction();
@@ -329,32 +371,68 @@ export class WithdrawalsService {
 
       if (!withdrawal) {
         await session.abortTransaction();
-        return;
+        return { message: 'Withdrawal not found.' };
       }
 
-      // Idempotency check (VERY IMPORTANT)
+      if (withdrawal.status === WithdrawalStatus.SUCCESS) {
+        await session.abortTransaction();
+
+        return {
+          message: 'Withdrawal is already successful. No refund was issued.',
+        };
+      }
+
       if (withdrawal.status === WithdrawalStatus.FAILED) {
         await session.abortTransaction();
         return { message: 'Already processed' };
       }
 
-      // 1 Update withdrawal status
-      withdrawal.status = WithdrawalStatus.FAILED;
-      await withdrawal.save({ session });
+      const failedWithdrawal =
+        await this.withdrawalsRepo.updateStatusWithSession(
+          reference,
+          {
+            status: WithdrawalStatus.FAILED,
+          },
+          session,
+          [WithdrawalStatus.PENDING, WithdrawalStatus.PROCESSING],
+        );
 
-      // 2 Refund wallet
+      if (!failedWithdrawal) {
+        await session.abortTransaction();
+
+        return {
+          message: 'Withdrawal status changed. Reconciliation is required.',
+        };
+      }
+
       await this.walletsRepo.creditUserWallet(
-        withdrawal.userId,
-        withdrawal.amountInKobo,
+        failedWithdrawal.userId,
+        failedWithdrawal.amountInKobo,
         session,
       );
 
-      // 3 Commit
+      await this.transactionsRepo.createTransactionWithSession(
+        {
+          walletId: failedWithdrawal.walletId.toString(),
+          amountInKobo: failedWithdrawal.amountInKobo,
+          description: 'Refund for failed bank withdrawal',
+          transactionType: TransactionType.CREDIT,
+          category: TransactionCategoryEnum.GENERAL,
+          withdrawalId: failedWithdrawal._id.toString(),
+        },
+        session,
+      );
+
       await session.commitTransaction();
 
-      return { message: 'Withdrawal failed and refunded' };
+      return {
+        message: 'Withdrawal failed and refunded',
+        status: WithdrawalStatus.FAILED,
+      };
     } catch (error) {
-      await session.abortTransaction();
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       throw error;
     } finally {
       session.endSession();
