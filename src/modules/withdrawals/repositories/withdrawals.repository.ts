@@ -43,8 +43,8 @@ export class WithdrawalsRepository {
   }
 
   async findByIdempotencyKey(
-    userId: string,
     idempotencyKey: string,
+    userId: string,
   ): Promise<WithdrawalDocument | null> {
     const id = new Types.ObjectId(userId);
 

@@ -50,6 +50,8 @@ export class WithdrawalsService {
       user.sub.toString(),
     );
 
+    console.log('existingWithdrawal:', existingWithdrawal);
+
     if (existingWithdrawal) {
       const sameRequest =
         existingWithdrawal.walletId.toString() === dto.walletId &&
@@ -130,7 +132,7 @@ export class WithdrawalsService {
             userId: new Types.ObjectId(id),
             walletId: wallet._id,
             amountInKobo: dto.amountInKobo,
-            idempotencyKey: dto.idempotencyKey,
+            idempotencyKey: dto.idempotencyKey.toLowerCase(),
             reference,
             recipientCode: userAccount.transferRecipientCode,
             destinationAccountName: userAccount.accountName,
