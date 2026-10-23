@@ -119,25 +119,4 @@ export class WithdrawalsRepository {
     );
     return response;
   }
-  // async updateStatusWithSession(
-  //   reference: string,
-  //   payload: {
-  //     status: WithdrawalStatus;
-  //     providerReference?: string;
-  //     metadata?: any;
-  //     failureReason?: string;
-  //   },
-  //   session: ClientSession,
-  // ) {
-  //   const { status, providerReference, metadata } = payload;
-
-  //   const response = await this.withdrawalModel
-  //     .findOneAndUpdate(
-  //       { reference },
-  //       { status, providerReference, metadata },
-  //       { returnDocument: 'after' },
-  //     )
-  //     .session(session);
-  //   return response;
-  // }
 }

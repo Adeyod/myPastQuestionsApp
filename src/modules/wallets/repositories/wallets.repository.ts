@@ -12,12 +12,12 @@ import {
 } from '../../../modules/transactions/schemas/transaction.schema';
 import { WalletCreditDto } from '../dto/wallet-credit.dto';
 import { WalletDebitDto } from '../dto/wallet-debit.dto';
-import { WalletDocument } from '../schemas/wallet.schema';
+import { Wallet, WalletDocument } from '../schemas/wallet.schema';
 
 @Injectable()
 export class WalletsRepository {
   constructor(
-    @InjectModel('Wallet') private walletModel: Model<WalletDocument>,
+    @InjectModel(Wallet.name) private walletModel: Model<WalletDocument>,
     private transactionsRepository: TransactionsRepository,
   ) {}
 
@@ -29,6 +29,30 @@ export class WalletsRepository {
     }).save();
 
     return newWallet;
+  }
+
+  async creditWithdrawalRefundWithSession(
+    walletId: Types.ObjectId,
+    userId: Types.ObjectId,
+    amountInKobo: number,
+    session: ClientSession,
+  ): Promise<WalletDocument | null> {
+    const response = await this.walletModel.findOneAndUpdate(
+      {
+        _id: walletId,
+        userId,
+      },
+      {
+        $inc: { balanceInKobo: amountInKobo },
+      },
+      {
+        session,
+        returnDocument: 'after',
+        runValidators: true,
+      },
+    );
+
+    return response;
   }
 
   async findWalletByUserId(userId: string): Promise<WalletDocument | null> {

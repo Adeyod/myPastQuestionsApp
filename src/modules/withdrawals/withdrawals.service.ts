@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
@@ -436,6 +437,172 @@ export class WithdrawalsService {
       throw error;
     } finally {
       session.endSession();
+    }
+  }
+
+  async handleWithdrawalReversed(providerResponse: any) {
+    const data = providerResponse?.data;
+
+    const reference = data?.reference;
+    const providerReference = data?.transactionReference;
+
+    if (typeof reference !== 'string' || !reference.trim()) {
+      throw new BadRequestException({
+        message: 'Withdrawal reference is missing.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const withdrawal = await this.withdrawalsRepo.findByReference(reference);
+
+    if (!withdrawal) {
+      throw new NotFoundException({
+        message: 'Withdrawal not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (withdrawal.status === WithdrawalStatus.REVERSED_REFUNDED) {
+      return {
+        message: 'Withdrawal reversal has already been refunded.',
+        status: withdrawal.status,
+      };
+    }
+
+    if (withdrawal.status === WithdrawalStatus.FAILED) {
+      return {
+        message:
+          'Withdrawal is already marked failed. Reconcile its existing refund before proceeding.',
+        status: WithdrawalStatus.RECONCILIATION_REQUIRED,
+        reference,
+      };
+    }
+
+    const transfer = await this.monnifyService.getTransferStatus(reference);
+
+    const transferStatus = String(transfer?.status ?? '').toUpperCase();
+
+    if (transferStatus !== 'REVERSED') {
+      return {
+        message:
+          'Monnify has not confirmed the transfer reversal. Reconciliation is required.',
+        reference,
+        providerStatus: transferStatus || 'UNKNOWN',
+      };
+    }
+
+    const verifiedProviderReference =
+      transfer?.transactionReference ?? transfer?.reference;
+
+    if (
+      providerReference &&
+      verifiedProviderReference &&
+      providerReference !== verifiedProviderReference
+    ) {
+      return {
+        message:
+          'The webhook and Monnify transfer references do not match. Manual reconciliation is required.',
+        reference,
+        status: WithdrawalStatus.RECONCILIATION_REQUIRED,
+      };
+    }
+
+    const eligibleStatuses = [
+      WithdrawalStatus.PROCESSING,
+      WithdrawalStatus.SUCCESS,
+      WithdrawalStatus.REVERSAL_PENDING,
+      WithdrawalStatus.RECONCILIATION_REQUIRED,
+    ];
+
+    if (!eligibleStatuses.includes(withdrawal.status)) {
+      return {
+        message:
+          'Withdrawal is not in an eligible state for automatic reversal refund.',
+        reference,
+        status: withdrawal.status,
+      };
+    }
+
+    const session = await this.connection.startSession();
+
+    try {
+      session.startTransaction();
+
+      const updatedWithdrawal =
+        await this.withdrawalsRepo.updateStatusWithSession(
+          reference,
+          {
+            status: WithdrawalStatus.REVERSED_REFUNDED,
+            providerReference: verifiedProviderReference ?? providerReference,
+            metadata: {
+              ...(withdrawal.metadata ?? {}),
+              reversal: {
+                status: 'REVERSED',
+                verifiedAt: new Date(),
+                providerResponse: transfer,
+              },
+            },
+          },
+          session,
+          eligibleStatuses,
+        );
+
+      if (!updatedWithdrawal) {
+        await session.abortTransaction();
+
+        return {
+          message:
+            'Withdrawal status changed concurrently. Reconciliation is required.',
+          reference,
+        };
+      }
+
+      const creditedWallet =
+        await this.walletsRepo.creditWithdrawalRefundWithSession(
+          withdrawal.walletId,
+          withdrawal.userId,
+          withdrawal.amountInKobo,
+          session,
+        );
+
+      if (!creditedWallet) {
+        throw new InternalServerErrorException({
+          message:
+            'Unable to credit the wallet. The reversal refund was not committed.',
+          success: false,
+          status: 500,
+        });
+      }
+
+      await this.transactionsRepo.createTransactionWithSession(
+        {
+          walletId: withdrawal.walletId.toString(),
+          amountInKobo: withdrawal.amountInKobo,
+          description: 'Refund for reversed bank withdrawal',
+          transactionType: TransactionType.CREDIT,
+          category: TransactionCategoryEnum.GENERAL,
+          withdrawalId: withdrawal._id.toString(),
+        },
+        session,
+      );
+
+      await session.commitTransaction();
+
+      return {
+        message: 'Withdrawal reversal confirmed and wallet refunded.',
+        reference,
+        status: WithdrawalStatus.REVERSED_REFUNDED,
+      };
+    } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+
+      throw error;
+    } finally {
+      await session.endSession();
     }
   }
 }

@@ -196,7 +196,7 @@ export class MonnifyService implements IPaymentProvider {
     );
   }
 
-  handleWebhook(req: Request): Promise<MonnifyWebhookPayload> {
+  handleTransactionWebhook(req: Request): Promise<MonnifyWebhookPayload> {
     const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
 
     const signature = req.headers['monnify-signature'];
@@ -226,6 +226,59 @@ export class MonnifyService implements IPaymentProvider {
     ) {
       throw new BadRequestException({
         message: 'Invalid Monnify webhook payload.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    return Promise.resolve(payload);
+  }
+
+  handleDisbursementWebhook(req: Request): Promise<MonnifyWebhookPayload> {
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+
+    const signature = req.headers['monnify-signature'];
+
+    if (typeof signature !== 'string') {
+      throw new BadRequestException({
+        message: 'Missing Monnify disbursement webhook signature.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (!this.verifyWebhookSignature(rawBody, signature)) {
+      throw new BadRequestException({
+        message: 'Invalid Monnify disbursement webhook signature.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const payload = req.body as MonnifyWebhookPayload;
+
+    if (
+      !payload ||
+      typeof payload.eventType !== 'string' ||
+      !payload.eventData ||
+      typeof payload.eventData !== 'object'
+    ) {
+      throw new BadRequestException({
+        message: 'Invalid Monnify disbursement webhook payload.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const supportedEvents = [
+      'SUCCESSFUL_DISBURSEMENT',
+      'FAILED_DISBURSEMENT',
+      'REVERSED_DISBURSEMENT',
+    ];
+
+    if (!supportedEvents.includes(payload.eventType)) {
+      throw new BadRequestException({
+        message: 'Unsupported Monnify disbursement event type.',
         success: false,
         status: 400,
       });

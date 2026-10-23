@@ -145,7 +145,7 @@ export class PaystackService implements IPaymentProvider {
     return response;
   }
 
-  handleWebhook(req: Request): Promise<any> {
+  handleTransactionWebhook(req: Request): Promise<any> {
     const hash = crypto
       .createHmac('sha512', this.secret as string)
       .update(JSON.stringify(req.body))
@@ -161,5 +161,9 @@ export class PaystackService implements IPaymentProvider {
 
     const event = req.body;
     return event;
+  }
+
+  handleDisbursementWebhook(req: Request): Promise<any> {
+    throw new Error('Not impemented yet');
   }
 }

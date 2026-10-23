@@ -26,7 +26,8 @@ export interface IPaymentProvider {
 
   verifyTransaction(reference: string): Promise<any>;
 
-  handleWebhook(req: Request): Promise<any>;
+  handleTransactionWebhook(req: Request): Promise<any>;
+  handleDisbursementWebhook(req: Request): Promise<any>;
 }
 
 export interface ResponseBodyInterface {

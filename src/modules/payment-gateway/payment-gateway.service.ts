@@ -24,8 +24,10 @@ export class PaymentGatewayService {
     };
   }
 
-  async handleWebhook(provider: PaymentProvider, req: Request) {
-    console.log('I want to process webhook here... Service function');
+  async handleTransactionWebhook(provider: PaymentProvider, req: Request) {
+    console.log(
+      'I want to process transaction webhook here... Service function',
+    );
     const handler = this.providerMap[provider];
 
     console.log('handler in service file:', handler);
@@ -38,7 +40,7 @@ export class PaymentGatewayService {
       });
     }
 
-    const providerResponse = await handler.handleWebhook(req);
+    const providerResponse = await handler.handleTransactionWebhook(req);
 
     console.log('providerResponse in service file:', providerResponse);
     if (provider === PaymentProvider.MONNIFY) {
@@ -91,5 +93,102 @@ export class PaymentGatewayService {
       default:
         return { message: 'Unhandled event type' };
     }
+  }
+
+  async handleDisbursementWebhook(provider: PaymentProvider, req: Request) {
+    console.log(
+      'I want to process transaction webhook here... Service function',
+    );
+    const handler = this.providerMap[provider];
+
+    console.log('handler in service file:', handler);
+
+    if (!handler) {
+      throw new BadRequestException({
+        message: 'Unsupported provider.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const providerResponse = await handler.handleDisbursementWebhook(req);
+
+    console.log('providerResponse in service file:', providerResponse);
+    if (provider === PaymentProvider.MONNIFY) {
+      const { eventType, eventData } = providerResponse;
+
+      if (!eventType || !eventData) {
+        throw new BadRequestException({
+          message: 'Invalid Monnify disbursement payload.',
+          success: false,
+          status: 400,
+        });
+      }
+
+      const normalizedResponse = {
+        data: {
+          reference: eventData.reference,
+          transactionReference: eventData.transactionReference,
+          status: eventData.status,
+          metadata: eventData.metadata ?? {},
+        },
+      };
+
+      switch (eventType) {
+        case 'SUCCESSFUL_DISBURSEMENT':
+          return this.withdrawalsService.handleWithdrawalSuccess(
+            normalizedResponse,
+          );
+
+        case 'FAILED_DISBURSEMENT':
+          return this.withdrawalsService.handleWithdrawalFailed(
+            normalizedResponse,
+          );
+
+        case 'REVERSED_DISBURSEMENT':
+          // Do not automatically treat a reversal as an ordinary failure.
+          // Implement a dedicated reversal/reconciliation workflow.
+          return this.withdrawalsService.handleWithdrawalReversed(
+            normalizedResponse,
+          );
+        // return {
+        //   message:
+        //     'Monnify reported a reversed disbursement. Reconciliation is required.',
+        //   reference: eventData.reference,
+        //   providerReference: eventData.transactionReference,
+        //   providerStatus: eventData.status,
+        // };
+
+        default:
+          return {
+            message: 'Unhandled Monnify disbursement event.',
+            eventType,
+          };
+      }
+    }
+
+    if (provider === PaymentProvider.PAYSTACK) {
+      switch (providerResponse.event) {
+        case 'transfer.success':
+          return this.withdrawalsService.handleWithdrawalSuccess(
+            providerResponse,
+          );
+
+        case 'transfer.failed':
+          return this.withdrawalsService.handleWithdrawalFailed(
+            providerResponse,
+          );
+
+        default:
+          return {
+            message: 'Unhandled Paystack disbursement event.',
+            event: providerResponse.event,
+          };
+      }
+    }
+
+    return {
+      message: 'No disbursement handler is configured for this provider.',
+    };
   }
 }

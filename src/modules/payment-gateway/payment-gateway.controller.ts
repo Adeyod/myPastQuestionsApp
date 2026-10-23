@@ -14,12 +14,26 @@ import { PaymentGatewayService } from './payment-gateway.service';
 @Controller('payment-gateway')
 export class PaymentGatewayController {
   constructor(private readonly paymentGatewayService: PaymentGatewayService) {}
-  @Post('webhook/:provider')
+  @Post('transaction-webhook/:provider')
   @HttpCode(HttpStatus.OK)
-  async handleWebhook(
+  async handleTransactionWebhook(
     @Param('provider') provider: PaymentProvider,
     @Req() req: RawBodyRequest<Request>,
   ) {
-    return await this.paymentGatewayService.handleWebhook(provider, req);
+    return await this.paymentGatewayService.handleTransactionWebhook(
+      provider,
+      req,
+    );
+  }
+  @Post('disbursement-webhook/:provider')
+  @HttpCode(HttpStatus.OK)
+  async handleDisbursementWebhook(
+    @Param('provider') provider: PaymentProvider,
+    @Req() req: RawBodyRequest<Request>,
+  ) {
+    return await this.paymentGatewayService.handleDisbursementWebhook(
+      provider,
+      req,
+    );
   }
 }
