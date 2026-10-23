@@ -18,4 +18,13 @@ export class RequestWithdrawalDto {
   @IsNotEmpty()
   @IsString()
   walletId!: string;
+
+  // @ApiProperty({
+  //   description:
+  //     'This is a unique key for each withdrawal.Please have a structured way of creating it.',
+  //   example: '39ek48j38ej4e837ewy3h4b3ue8',
+  // })
+  // @IsNotEmpty()
+  // @IsString()
+  // idempotencyKey!: string;
 }
