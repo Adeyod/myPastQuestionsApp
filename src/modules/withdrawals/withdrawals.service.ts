@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -42,6 +43,32 @@ export class WithdrawalsService {
         success: false,
         status: 400,
       });
+    }
+
+    const existingWithdrawal = await this.withdrawalsRepo.findByIdempotencyKey(
+      dto.idempotencyKey,
+      user.sub.toString(),
+    );
+
+    if (existingWithdrawal) {
+      const sameRequest =
+        existingWithdrawal.walletId.toString() === dto.walletId &&
+        existingWithdrawal.amountInKobo === dto.amountInKobo;
+
+      if (!sameRequest) {
+        throw new ConflictException({
+          success: false,
+          message:
+            'This idempotency key has already been used for a different withdrawal request.',
+          status: 409,
+        });
+      }
+
+      return {
+        message: 'This withdrawal request has already been received.',
+        reference: existingWithdrawal.reference,
+        status: existingWithdrawal.status,
+      };
     }
 
     const session = await this.connection.startSession();
@@ -103,6 +130,7 @@ export class WithdrawalsService {
             userId: new Types.ObjectId(id),
             walletId: wallet._id,
             amountInKobo: dto.amountInKobo,
+            idempotencyKey: dto.idempotencyKey,
             reference,
             recipientCode: userAccount.transferRecipientCode,
             destinationAccountName: userAccount.accountName,

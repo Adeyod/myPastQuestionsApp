@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { ClientSession, Model } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import {
   UpdateWithdrawalStatusPayload,
   Withdrawal,
@@ -38,6 +38,20 @@ export class WithdrawalsRepository {
   }
   async findByReference(reference: string) {
     const response = await this.withdrawalModel.findOne({ reference });
+
+    return response;
+  }
+
+  async findByIdempotencyKey(
+    userId: string,
+    idempotencyKey: string,
+  ): Promise<WithdrawalDocument | null> {
+    const id = new Types.ObjectId(userId);
+
+    const response = await this.withdrawalModel.findOne({
+      idempotencyKey: idempotencyKey.toLowerCase(),
+      userId: id,
+    });
 
     return response;
   }

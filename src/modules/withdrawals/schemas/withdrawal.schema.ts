@@ -35,6 +35,9 @@ export class Withdrawal {
   @Prop({ required: true, unique: true })
   reference!: string;
 
+  @Prop({ required: true, unique: true })
+  idempotencyKey!: string;
+
   @Prop()
   providerReference!: string;
 
@@ -65,3 +68,4 @@ export class Withdrawal {
 }
 
 export const WithdrawalSchema = SchemaFactory.createForClass(Withdrawal);
+WithdrawalSchema.index({ userId: 1, idempotencyKey: 1 }, { unique: true });
