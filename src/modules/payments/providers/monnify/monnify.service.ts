@@ -18,6 +18,7 @@ import {
   PaymentInitializationPayload,
   PaymentProviderResponse,
 } from '../interfaces/provider.interface';
+import { MonnifyDisbursementError } from './monnify-disbursement-error';
 
 @Injectable()
 export class MonnifyService implements IPaymentProvider {
@@ -338,19 +339,6 @@ export class MonnifyService implements IPaymentProvider {
 
     let response;
 
-    // 5. Initiate transfer
-    // const response = await axios.post(
-    //   `${this.baseUrl}/api/v2/disbursements/single`,
-    //   transferDetails,
-    //   {
-    //     headers: {
-    //       Authorization: `Bearer ${token}`,
-    //       'Content-type': 'application/json',
-    //     },
-    //     timeout: 30000,
-    //   },
-    // );
-
     try {
       response = await axios.post(
         `${this.baseUrl}/api/v2/disbursements/single`,
@@ -363,29 +351,61 @@ export class MonnifyService implements IPaymentProvider {
           timeout: 30000,
         },
       );
-    } catch (error) {
+    } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const responseData = error.response?.data;
+
+        // Only classify this specific, confirmed validation error
+        // as a definite rejection. Other errors need separate assessment.
+        const isReferenceLengthRejection =
+          status === 400 &&
+          typeof responseData?.responseMessage === 'string' &&
+          responseData.responseMessage
+            .toLowerCase()
+            .includes('reference size can not be more than 64');
+
         console.error('Monnify disbursement request failed:', {
-          status: error.response?.status,
-          responseData: error.response?.data,
+          status,
+          responseData,
           reference,
-          url: error.config?.url,
-          // Do not log the Authorization header or full bank account details.
+          outcome: isReferenceLengthRejection ? 'REJECTED' : 'UNKNOWN',
         });
-      } else {
-        console.error('Unexpected Monnify disbursement error:', error);
+
+        throw new MonnifyDisbursementError(
+          isReferenceLengthRejection
+            ? 'Monnify rejected the withdrawal reference.'
+            : 'The outcome of the Monnify disbursement is uncertain.',
+          isReferenceLengthRejection ? 'REJECTED' : 'UNKNOWN',
+          status,
+          responseData,
+        );
       }
+
+      console.error('Unexpected error during Monnify disbursement:', error);
+
+      throw new MonnifyDisbursementError(
+        'The outcome of the Monnify disbursement is uncertain.',
+        'UNKNOWN',
+      );
     }
 
     console.log('Monnify response:', response);
     const data = response.data;
 
     if (!data.requestSuccessful || !data.responseBody) {
-      throw new InternalServerErrorException({
-        message: 'Monnify could not initiate the bank transfer.',
-        success: false,
-        status: 500,
+      console.error('Monnify returned an unsuccessful response:', {
+        responseCode: data.responseCode,
+        responseMessage: data.responseMessage,
+        reference,
       });
+
+      throw new MonnifyDisbursementError(
+        data.responseMessage ?? 'Monnify returned an unsuccessful response.',
+        'UNKNOWN',
+        response.status,
+        data,
+      );
     }
 
     console.log('Monnify data.responseBody:', data.responseBody);
