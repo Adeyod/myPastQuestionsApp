@@ -50,8 +50,6 @@ export class WithdrawalsService {
       user.sub.toString(),
     );
 
-    console.log('existingWithdrawal:', existingWithdrawal);
-
     if (existingWithdrawal) {
       const sameRequest =
         existingWithdrawal.walletId.toString() === dto.walletId &&
@@ -105,7 +103,8 @@ export class WithdrawalsService {
       if (
         !userAccount.accountName ||
         !userAccount.accountNumber ||
-        !userAccount.transferRecipientCode
+        !userAccount.transferRecipientCode ||
+        !userAccount.bankCode
       ) {
         throw new BadRequestException({
           message: 'Your bank account details are incomplete.',
@@ -113,8 +112,6 @@ export class WithdrawalsService {
           status: 400,
         });
       }
-
-      console.log('userAccount:', userAccount);
 
       const reference = generatePaymentReference({ userId: id }, 'WITHDRAWAL');
 
@@ -142,8 +139,6 @@ export class WithdrawalsService {
           session,
         );
 
-      console.log('withdrawal:', withdrawal);
-
       wallet.balanceInKobo -= dto.amountInKobo;
       await wallet.save({ session });
 
@@ -159,8 +154,6 @@ export class WithdrawalsService {
           },
           session,
         );
-
-      console.log('transaction:', transaction);
 
       await session.commitTransaction();
     } catch (error) {
@@ -199,11 +192,8 @@ export class WithdrawalsService {
         type: WebhookProcessionTransactionType.WITHDRAWAL,
       };
 
-      console.log('payload going to monnify:', input);
       const monnifyResponse =
         await this.monnifyService.creditUserBankAccount(input);
-
-      console.log('monnifyResponse:', monnifyResponse);
 
       const updatedStatus = await this.withdrawalsRepo.updateStatus(
         withdrawal.reference,
@@ -247,15 +237,7 @@ export class WithdrawalsService {
           error.message,
         );
 
-        console.log('result.status:', result.status);
-
         if (result.status !== WithdrawalStatus.FAILED) {
-          console.error(
-            'Withdrawal rejection requires reconciliation:',
-            withdrawal.reference,
-            result,
-          );
-
           throw new InternalServerErrorException({
             success: false,
             message:
@@ -272,7 +254,6 @@ export class WithdrawalsService {
         });
       }
 
-      console.log('error:', error);
       try {
         const updated = await this.withdrawalsRepo.updateStatus(
           withdrawal.reference,
@@ -805,8 +786,6 @@ export class WithdrawalsService {
         );
       }
 
-      console.log('Credited Wallet ID:', creditedWallet._id);
-
       const trans = await this.transactionsRepo.createTransactionWithSession(
         {
           walletId: failedWithdrawal.walletId.toString(),
@@ -818,8 +797,6 @@ export class WithdrawalsService {
         },
         session,
       );
-
-      console.log('transaction ID:', trans._id);
 
       await session.commitTransaction();
 

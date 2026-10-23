@@ -356,21 +356,12 @@ export class MonnifyService implements IPaymentProvider {
         const status = error.response?.status;
         const responseData = error.response?.data;
 
-        // Only classify this specific, confirmed validation error
-        // as a definite rejection. Other errors need separate assessment.
         const isReferenceLengthRejection =
           status === 400 &&
           typeof responseData?.responseMessage === 'string' &&
           responseData.responseMessage
             .toLowerCase()
             .includes('reference size can not be more than 64');
-
-        console.error('Monnify disbursement request failed:', {
-          status,
-          responseData,
-          reference,
-          outcome: isReferenceLengthRejection ? 'REJECTED' : 'UNKNOWN',
-        });
 
         throw new MonnifyDisbursementError(
           isReferenceLengthRejection
@@ -382,15 +373,12 @@ export class MonnifyService implements IPaymentProvider {
         );
       }
 
-      console.error('Unexpected error during Monnify disbursement:', error);
-
       throw new MonnifyDisbursementError(
         'The outcome of the Monnify disbursement is uncertain.',
         'UNKNOWN',
       );
     }
 
-    console.log('Monnify response:', response);
     const data = response.data;
 
     if (!data.requestSuccessful || !data.responseBody) {
@@ -408,7 +396,6 @@ export class MonnifyService implements IPaymentProvider {
       );
     }
 
-    console.log('Monnify data.responseBody:', data.responseBody);
     return data.responseBody;
   }
 
