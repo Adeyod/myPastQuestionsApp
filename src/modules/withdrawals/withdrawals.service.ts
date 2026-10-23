@@ -198,6 +198,7 @@ export class WithdrawalsService {
     } catch (error: any) {
       // monnify failed → COMPENSATING ACTION
 
+      console.log('error:', error);
       try {
         await this.withdrawalsRepo.updateStatus(
           withdrawal.reference,
