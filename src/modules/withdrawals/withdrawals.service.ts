@@ -157,6 +157,8 @@ export class WithdrawalsService {
         type: WebhookProcessionTransactionType.WITHDRAWAL,
       });
 
+      console.log('monnifyResponse:', monnifyResponse);
+
       const updatedStatus = await this.withdrawalsRepo.updateStatus(
         withdrawal.reference,
         {
