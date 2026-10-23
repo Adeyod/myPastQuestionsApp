@@ -92,13 +92,13 @@ export class WithdrawalsService {
         'WITHDRAWAL',
       );
 
-      // if (reference.length > 64) {
-      //   throw new BadRequestException({
-      //     message: 'Unable to generate a valid withdrawal reference.',
-      //     success: false,
-      //     status: 400,
-      //   });
-      // }
+      if (reference.length > 64) {
+        throw new BadRequestException({
+          message: 'Unable to generate a valid withdrawal reference.',
+          success: false,
+          status: 400,
+        });
+      }
 
       withdrawal =
         await this.withdrawalsRepo.createWithdrawalDocumentWithSession(
@@ -219,6 +219,8 @@ export class WithdrawalsService {
           withdrawal.reference,
           error.message,
         );
+
+        console.log('result.status:', result.status);
 
         if (result.status !== WithdrawalStatus.FAILED) {
           console.error(
@@ -704,6 +706,10 @@ export class WithdrawalsService {
     const session = await this.connection.startSession();
 
     try {
+      console.log(
+        'I want to update the user wallet balance because withdrawal failed',
+        failureReason,
+      );
       session.startTransaction();
 
       const withdrawal = await this.withdrawalsRepo.findByReferenceWithSession(
@@ -772,7 +778,9 @@ export class WithdrawalsService {
         );
       }
 
-      await this.transactionsRepo.createTransactionWithSession(
+      console.log('Credited Wallet ID:', creditedWallet._id);
+
+      const trans = await this.transactionsRepo.createTransactionWithSession(
         {
           walletId: failedWithdrawal.walletId.toString(),
           amountInKobo: failedWithdrawal.amountInKobo,
@@ -783,6 +791,8 @@ export class WithdrawalsService {
         },
         session,
       );
+
+      console.log('transaction ID:', trans._id);
 
       await session.commitTransaction();
 
