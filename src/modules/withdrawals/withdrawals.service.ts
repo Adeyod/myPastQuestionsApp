@@ -87,18 +87,15 @@ export class WithdrawalsService {
 
       console.log('userAccount:', userAccount);
 
-      const reference = generatePaymentReference(
-        { userId: id, plan: 'BANK_WITHDRAWAL' },
-        'WITHDRAWAL',
-      );
+      const reference = generatePaymentReference({ userId: id }, 'WITHDRAWAL');
 
-      // if (reference.length > 64) {
-      //   throw new BadRequestException({
-      //     message: 'Unable to generate a valid withdrawal reference.',
-      //     success: false,
-      //     status: 400,
-      //   });
-      // }
+      if (reference.length > 64) {
+        throw new BadRequestException({
+          message: 'Unable to generate a valid withdrawal reference.',
+          success: false,
+          status: 400,
+        });
+      }
 
       withdrawal =
         await this.withdrawalsRepo.createWithdrawalDocumentWithSession(
