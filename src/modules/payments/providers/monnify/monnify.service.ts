@@ -319,28 +319,63 @@ export class MonnifyService implements IPaymentProvider {
     const amountInNaira = amountInKobo / 100;
     const token = await this.getAccessToken();
 
+    const transferDetails = {
+      amount: amountInNaira,
+      reference,
+      narration: 'User withdrawal',
+      destinationBankCode: bankCode,
+      destinationAccountNumber: accountNumber,
+      destinationAccountName: accountName,
+      currency: 'NGN',
+      sourceAccountNumber: this.sourceAccountNumber,
+      metadata: {
+        accountNumber,
+        accountName,
+        amountInNaira,
+      },
+      async: true,
+    };
+
+    let response;
+
     // 5. Initiate transfer
-    const response = await axios.post(
-      `${this.baseUrl}/api/v2/disbursements/single`,
-      {
-        amount: amountInNaira,
-        reference,
-        narration: 'User withdrawal',
-        destinationBankCode: bankCode,
-        destinationAccountNumber: accountNumber,
-        destinationAccountName: accountName,
-        currency: 'NGN',
-        sourceAccountNumber: this.sourceAccountNumber,
-        async: true,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-type': 'application/json',
+    // const response = await axios.post(
+    //   `${this.baseUrl}/api/v2/disbursements/single`,
+    //   transferDetails,
+    //   {
+    //     headers: {
+    //       Authorization: `Bearer ${token}`,
+    //       'Content-type': 'application/json',
+    //     },
+    //     timeout: 30000,
+    //   },
+    // );
+
+    try {
+      response = await axios.post(
+        `${this.baseUrl}/api/v2/disbursements/single`,
+        transferDetails,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-type': 'application/json',
+          },
+          timeout: 30000,
         },
-        timeout: 30000,
-      },
-    );
+      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('Monnify disbursement request failed:', {
+          status: error.response?.status,
+          responseData: error.response?.data,
+          reference,
+          url: error.config?.url,
+          // Do not log the Authorization header or full bank account details.
+        });
+      } else {
+        console.error('Unexpected Monnify disbursement error:', error);
+      }
+    }
 
     console.log('Monnify response:', response);
     const data = response.data;
