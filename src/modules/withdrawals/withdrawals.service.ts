@@ -10,6 +10,7 @@ import { JwtUser } from '../../common/types/jwt-user.type';
 import { generatePaymentReference } from '../../common/utils/helper';
 import { AccountsService } from '../accounts/accounts.service';
 import { AccountDocument } from '../accounts/schemas/accounts.schema';
+import { MonnifyDisbursementError } from '../payments/providers/monnify/monnify-disbursement-error';
 import { MonnifyService } from '../payments/providers/monnify/monnify.service';
 import { WebhookProcessionTransactionType } from '../payments/schemas/payment.schema';
 import { TransactionsRepository } from '../transactions/repositories/transaction.repository';
@@ -90,6 +91,14 @@ export class WithdrawalsService {
         { userId: id, plan: 'BANK_WITHDRAWAL' },
         'WITHDRAWAL',
       );
+
+      if (reference.length > 64) {
+        throw new BadRequestException({
+          message: 'Unable to generate a valid withdrawal reference.',
+          success: false,
+          status: 400,
+        });
+      }
 
       withdrawal =
         await this.withdrawalsRepo.createWithdrawalDocumentWithSession(
@@ -195,15 +204,55 @@ export class WithdrawalsService {
         message: 'Withdrawal initiated and is being processed.',
         status: updatedStatus.status,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // monnify failed → COMPENSATING ACTION
+      console.error('Withdrawal initiation error:', {
+        reference: withdrawal.reference,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (
+        error instanceof MonnifyDisbursementError &&
+        error.outcome === 'REJECTED'
+      ) {
+        const result = await this.failWithdrawalAndRefund(
+          withdrawal.reference,
+          error.message,
+        );
+
+        if (result.status !== WithdrawalStatus.FAILED) {
+          console.error(
+            'Withdrawal rejection requires reconciliation:',
+            withdrawal.reference,
+            result,
+          );
+
+          throw new InternalServerErrorException({
+            success: false,
+            message:
+              'Your withdrawal is being verified. Please do not submit it again.',
+            status: 500,
+          });
+        }
+
+        throw new BadRequestException({
+          message:
+            'Your withdrawal could not be initiated. The amount has been returned to your wallet.',
+          success: false,
+          status: 400,
+        });
+      }
 
       console.log('error:', error);
       try {
-        await this.withdrawalsRepo.updateStatus(
+        const updated = await this.withdrawalsRepo.updateStatus(
           withdrawal.reference,
           {
-            status: WithdrawalStatus.PROCESSING,
+            status: WithdrawalStatus.RECONCILIATION_REQUIRED,
+            failureReason:
+              error instanceof Error
+                ? error.message
+                : 'Unknown transfer initiation error',
             metadata: {
               initiationOutcome: 'UNKNOWN',
               reconciliationRequired: true,
@@ -215,9 +264,21 @@ export class WithdrawalsService {
           },
           [WithdrawalStatus.PROCESSING],
         );
-      } catch {
+
+        if (!updated) {
+          console.error(
+            'Could not mark withdrawal for reconciliation:',
+            withdrawal.reference,
+          );
+        }
+      } catch (statusError) {
         // The withdrawal remains recorded.
         // Reconcile it using its unique reference before retrying or refunding.
+        console.error(
+          'Failed to update withdrawal status for reconciliation:',
+          withdrawal.reference,
+          statusError,
+        );
       }
 
       throw new BadRequestException({
@@ -372,86 +433,103 @@ export class WithdrawalsService {
       });
     }
 
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try {
-      const withdrawal = await this.withdrawalsRepo.findByReferenceWithSession(
-        reference,
-        session,
-      );
-
-      console.log('withdrawal:', withdrawal);
-
-      if (!withdrawal) {
-        await session.abortTransaction();
-        return { message: 'Withdrawal not found.' };
-      }
-
-      if (withdrawal.status === WithdrawalStatus.SUCCESS) {
-        await session.abortTransaction();
-
-        return {
-          message: 'Withdrawal is already successful. No refund was issued.',
-        };
-      }
-
-      if (withdrawal.status === WithdrawalStatus.FAILED) {
-        await session.abortTransaction();
-        return { message: 'Already processed' };
-      }
-
-      const failedWithdrawal =
-        await this.withdrawalsRepo.updateStatusWithSession(
-          reference,
-          {
-            status: WithdrawalStatus.FAILED,
-          },
-          session,
-          [WithdrawalStatus.PENDING, WithdrawalStatus.PROCESSING],
-        );
-
-      if (!failedWithdrawal) {
-        await session.abortTransaction();
-
-        return {
-          message: 'Withdrawal status changed. Reconciliation is required.',
-        };
-      }
-
-      await this.walletsRepo.creditUserWallet(
-        failedWithdrawal.userId,
-        failedWithdrawal.amountInKobo,
-        session,
-      );
-
-      await this.transactionsRepo.createTransactionWithSession(
-        {
-          walletId: failedWithdrawal.walletId.toString(),
-          amountInKobo: failedWithdrawal.amountInKobo,
-          description: 'Refund for failed bank withdrawal',
-          transactionType: TransactionType.CREDIT,
-          category: TransactionCategoryEnum.GENERAL,
-          withdrawalId: failedWithdrawal._id.toString(),
-        },
-        session,
-      );
-
-      await session.commitTransaction();
-
-      return {
-        message: 'Withdrawal failed and refunded',
-        status: WithdrawalStatus.FAILED,
-      };
-    } catch (error) {
-      if (session.inTransaction()) {
-        await session.abortTransaction();
-      }
-      throw error;
-    } finally {
-      session.endSession();
-    }
+    return await this.failWithdrawalAndRefund(
+      reference,
+      providerResponse?.data?.failureReason ??
+        'Withdrawal failed according to provider notification.',
+    );
   }
+  // async handleWithdrawalFailed(providerResponse: any) {
+  //   const { reference } = providerResponse.data;
+
+  //   if (!reference) {
+  //     throw new BadRequestException({
+  //       message: 'Missing withdrawal reference.',
+  //       success: false,
+  //       status: 400,
+  //     });
+  //   }
+
+  //   const session = await this.connection.startSession();
+  //   session.startTransaction();
+
+  //   try {
+  //     const withdrawal = await this.withdrawalsRepo.findByReferenceWithSession(
+  //       reference,
+  //       session,
+  //     );
+
+  //     console.log('withdrawal:', withdrawal);
+
+  //     if (!withdrawal) {
+  //       await session.abortTransaction();
+  //       return { message: 'Withdrawal not found.' };
+  //     }
+
+  //     if (withdrawal.status === WithdrawalStatus.SUCCESS) {
+  //       await session.abortTransaction();
+
+  //       return {
+  //         message: 'Withdrawal is already successful. No refund was issued.',
+  //       };
+  //     }
+
+  //     if (withdrawal.status === WithdrawalStatus.FAILED) {
+  //       await session.abortTransaction();
+  //       return { message: 'Already processed' };
+  //     }
+
+  //     const failedWithdrawal =
+  //       await this.withdrawalsRepo.updateStatusWithSession(
+  //         reference,
+  //         {
+  //           status: WithdrawalStatus.FAILED,
+  //         },
+  //         session,
+  //         [WithdrawalStatus.PENDING, WithdrawalStatus.PROCESSING],
+  //       );
+
+  //     if (!failedWithdrawal) {
+  //       await session.abortTransaction();
+
+  //       return {
+  //         message: 'Withdrawal status changed. Reconciliation is required.',
+  //       };
+  //     }
+
+  //     await this.walletsRepo.creditUserWallet(
+  //       failedWithdrawal.userId,
+  //       failedWithdrawal.amountInKobo,
+  //       session,
+  //     );
+
+  //     await this.transactionsRepo.createTransactionWithSession(
+  //       {
+  //         walletId: failedWithdrawal.walletId.toString(),
+  //         amountInKobo: failedWithdrawal.amountInKobo,
+  //         description: 'Refund for failed bank withdrawal',
+  //         transactionType: TransactionType.CREDIT,
+  //         category: TransactionCategoryEnum.GENERAL,
+  //         withdrawalId: failedWithdrawal._id.toString(),
+  //       },
+  //       session,
+  //     );
+
+  //     await session.commitTransaction();
+
+  //     return {
+  //       message: 'Withdrawal failed and refunded',
+  //       status: WithdrawalStatus.FAILED,
+  //     };
+  //   } catch (error) {
+  //     if (session.inTransaction()) {
+  //       await session.abortTransaction();
+  //     }
+  //     throw error;
+  //   } finally {
+  //     session.endSession();
+  //   }
+  // }
 
   async handleWithdrawalReversed(providerResponse: any) {
     const data = providerResponse?.data;
@@ -607,6 +685,110 @@ export class WithdrawalsService {
         message: 'Withdrawal reversal confirmed and wallet refunded.',
         reference,
         status: WithdrawalStatus.REVERSED_REFUNDED,
+      };
+    } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  private async failWithdrawalAndRefund(
+    reference: string,
+    failureReason?: string,
+  ) {
+    const session = await this.connection.startSession();
+
+    try {
+      session.startTransaction();
+
+      const withdrawal = await this.withdrawalsRepo.findByReferenceWithSession(
+        reference,
+        session,
+      );
+
+      if (!withdrawal) {
+        await session.abortTransaction();
+
+        return { message: 'Withdrawal not found.' };
+      }
+
+      if (
+        withdrawal.status === WithdrawalStatus.SUCCESS ||
+        withdrawal.status === WithdrawalStatus.REVERSED_REFUNDED
+      ) {
+        await session.abortTransaction();
+
+        return {
+          message: 'Withdrawal is not eligible for a failure refund.',
+          status: withdrawal.status,
+        };
+      }
+
+      if (withdrawal.status === WithdrawalStatus.FAILED) {
+        await session.abortTransaction();
+
+        return {
+          message:
+            'Withdrawal is already marked failed. Verify whether its refund was recorded.',
+          status: withdrawal.status,
+        };
+      }
+
+      const failedWithdrawal =
+        await this.withdrawalsRepo.updateStatusWithSession(
+          reference,
+          {
+            status: WithdrawalStatus.FAILED,
+            failureReason,
+          },
+          session,
+          [WithdrawalStatus.PENDING, WithdrawalStatus.PROCESSING],
+        );
+
+      if (!failedWithdrawal) {
+        await session.abortTransaction();
+
+        return {
+          message: 'Withdrawal status changed. Reconciliation is required.',
+        };
+      }
+
+      const creditedWallet =
+        await this.walletsRepo.creditWithdrawalRefundWithSession(
+          failedWithdrawal.walletId,
+          failedWithdrawal.userId,
+          failedWithdrawal.amountInKobo,
+          session,
+        );
+
+      if (!creditedWallet) {
+        throw new InternalServerErrorException(
+          'Unable to credit the withdrawal refund.',
+        );
+      }
+
+      await this.transactionsRepo.createTransactionWithSession(
+        {
+          walletId: failedWithdrawal.walletId.toString(),
+          amountInKobo: failedWithdrawal.amountInKobo,
+          description: 'Refund for failed bank withdrawal',
+          transactionType: TransactionType.CREDIT,
+          category: TransactionCategoryEnum.GENERAL,
+          withdrawalId: failedWithdrawal._id.toString(),
+        },
+        session,
+      );
+
+      await session.commitTransaction();
+
+      return {
+        message: 'Withdrawal failed and refunded.',
+        status: WithdrawalStatus.FAILED,
       };
     } catch (error) {
       if (session.inTransaction()) {
