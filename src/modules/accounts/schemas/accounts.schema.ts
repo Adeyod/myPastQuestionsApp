@@ -12,7 +12,10 @@ export class Account {
   bankName!: string;
 
   @Prop({ required: true, type: String })
-  transferRecipientCode!: string;
+  bankCode!: string;
+
+  @Prop({ required: true, type: String })
+  transferRecipientCode!: string; // this is needed if we are using paystack to disburse
 
   @Prop({ required: true, type: String })
   accountNumber!: string;

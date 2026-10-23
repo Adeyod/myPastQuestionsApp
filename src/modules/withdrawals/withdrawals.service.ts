@@ -153,7 +153,7 @@ export class WithdrawalsService {
 
     try {
       const input = {
-        bankCode: userAccount.transferRecipientCode,
+        bankCode: userAccount.bankCode,
         bankName: userAccount.bankName,
         accountNumber: userAccount.accountNumber,
         accountName: userAccount.accountName,

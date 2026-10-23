@@ -10,7 +10,7 @@ import { Queue } from 'bull';
 import { AppModule } from './app.module';
 import { MongoExceptionFilter } from './common/filters/mongo-exception.filter';
 import { GlobalResponseInterceptor } from './common/interceptor/global-response.interceptor';
-import { QuizService } from './modules/quiz/quiz.service';
+import { PaystackService } from './modules/payments/providers/paystack/paystack.service';
 
 async function bootstrap() {
   // const app = await NestFactory.create(AppModule);
@@ -34,7 +34,7 @@ async function bootstrap() {
   //   limit: 10,
   //   page: 1,
   // };
-  const repo = app.get(QuizService);
+  const repo = app.get(PaystackService);
 
   const roomId = 'QUIZ_ROOM_6aabdeb6c2ec85fde18e4185_1790182547850';
   const userId = '69b6e2d1c2500fccbbfbe3cb';
@@ -45,6 +45,7 @@ async function bootstrap() {
 
   // await repo.getQuizRoomLeaderboard(quizId, roundNumber);
   // await repo.findByEmail('ayodejiadebolu@gmail.com');
+  // await repo.paystackBankCodes();
 
   // Create Bull Board
   const { addQueue, removeQueue, replaceQueues } = createBullBoard({
