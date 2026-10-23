@@ -342,6 +342,7 @@ export class MonnifyService implements IPaymentProvider {
       },
     );
 
+    console.log('Monnify response:', response);
     const data = response.data;
 
     if (!data.requestSuccessful || !data.responseBody) {

@@ -152,7 +152,7 @@ export class WithdrawalsService {
     }
 
     try {
-      const monnifyResponse = await this.monnifyService.creditUserBankAccount({
+      const input = {
         bankCode: userAccount.transferRecipientCode,
         bankName: userAccount.bankName,
         accountNumber: userAccount.accountNumber,
@@ -161,7 +161,11 @@ export class WithdrawalsService {
         walletId: wallet._id.toString(),
         reference: withdrawal.reference,
         type: WebhookProcessionTransactionType.WITHDRAWAL,
-      });
+      };
+
+      console.log('payload going to monnify:', input);
+      const monnifyResponse =
+        await this.monnifyService.creditUserBankAccount(input);
 
       console.log('monnifyResponse:', monnifyResponse);
 
