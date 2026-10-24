@@ -423,4 +423,46 @@ export class MonnifyService implements IPaymentProvider {
 
     return response.data.responseBody;
   }
+
+  async validateBankAccount(accountNumber: string, bankCode: string) {
+    try {
+      const token = await this.getAccessToken();
+
+      const url = new URL(
+        '/api/v2/disbursements/account/validate',
+        this.baseUrl,
+      );
+
+      url.searchParams.set('accountNumber', accountNumber);
+      url.searchParams.set('bankCode', bankCode);
+
+      const response = await axios.get(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 30000,
+      });
+
+      const { requestSuccessful, responseMessage, responseBody } =
+        response.data;
+
+      if (
+        !requestSuccessful ||
+        !responseBody?.accountName ||
+        !responseBody?.accountNumber
+      ) {
+        throw new BadRequestException(
+          responseMessage || 'Unable to validate this bank account.',
+        );
+      }
+
+      return responseBody;
+    } catch (error: unknown) {
+      console.error('Monnify account validation failed:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      throw error;
+    }
+  }
 }
