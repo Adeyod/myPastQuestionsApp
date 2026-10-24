@@ -182,7 +182,9 @@ export class AccountsService {
 
       console.log('monnifyData response:', monnifyData);
 
-      return this.normalizeAccountResponse(monnifyData);
+      const response = this.normalizeAccountResponse(monnifyData);
+
+      return response;
     } catch (monnifyError: unknown) {
       console.error('Monnify account resolution failed:', {
         message:
@@ -217,21 +219,23 @@ export class AccountsService {
   }
 
   private normalizeAccountResponse(data: any) {
-    if (
-      !data ||
-      typeof data.account_name !== 'string' ||
-      typeof data.account_number !== 'string'
-    ) {
+    const accountName = data?.account_name ?? data?.accountName;
+    const accountNumber = data?.account_number ?? data?.accountNumber;
+    const bankCode = data?.bank_code ?? data?.bankCode;
+    const bankName = data?.bank_name ?? data?.bankName;
+
+    if (typeof accountName !== 'string' || typeof accountNumber !== 'string') {
       throw new ServiceUnavailableException(
         'The provider returned an invalid account resolution response.',
       );
     }
 
     const normalizedData = {
-      accountName: data.account_name,
-      accountNumber: data.account_number,
-      bankCode: data.bank_code ?? data.bankCode,
-      bankName: data.bank_name ?? data.bankName,
+      accountName: accountName,
+      accountNumber: accountNumber,
+      bankCode: bankCode,
+      bankName: bankName,
+      currencyCode: data?.currencyCode ?? data?.currency_code ?? 'NGN',
     };
 
     console.log('normalizedData response:', normalizedData);
