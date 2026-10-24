@@ -114,13 +114,21 @@ export class AccountsService {
     accountNumber: string,
     bankCode: string,
   ) {
-    const paystackResponse =
-      await this.paystackService.paystackResolveBankAccount(
-        accountNumber,
-        bankCode,
-      );
+    try {
+      const paystackResponse =
+        await this.paystackService.paystackResolveBankAccount(
+          accountNumber,
+          bankCode,
+        );
 
-    return paystackResponse.data.data;
+      console.log('paystackResponse.data:', paystackResponse.data);
+      console.log('paystackResponse.data.data:', paystackResponse.data.data);
+
+      return paystackResponse.data.data;
+    } catch (error) {
+      console.log('error:', error);
+      throw error;
+    }
   }
   async fetchBankCodes() {
     const paystackResponse = await this.paystackService.paystackBankCodes();
