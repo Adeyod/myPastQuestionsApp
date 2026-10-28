@@ -81,3 +81,14 @@ PaymentSchema.index({
 });
 
 PaymentSchema.index({ providerReference: 1 });
+
+PaymentSchema.index(
+  { userId: 1, plan: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: PaymentStatus.SUCCESSFUL,
+    },
+    name: 'unique_successful_subscription_per_user_plan',
+  },
+);

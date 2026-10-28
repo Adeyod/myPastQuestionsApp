@@ -12,8 +12,6 @@ export class UsersRepository {
   async findById(id: Types.ObjectId): Promise<UserDocument | null> {
     const response = await this.userModel.findOne({ _id: id, isActive: false });
 
-    console.log('response:', response);
-
     return response;
   }
   async findByIdWithSession(
@@ -24,7 +22,6 @@ export class UsersRepository {
       .findOne({ _id: id, isActive: false })
       .session(session);
 
-    console.log('response:', response);
     return response;
   }
 
@@ -79,8 +76,6 @@ export class UsersRepository {
       email: email.toLowerCase().trim(),
       isActive: false,
     });
-
-    console.log('user:', user);
 
     return user;
   }
@@ -174,7 +169,6 @@ export class UsersRepository {
       },
     ]);
 
-    console.log('referrals:', referrals);
     return referrals;
   }
 
@@ -259,15 +253,9 @@ export class UsersRepository {
       },
     );
 
-    console.log('assignDefaultToUsers:', result);
-
     const message = 'Default referrer assigned successfully.';
     const matchedCount = result.matchedCount;
     const modifiedCount = result.modifiedCount;
-
-    console.log('assignDefaultToUsers message:', message);
-    console.log('assignDefaultToUsers matchedCount:', matchedCount);
-    console.log('assignDefaultToUsers modifiedCount:', modifiedCount);
 
     return {
       message,
@@ -287,8 +275,6 @@ export class UsersRepository {
   //       },
   //     },
   //   );
-
-  //   console.log('setExistingUsersInactive result:', result);
 
   //   return {
   //     message: 'Existing users updated successfully.',

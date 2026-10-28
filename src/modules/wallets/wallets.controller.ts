@@ -66,7 +66,6 @@ export class WalletsController {
     @GetCurrentUser() user: JwtUser,
   ) {
     const response = await this.walletsService.findWalletByUserId(userId, user);
-    console.log('response:', response);
     return response;
   }
 
@@ -105,7 +104,6 @@ export class WalletsController {
     @GetCurrentUser() user: JwtUser,
   ) {
     const response = await this.walletsService.findWalletById(walletId, user);
-    console.log('response:', response);
     return response;
   }
 
@@ -143,7 +141,6 @@ export class WalletsController {
   //     amount,
   //     user,
   //   );
-  //   console.log('response:', response);
   //   return response;
   // }
 
@@ -182,7 +179,6 @@ export class WalletsController {
     @GetCurrentUser() user: JwtUser,
   ) {
     const response = await this.walletsService.getWalletBalance(walletId, user);
-    console.log('response:', response);
     return response;
   }
   @Post('fund-wallet-by-walletId/:walletId/:provider')
@@ -221,7 +217,6 @@ export class WalletsController {
     @Body() fundUserWalletDto: FundUserWalletDto,
     @GetCurrentUser() user: JwtUser,
   ) {
-    console.log('Wallet controller provider:', provider);
     const response =
       await this.walletsService.fundUserWalletFromPaymentGatewayProvider(
         walletId,
@@ -229,7 +224,6 @@ export class WalletsController {
         provider,
         user,
       );
-    console.log('response:', response);
     return response;
   }
 }

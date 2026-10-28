@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { UpdatePlanDto } from '../dtos/update-plan.dto';
 import { Plan, PlanCode, PlanDocument } from '../schemas/plan.schema';
 
@@ -68,9 +68,26 @@ export class PlansRepository implements OnModuleInit {
 
     return plan;
   }
+  async findOneByIdAndSession(
+    planId: string,
+    session: ClientSession,
+  ): Promise<PlanDocument | null> {
+    const id = new Types.ObjectId(planId);
+
+    const plan = await this.planModel.findById(id).session(session).exec();
+
+    return plan;
+  }
 
   async getPlanByCode(code: PlanCode): Promise<PlanDocument | null> {
     const plan = await this.planModel.findOne({ code }).exec();
+    return plan;
+  }
+  async getPlanByCodeAndSession(
+    code: PlanCode,
+    session: ClientSession,
+  ): Promise<PlanDocument | null> {
+    const plan = await this.planModel.findOne({ code }).session(session).exec();
     return plan;
   }
 

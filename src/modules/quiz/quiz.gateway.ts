@@ -73,8 +73,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         next();
       } catch (error) {
-        console.error('Socket authentication failed:', error);
-
         next(new Error('Invalid or expired authentication token.'));
       }
     });
@@ -237,7 +235,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('display_next_question data:', data);
     const user: JwtUser = client.data.user;
 
     if (user?.role !== Role.ADMIN) {
@@ -316,8 +313,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const user: JwtUser = client.data.user;
 
-    console.log('participant_selected_answer data:', data);
-
     if (!user?.sub) {
       throw new WsException('Authenticated user not found.');
     }
@@ -335,8 +330,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException('Selected Answer ID not found.');
     }
 
-    console.log('running participant selected answer...');
-
     const response = await this.quizService.submitAnswer(
       data.roomId,
       user.sub.toString(),
@@ -348,7 +341,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('participant_answer_submitted', response);
 
     if (response.data.isFirstCorrectAnswer) {
-      console.log('I want to braodcast a winner to the participant');
       const res = await this.broadcastFastestCorrectWinner(
         response.data.quizId.toString(),
         data.roomId,
@@ -369,8 +361,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       questionId: string;
     },
   ) {
-    console.log('get_question_fastest_winner data:', data);
-
     if (!data.quizId) {
       throw new WsException('Quiz ID is not found.');
     }
@@ -405,7 +395,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('join_room data:', data);
     const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
@@ -463,8 +452,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('get_room_doc data:', data);
-
     const user: JwtUser = client.data.user;
 
     if (!user?.sub) {
@@ -498,7 +485,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       roundNumber: number;
     },
   ) {
-    console.log('start_round data:', data);
     if (!data.roomId) {
       throw new WsException('Room ID not found.');
     }
@@ -531,7 +517,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       quizId: string;
     },
   ) {
-    console.log('get_quiz_room_leaderboard data:', data);
     if (!data.roomId) {
       throw new WsException('Room ID not found.');
     }
@@ -559,8 +544,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('enable_top_winner_to_solve_tie data:', data);
-
     const user: JwtUser = client.data.user;
     if (user?.role !== Role.ADMIN) {
       throw new WsException('Only administrators can trigger tie resolution.');
@@ -630,7 +613,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('request_tiebreaker_question data:', data);
     if (!data.roomId) {
       throw new WsException('Room ID not found.');
     }
@@ -669,8 +651,6 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect {
       eliminatedUserIds: string[]; // IDs selected by admin for removal
     },
   ) {
-    console.log('resolve_tiebreaker_eliminations data:', data);
-
     if (!data.roomId) {
       throw new WsException('Room ID not found.');
     }

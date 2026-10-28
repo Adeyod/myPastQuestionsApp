@@ -29,6 +29,7 @@ import { UserSessionModule } from './modules/user-session/user-session.module';
 import { UsersModule } from './modules/users/users.module';
 import { WalletsModule } from './modules/wallets/wallets.module';
 import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
+import { PinsModule } from './modules/pins/pins.module';
 
 @Module({
   imports: [
@@ -145,6 +146,7 @@ import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
     PracticeWalletModule,
     SolveAndWinModule,
     QuizModule,
+    PinsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

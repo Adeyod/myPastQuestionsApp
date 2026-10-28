@@ -80,6 +80,50 @@ export class PaymentsRepository {
 
     return newPayment;
   }
+  async createPaymentForPinSubscription(
+    userId: Types.ObjectId,
+    provider: PaymentProvider,
+    planObj: PlanDocument,
+    paymentUrl: string,
+    providerReference: string,
+    session: ClientSession,
+  ) {
+    const plan = planObj.code;
+
+    const amountInKobo = planObj.priceInKobo;
+
+    if (!amountInKobo) {
+      throw new BadRequestException({
+        message: 'Invalid Plan selected.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const user = userId.toString();
+
+    const payload = {
+      plan,
+      userId: user,
+    };
+    const reference = generatePaymentReference(payload, 'PAYMENT');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    const newPayment = await new this.paymentModel({
+      userId,
+      plan,
+      amountInKobo,
+      reference,
+      provider,
+      expiresAt,
+      paymentUrl,
+      providerReference,
+      status: PaymentStatus.SUCCESSFUL,
+      verified: true,
+    }).save({ session });
+
+    return newPayment;
+  }
 
   async getPaymentByRefAndUserId(
     reference: string,
@@ -182,6 +226,22 @@ export class PaymentsRepository {
       status: PaymentStatus.SUCCESSFUL,
       verified: true,
     });
+
+    return intent;
+  }
+  async findSuccessfulPaymentPlanWithSession(
+    userId: Types.ObjectId,
+    plan: PlanCode,
+    session: ClientSession,
+  ): Promise<PaymentDocument | null> {
+    const intent = await this.paymentModel
+      .findOne({
+        userId,
+        plan,
+        status: PaymentStatus.SUCCESSFUL,
+        verified: true,
+      })
+      .session(session);
 
     return intent;
   }

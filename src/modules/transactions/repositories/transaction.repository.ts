@@ -219,7 +219,6 @@ export class TransactionsRepository {
     totalPages: number;
     totalCount: number;
   }> {
-    console.log('queryWithPaginationDto:', queryWithPaginationDto);
     const { page, limit, searchParams } = queryWithPaginationDto;
 
     let query = this.transactionModel.find();

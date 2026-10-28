@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
-import { Connection, Types } from 'mongoose';
+import { ClientSession, Connection, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { PlansService } from '../plans/plans.service';
@@ -56,7 +56,6 @@ export class PaymentsService {
     plan: PlanCode,
     user: JwtUser,
   ) {
-    console.log('provider:', provider);
     const findUser = await this.usersRepository.findById(user.sub);
 
     if (!findUser) {
@@ -359,10 +358,6 @@ export class PaymentsService {
     userId: string,
     reference: string,
   ) {
-    console.log('payment service provider:', provider);
-    console.log('payment service userId:', userId);
-    console.log('payment service reference:', reference);
-
     if (!reference) {
       throw new BadRequestException({
         message: 'Missing payment reference.',
@@ -391,8 +386,6 @@ export class PaymentsService {
           userObjectId,
           session,
         );
-
-      console.log('paymentDoc:', paymentDoc);
 
       const transactionDoc = paymentDoc
         ? null
@@ -561,6 +554,79 @@ export class PaymentsService {
     }
   }
 
+  async createPaymentForPinSubscription(
+    provider: PaymentProvider,
+    plan: PlanCode,
+    pin: string,
+    user: JwtUser,
+    session: ClientSession,
+  ) {
+    const findUser = await this.usersRepository.findByIdWithSession(
+      user.sub,
+      session,
+    );
+
+    if (!findUser) {
+      throw new NotFoundException({
+        message: 'User not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const planExist = await this.plansService.getPlanByCodeAndSession(
+      plan,
+      session,
+    );
+
+    if (!planExist) {
+      throw new NotFoundException({
+        message: 'Plan does not exist.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const alreadyPaid =
+      await this.paymentsRepository.findSuccessfulPaymentPlanWithSession(
+        findUser._id,
+        planExist.code,
+        session,
+      );
+
+    if (alreadyPaid && alreadyPaid.status === PaymentStatus.SUCCESSFUL) {
+      throw new UnauthorizedException({
+        message: 'Plan already purchased.',
+        success: false,
+        status: 401,
+      });
+    }
+
+    const paymentUrl = pin;
+    const providerRef = 'internal_pin_payment';
+    const createIntent =
+      await this.paymentsRepository.createPaymentForPinSubscription(
+        findUser._id,
+        provider,
+        planExist,
+        paymentUrl,
+        providerRef,
+        session,
+      );
+
+    if (!createIntent) {
+      throw new BadRequestException({
+        message: 'Unable to create payment document',
+        success: false,
+        status: 400,
+      });
+    }
+
+    await this.processSuccessfulPayment(createIntent, session);
+
+    return createIntent;
+  }
+
   private async processSuccessfulPayment(payment: PaymentDocument, session) {
     const userExist = await this.usersRepository.findByIdWithSession(
       payment.userId,
@@ -568,7 +634,11 @@ export class PaymentsService {
     );
 
     if (!userExist) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException({
+        message: 'User not found',
+        success: false,
+        status: 404,
+      });
     }
 
     userExist.plans.push(payment.plan);

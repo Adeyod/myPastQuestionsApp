@@ -132,27 +132,11 @@ export class QuizService {
       });
     }
 
-    console.log('dto.round_information:', dto.round_information[0]);
     for (const round of dto.round_information) {
-      console.log('round:', round);
       const difficultyTotal =
         round.difficultyBreakdown.easy +
         round.difficultyBreakdown.medium +
         round.difficultyBreakdown.hard;
-
-      console.log(
-        'round.difficultyBreakdown.easy:',
-        round.difficultyBreakdown.easy,
-      );
-      console.log(
-        'round.difficultyBreakdown.medium:',
-        round.difficultyBreakdown.medium,
-      );
-      console.log(
-        'round.difficultyBreakdown.hard:',
-        round.difficultyBreakdown.hard,
-      );
-      console.log('difficultyTotal:', difficultyTotal);
 
       if (difficultyTotal !== round.no_of_questions) {
         throw new BadRequestException({
@@ -236,9 +220,6 @@ export class QuizService {
     userId: string,
     queryDto: QueryWithPaginationDto,
   ) {
-    console.log('findAllMyQuizzes userId:', userId);
-    console.log('findAllMyQuizzes user.sub.toString():', user.sub.toString());
-
     if (userId !== user.sub.toString()) {
       throw new ConflictException({
         message:
@@ -329,8 +310,6 @@ export class QuizService {
     }
 
     const contestantId = generateRefCode();
-
-    console.log('contestantId:', contestantId);
 
     const participant = await this.participantRepo.createParticipant(
       quizId,
@@ -524,9 +503,6 @@ export class QuizService {
   ) {
     const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
-    console.log('room:', room);
-    console.log('roomId:', roomId);
-
     if (!room) {
       throw new NotFoundException({
         success: false,
@@ -591,9 +567,6 @@ export class QuizService {
   }
   async registerAdminSocket(roomId: string, userId: string, socketId: string) {
     const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
-
-    console.log('room:', room);
-    console.log('roomId:', roomId);
 
     if (!room) {
       throw new NotFoundException({
@@ -1062,8 +1035,6 @@ export class QuizService {
   ) {
     const room = await this.quizRoomRepo.findRoomByRoomId(roomId);
 
-    console.log('submitAnswer service room:', room);
-
     if (!room) {
       throw new NotFoundException({
         success: false,
@@ -1358,8 +1329,6 @@ export class QuizService {
         status: 404,
       });
     }
-
-    console.log('leaderboard:', leaderboard);
 
     return leaderboard;
   }

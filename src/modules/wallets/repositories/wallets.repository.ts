@@ -191,8 +191,6 @@ export class WalletsRepository {
         session,
       );
 
-    console.log('walletBal:', walletBal);
-    console.log('transactionCreation:', transactionCreation);
     return walletBal;
   }
 

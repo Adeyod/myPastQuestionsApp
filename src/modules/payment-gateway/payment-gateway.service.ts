@@ -25,12 +25,7 @@ export class PaymentGatewayService {
   }
 
   async handleTransactionWebhook(provider: PaymentProvider, req: Request) {
-    console.log(
-      'I want to process transaction webhook here... Service function',
-    );
     const handler = this.providerMap[provider];
-
-    console.log('handler in service file:', handler);
 
     if (!handler) {
       throw new BadRequestException({
@@ -42,25 +37,16 @@ export class PaymentGatewayService {
 
     const providerResponse = await handler.handleTransactionWebhook(req);
 
-    console.log('providerResponse in service file:', providerResponse);
     if (provider === PaymentProvider.MONNIFY) {
       const { eventType, eventData } = providerResponse;
 
-      console.log('eventType in service file:', eventType);
-      console.log('eventData in service file:', eventData);
       if (
         eventType === 'SUCCESSFUL_TRANSACTION' &&
         eventData?.paymentStatus === 'PAID'
       ) {
-        console.log('This monnify condition is met.....');
         const paymentRef = eventData.paymentReference;
 
         const userId = paymentRef.split('_')[2];
-
-        console.log(
-          'userID from splitting payment reference in monnify:',
-          userId,
-        );
 
         return this.paymentsService.handlePaymentWebhook(
           PaymentProvider.MONNIFY,
@@ -96,12 +82,7 @@ export class PaymentGatewayService {
   }
 
   async handleDisbursementWebhook(provider: PaymentProvider, req: Request) {
-    console.log(
-      'I want to process transaction webhook here... Service function',
-    );
     const handler = this.providerMap[provider];
-
-    console.log('handler in service file:', handler);
 
     if (!handler) {
       throw new BadRequestException({
@@ -113,7 +94,6 @@ export class PaymentGatewayService {
 
     const providerResponse = await handler.handleDisbursementWebhook(req);
 
-    console.log('providerResponse in service file:', providerResponse);
     if (provider === PaymentProvider.MONNIFY) {
       const { eventType, eventData } = providerResponse;
 

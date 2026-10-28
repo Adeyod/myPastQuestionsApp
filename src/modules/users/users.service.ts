@@ -165,7 +165,6 @@ export class UsersService {
       payload,
       subject,
     );
-    console.log('mailResponse:', mailResponse);
 
     return {
       message: 'Email notification sent successfully.',

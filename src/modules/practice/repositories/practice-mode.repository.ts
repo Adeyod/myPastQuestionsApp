@@ -157,7 +157,5 @@ export class PracticeModeRepository implements OnModuleInit {
 
     const response =
       await this.practiceModeModel.insertMany(defaultPracticeModes);
-
-    console.log('Default practice modes seeded successfully.');
   }
 }

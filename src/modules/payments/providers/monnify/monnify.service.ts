@@ -87,7 +87,6 @@ export class MonnifyService implements IPaymentProvider {
         });
       }
     } catch (error) {
-      console.log(error);
       this.token = undefined;
       this.tokenExpiresAt = 0;
       throw new InternalServerErrorException({

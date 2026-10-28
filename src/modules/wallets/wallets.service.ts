@@ -58,17 +58,13 @@ export class WalletsService {
     };
     const debitWallet = await this.walletsRepository.chargeWallet(payload);
 
-    console.log('debitWallet:', debitWallet);
-
     const companyWallet =
       await this.companyWalletService.getOrCreateCompanyWallet(data.session);
-    console.log('companyWallet:', companyWallet);
 
     const creditCompanyWallet = await this.companyWalletService.creditWallet(
       data.amountInKobo,
       data.session,
     );
-    console.log('creditCompanyWallet:', creditCompanyWallet);
 
     return debitWallet;
   }

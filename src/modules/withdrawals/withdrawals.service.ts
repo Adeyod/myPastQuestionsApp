@@ -215,8 +215,6 @@ export class WithdrawalsService {
         });
       }
 
-      console.log('updatedStatus:', updatedStatus);
-
       return {
         message: 'Withdrawal initiated and is being processed.',
         status: updatedStatus.status,
@@ -396,8 +394,6 @@ export class WithdrawalsService {
 
     const withdrawal = await this.withdrawalsRepo.findByReference(reference);
 
-    console.log('withdrawal:', withdrawal);
-
     if (!withdrawal) return;
 
     if (withdrawal.status === WithdrawalStatus.SUCCESS) {
@@ -468,8 +464,6 @@ export class WithdrawalsService {
   //       reference,
   //       session,
   //     );
-
-  //     console.log('withdrawal:', withdrawal);
 
   //     if (!withdrawal) {
   //       await session.abortTransaction();
@@ -714,10 +708,6 @@ export class WithdrawalsService {
     const session = await this.connection.startSession();
 
     try {
-      console.log(
-        'I want to update the user wallet balance because withdrawal failed',
-        failureReason,
-      );
       session.startTransaction();
 
       const withdrawal = await this.withdrawalsRepo.findByReferenceWithSession(

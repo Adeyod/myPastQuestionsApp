@@ -131,18 +131,6 @@ export class QuestionsRepository {
     return result[0] || { totalCount: 0, years: [] };
   }
 
-  // async countQuestionsBySubjectAndYear(
-  //   subjectId: Types.ObjectId,
-  //   year: string,
-  // ) {
-  //   const question = this.questionModel.find({
-  //     subject: subjectId,
-  //     examYear: year,
-  //   });
-  //   const count = question.clone().countDocuments();
-  //   return count;
-  // }
-
   async countQuestionsBySubjectAndYear(
     subjectId: Types.ObjectId,
     year: string,
@@ -356,59 +344,6 @@ export class QuestionsRepository {
     };
   }
 
-  // async insertQuestions(questions: any[]) {
-  //   if (!questions || questions.length === 0) return;
-
-  //   // Normalize questions and remove any with undefined ID
-  //   const validQuestions = questions.filter(
-  //     (q) => q.apiQuestionId && q.apiSubjectName,
-  //   );
-  //   if (validQuestions.length === 0) return;
-
-  //   // Remove duplicates inside this batch
-  //   const uniqueMap = new Map<string, any>();
-  //   validQuestions.forEach((q) => {
-  //     const key = `${q.apiQuestionId}_${q.apiSubjectName}`;
-  //     if (!uniqueMap.has(key)) {
-  //       uniqueMap.set(key, q);
-  //     }
-  //   });
-  //   const uniqueQuestions = Array.from(uniqueMap.values());
-
-  //   if (uniqueQuestions.length === 0) return;
-
-  //   try {
-  //     const compoundKeys = uniqueQuestions.map((q) => ({
-  //       apiQuestionId: q.apiQuestionId,
-  //       apiSubjectName: q.apiSubjectName,
-  //     }));
-
-  //     const existing = await this.questionModel
-  //       .find({
-  //         $or: compoundKeys,
-  //       })
-  //       .select('apiQuestionId apiSubjectName')
-  //       .lean();
-
-  //     const existingSet = new Set(
-  //       existing.map((q) => `${q.apiQuestionId}_${q.apiSubjectName}`),
-  //     );
-
-  //     const newQuestions = uniqueQuestions.filter(
-  //       (q) => !existingSet.has(`${q.apiQuestionId}_${q.apiSubjectName}`),
-  //     );
-
-  //     if (newQuestions.length === 0) return;
-
-  //     const res = await this.questionModel.insertMany(newQuestions);
-  //   } catch (error: any) {
-  //     if (error.code === 11000) {
-  //     } else {
-  //       throw error;
-  //     }
-  //   }
-  // }
-
   async insertQuestions(questions: any[]) {
     if (!questions?.length) {
       return { inserted: 0, skipped: 0 };
@@ -599,16 +534,12 @@ export class QuestionsRepository {
         .limit(BATCH_SIZE);
 
       if (questions.length === 0) {
-        console.log('✅ Migration complete');
         break;
       }
 
       const bulkOps = questions
         .map((q) => {
           const examType = q.examType?.trim().toLowerCase();
-
-          console.log('examType:', examType);
-          console.log('q:', q);
 
           const normalizedExamType = examType?.replace(/\s+/g, '-');
 
@@ -640,8 +571,6 @@ export class QuestionsRepository {
       if (bulkOps.length > 0) {
         await this.questionModel.bulkWrite(bulkOps);
       }
-
-      console.log(`✅ Updated ${bulkOps.length} questions`);
     }
   }
 
@@ -666,7 +595,6 @@ export class QuestionsRepository {
       );
 
       if (!questions.length) {
-        console.log('No questions found for normalization.');
         return;
       }
 
@@ -721,71 +649,25 @@ export class QuestionsRepository {
       }
 
       if (bulkOps.length === 0) {
-        console.log('No updates needed. Already normalized.');
         return;
       }
 
       // 🚀 MASS UPDATE (FAST)
       const result = await this.questionModel.bulkWrite(bulkOps);
-
-      console.log(`✅ Normalization complete!`);
-      console.log(`Matched: ${result.matchedCount}`);
-      console.log(`Modified: ${result.modifiedCount}`);
     } catch (error) {
       console.error('❌ Error normalizing questions:', error);
       throw error;
     }
   }
 
-  // async getQuestionsByExamYear() {
-  //   const EXAM_TYPES = [
-  //     'utme',
-  //     'post-utme',
-  //     'wassce',
-  //     'jamb',
-  //     'neco',
-  //     'ijmb',
-  //     'nursing',
-  //     'medical',
-  //     'law',
-  //     'coren',
-  //     'ican',
-  //     'anna',
-  //     'ielts',
-  //   ];
-
-  //   const docs = await this.questionModel.find({
-  //     examYear: { $in: EXAM_TYPES },
-  //     examType: { $regex: /^\d{4}$/ },
-  //   });
-  //   console.log('docs:', docs.length);
-
-  //   const bulkOps = docs.map((doc) => ({
-  //     updateOne: {
-  //       filter: { _id: doc._id },
-  //       update: {
-  //         $set: {
-  //           examType: doc.examYear,
-  //           examYear: doc.examType,
-  //         },
-  //       },
-  //     },
-  //   }));
-
-  //   await this.questionModel.bulkWrite(bulkOps);
-  //   console.log('bulkOps:', bulkOps.length);
-  // }
-
   async getAllExamTypes(): Promise<string[]> {
     const examTypes = await this.questionModel.distinct('examType');
 
-    console.log('examTypes:', examTypes);
     return examTypes;
   }
   async getAllExamYears(): Promise<string[]> {
     const examYears = await this.questionModel.distinct('examYear');
 
-    console.log('examYears:', examYears);
     return examYears;
   }
 
@@ -802,49 +684,12 @@ export class QuestionsRepository {
     }
   }
 
-  // async flattenOptions() {
-  //   // Step 1: Fetch all questions where options is an array with exactly 1 element
-  //   const questions = await this.questionModel.find({
-  //     options: { $type: 'array', $size: 1 },
-  //   });
-
-  //   console.log('questionslength:', questions.length);
-
-  //   if (questions.length === 0) {
-  //     console.log('No questions need flattening.');
-  //     return;
-  //   }
-
-  //   // Step 2: Prepare bulk operations
-  //   const bulkOps = questions.map((q) => ({
-  //     updateOne: {
-  //       filter: { _id: q._id },
-  //       update: { $set: { options: q.options && q.options[0] } },
-  //     },
-  //   }));
-
-  //   // Step 3: Execute bulkWrite
-  //   const result = await this.questionModel.bulkWrite(bulkOps, {
-  //     ordered: false,
-  //   });
-
-  //   console.log(
-  //     `Flattened options successfully for: ${result.modifiedCount} questions`,
-  //   );
-  //   console.log(
-  //     `Failed to flatten options for: ${questions.length - result.modifiedCount} questions`,
-  //   );
-  // }
-
   async flattenOptions() {
     const questions = await this.questionModel.find({
       options: { $type: 'array', $size: 1 },
     });
 
-    console.log('questions length:', questions.length);
-
     if (questions.length === 0) {
-      console.log('No questions need flattening.');
       return;
     }
 
@@ -868,16 +713,11 @@ export class QuestionsRepository {
       .filter((op): op is NonNullable<typeof op> => op !== null);
 
     if (bulkOps.length === 0) {
-      console.log('No valid operations to perform.');
       return;
     }
 
     const result = await this.questionModel.bulkWrite(bulkOps, {
       ordered: false,
     });
-
-    console.log(
-      `Flattened options successfully for: ${result.modifiedCount} questions`,
-    );
   }
 }

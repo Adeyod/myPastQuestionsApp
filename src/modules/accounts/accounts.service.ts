@@ -125,12 +125,8 @@ export class AccountsService {
   //         bankCode,
   //       );
 
-  //     console.log('paystackResponse.data:', paystackResponse.data);
-  //     console.log('paystackResponse.data.data:', paystackResponse.data.data);
-
   //     return paystackResponse.data.data;
   //   } catch (error) {
-  //     console.log('error:', error);
   //     throw error;
   //   }
   // }
@@ -154,8 +150,6 @@ export class AccountsService {
         bankCode,
       );
 
-      console.log('paystackData response:', paystackData);
-
       return this.normalizeAccountResponse(paystackData);
     } catch (paystackError: unknown) {
       console.error('Paystack account resolution failed:', {
@@ -169,7 +163,6 @@ export class AccountsService {
       // Only fall back when the error may be temporary
       // or caused by rate limiting.
       if (!this.shouldFallbackToMonnify(paystackError)) {
-        console.log('paystackError error:', paystackError);
         throw paystackError;
       }
     }
@@ -179,8 +172,6 @@ export class AccountsService {
         accountNumber,
         bankCode,
       );
-
-      console.log('monnifyData response:', monnifyData);
 
       const response = this.normalizeAccountResponse(monnifyData);
 
@@ -237,8 +228,6 @@ export class AccountsService {
       bankName: bankName,
       currencyCode: data?.currencyCode ?? data?.currency_code ?? 'NGN',
     };
-
-    console.log('normalizedData response:', normalizedData);
 
     return normalizedData;
   }

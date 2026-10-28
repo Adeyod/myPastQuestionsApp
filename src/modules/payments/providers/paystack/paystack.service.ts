@@ -142,8 +142,6 @@ export class PaystackService implements IPaymentProvider {
 
     const response = await axios(url, { headers });
 
-    console.log('response:', response);
-
     return response;
   }
 

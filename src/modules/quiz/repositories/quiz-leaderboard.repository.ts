@@ -155,7 +155,7 @@ export class QuizLeaderboardRepository {
             },
           },
           {
-            new: true,
+            returnDocument: 'after',
           },
         );
 

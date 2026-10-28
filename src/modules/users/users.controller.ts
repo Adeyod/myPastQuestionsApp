@@ -67,7 +67,6 @@ export class UsersController {
   })
   async getMyDetailsById(@GetCurrentUser() user: JwtUser) {
     const details = await this.usersService.findUserById(user.sub);
-    console.log('details:', details);
     return details;
   }
   @Get('/get-user-details-by-userId/:userId')
@@ -102,7 +101,6 @@ export class UsersController {
   async getUserDetailsById(@Param('userId') userId: string) {
     const id = new Types.ObjectId(userId);
     const userDetails = await this.usersService.findUserById(id);
-    console.log('userDetails:', userDetails);
     return userDetails;
   }
 
