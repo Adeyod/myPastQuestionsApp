@@ -4,6 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -66,6 +67,46 @@ export class PracticeWalletController {
   async getAllPracticeWallets(@Query() queryDto: QueryWithPaginationDto) {
     const response =
       await this.practiceWalletService.getAllPracticeWallets(queryDto);
+
+    return response;
+  }
+
+  @Post('claim-welcome-token')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Welcome token claimed successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Claim welcome token.',
+    description:
+      'This is the endpoint for that user uses to claim welcome token.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Welcome token claimed successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to claim welcome token.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async claimWelcomeToken(@GetCurrentUser() user: JwtUser) {
+    const response = await this.practiceWalletService.claimWelcomeToken(user);
 
     return response;
   }

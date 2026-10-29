@@ -605,7 +605,6 @@ export class QuestionsRepository {
 
         let needsUpdate = false;
 
-        // ✅ Strongly type options
         const options = q.options as Record<string, any>;
 
         const normalizedOptions: Record<string, string> = {};
@@ -625,7 +624,6 @@ export class QuestionsRepository {
           normalizedOptions[newKey] = newValue;
         }
 
-        // ✅ Normalize answer
         const normalizedAnswer =
           typeof q.answer === 'string' ? q.answer.toLowerCase() : q.answer;
 
@@ -652,10 +650,9 @@ export class QuestionsRepository {
         return;
       }
 
-      // 🚀 MASS UPDATE (FAST)
       const result = await this.questionModel.bulkWrite(bulkOps);
     } catch (error) {
-      console.error('❌ Error normalizing questions:', error);
+      console.error('Error normalizing questions:', error);
       throw error;
     }
   }

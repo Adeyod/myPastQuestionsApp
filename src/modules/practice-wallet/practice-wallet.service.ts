@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ClientSession, Types } from 'mongoose';
+import { ClientSession, Connection, Types } from 'mongoose';
 
 import { JwtUser } from '../../common/types/jwt-user.type';
 import {
@@ -12,8 +12,10 @@ import {
   PracticePointTransactionType,
 } from './schemas/practice-point-transaction.schema';
 
+import { InjectConnection } from '@nestjs/mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { Role } from '../users/schemas/user.schema';
+import { UsersService } from '../users/users.service';
 import { PracticePointTransactionRepository } from './repositories/practice-point-transaction.repository';
 import { PracticeWalletRepository } from './repositories/practice-wallet.repository';
 
@@ -22,6 +24,9 @@ export class PracticeWalletService {
   constructor(
     private readonly practiceWalletRepository: PracticeWalletRepository,
     private readonly practicePointTransactionRepository: PracticePointTransactionRepository,
+    private readonly usersService: UsersService,
+    @InjectConnection()
+    private readonly connection: Connection,
   ) {}
 
   async getOrCreateUserPracticeWallet(user: JwtUser) {
@@ -75,6 +80,72 @@ export class PracticeWalletService {
     const wallet = await this.practiceWalletRepository.findOrCreateByUserId(id);
 
     return wallet;
+  }
+
+  async claimWelcomeToken(user: JwtUser) {
+    const tokenReward = 50000;
+
+    const session = await this.connection.startSession();
+    try {
+      const id = new Types.ObjectId(user.sub.toString());
+
+      session.startTransaction();
+      const userExist = await this.usersService.findByIdWithSession(
+        id,
+        session,
+      );
+
+      if (userExist.welcomeTokenAwarded) {
+        throw new BadRequestException({
+          message: 'You have received welcome token before now.',
+          success: false,
+          status: 400,
+        });
+      }
+
+      const walletExist =
+        await this.practiceWalletRepository.findOrCreateByUserIdWithSession(
+          id,
+          session,
+        );
+
+      if (!walletExist) {
+        throw new NotFoundException({
+          message: 'User practice wallet not found.',
+          success: false,
+          status: 404,
+        });
+      }
+
+      const awardToken = await this.practiceWalletRepository.incrementPoints(
+        walletExist._id,
+        tokenReward,
+        session,
+      );
+
+      if (!awardToken) {
+        throw new BadRequestException({
+          message: 'Unable to add welcome reward token',
+          success: false,
+          status: 400,
+        });
+      }
+
+      userExist.welcomeTokenAwarded = true;
+      await userExist.save({ session });
+      await session.commitTransaction();
+
+      return {
+        message: 'Welcome reward added successfully.',
+      };
+    } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      throw error;
+    } finally {
+      await session.endSession();
+    }
   }
 
   async creditPracticePoints(data: {

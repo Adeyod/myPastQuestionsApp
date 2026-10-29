@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserSessionModule } from '../user-session/user-session.module';
+import { UsersModule } from '../users/users.module';
 import { PracticeWalletController } from './practice-wallet.controller';
 import { PracticeWalletService } from './practice-wallet.service';
 import { PracticePointTransactionRepository } from './repositories/practice-point-transaction.repository';
@@ -24,6 +25,7 @@ import {
       },
     ]),
     UserSessionModule,
+    UsersModule,
   ],
   controllers: [PracticeWalletController],
   providers: [

@@ -4,7 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { ClientSession, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { MailService } from '../../mail/mail.service';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -16,6 +16,19 @@ export class UsersService {
     private usersRepository: UsersRepository,
     private mailService: MailService,
   ) {}
+  async findByIdWithSession(id: Types.ObjectId, session: ClientSession) {
+    const user = await this.usersRepository.findByIdWithSession(id, session);
+
+    if (!user) {
+      throw new NotFoundException({
+        message: 'User not found',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return user;
+  }
   async findUserDetails(id: Types.ObjectId) {
     const user = await this.usersRepository.findById(id);
 

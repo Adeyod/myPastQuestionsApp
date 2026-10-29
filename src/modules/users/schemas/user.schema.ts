@@ -53,6 +53,9 @@ export class User {
   @Prop({ default: false })
   isVerified!: boolean;
 
+  @Prop({ type: Boolean, default: false })
+  welcomeTokenAwarded!: boolean;
+
   @Prop({ default: false })
   isActive!: boolean;
 

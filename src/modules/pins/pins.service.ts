@@ -121,6 +121,10 @@ export class PinsService {
       await this.pinsRepository.createMany(documents, session);
       await session.commitTransaction();
     } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+
       if (
         error &&
         typeof error === 'object' &&
