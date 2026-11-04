@@ -41,6 +41,6 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RefreshTokenStrategy, WsJwtGuard],
-  exports: [WsJwtGuard, JwtModule],
+  exports: [WsJwtGuard, JwtModule, AuthService],
 })
 export class AuthModule {}

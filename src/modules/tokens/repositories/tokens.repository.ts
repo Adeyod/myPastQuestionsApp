@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { Token, TokenDocument, TokenPurpose } from '../schemas/token.schema';
 
 @Injectable()
@@ -11,26 +11,36 @@ export class TokensRepository {
   ) {}
 
   async findById(id: Types.ObjectId) {
-    return this.tokenModel.findById(id);
+    const response = await this.tokenModel.findById(id);
+    return response;
   }
 
   async findOneByUserIdAndPurpose(
     userId: Types.ObjectId,
     purpose: TokenPurpose,
   ) {
-    return this.tokenModel.findOne({
+    const response = await this.tokenModel.findOne({
       user: userId,
       purpose,
     });
+
+    return response;
   }
 
   async findOne(token: string, purpose: TokenPurpose) {
-    return this.tokenModel.findOne({
+    const response = await this.tokenModel.findOne({
       token,
       purpose,
     });
+
+    return response;
   }
 
+  async createWithSession(data: Partial<Token>, session: ClientSession) {
+    const token = new this.tokenModel(data);
+    await token.save({ session });
+    return token;
+  }
   async create(data: Partial<Token>) {
     const token = new this.tokenModel(data);
     await token.save();
@@ -38,6 +48,8 @@ export class TokensRepository {
   }
 
   async delete(id: Types.ObjectId) {
-    return this.tokenModel.findByIdAndDelete(id);
+    const response = await this.tokenModel.findByIdAndDelete(id);
+
+    return response;
   }
 }

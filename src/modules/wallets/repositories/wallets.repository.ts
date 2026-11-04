@@ -21,11 +21,23 @@ export class WalletsRepository {
     private transactionsRepository: TransactionsRepository,
   ) {}
 
+  async createWalletWithSession(
+    userId: string,
+    session: ClientSession,
+  ): Promise<WalletDocument> {
+    const user = new Types.ObjectId(userId);
+    const newWallet = await new this.walletModel({
+      userId: user,
+      balanceInKobo: 0,
+    }).save({ session });
+
+    return newWallet;
+  }
   async createWallet(userId: string): Promise<WalletDocument> {
     const user = new Types.ObjectId(userId);
     const newWallet = await new this.walletModel({
       userId: user,
-      balance: 0,
+      balanceInKobo: 0,
     }).save();
 
     return newWallet;
@@ -104,7 +116,7 @@ export class WalletsRepository {
         {
           userId,
         },
-        { $inc: { balance: amount } },
+        { $inc: { balanceInKobo: amount } },
         { returnDocument: 'after' },
       )
       .session(session);
@@ -128,7 +140,7 @@ export class WalletsRepository {
     const walletBal = await this.walletModel.findByIdAndUpdate(
       id,
       {
-        $inc: { balance: amountInKobo },
+        $inc: { balanceInKobo: amountInKobo },
       },
       {
         returnDocument: 'after',

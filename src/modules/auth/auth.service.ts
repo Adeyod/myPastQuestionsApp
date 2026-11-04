@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
 import { Request } from 'express';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { JwtUser } from '../../common/types/jwt-user.type';
 import { generateCode } from '../../common/utils/code';
 import { addDays } from '../../common/utils/helper';
@@ -21,11 +21,13 @@ import { TokenPurpose } from '../tokens/schemas/token.schema';
 import { UserSessionDocument } from '../user-session/schemas/user-session.schema';
 import { UserSessionService } from '../user-session/user-session.service';
 import { UsersRepository } from '../users/repositories/users.repository';
+import { UserDocument } from '../users/schemas/user.schema';
 import { WalletResponseDto } from '../wallets/dto/wallet-response.dto';
 import { WalletsRepository } from '../wallets/repositories/wallets.repository';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
+import { RegisterSchoolOwnerDto } from './dto/register-school-owner.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { BlacklistedToken } from './schemas/black-listed-token.schema';
@@ -100,6 +102,77 @@ export class AuthService {
     return {
       data: null,
       message: `${newUser.firstName} ${newUser.lastName}, your registration is successful, kindly check your email to proceed.`,
+    };
+  }
+
+  async registerSchoolOwner(
+    data: RegisterSchoolOwnerDto,
+    session: ClientSession,
+  ): Promise<{
+    user: UserDocument;
+    verificationEmail: {
+      email: string;
+      firstName: string;
+      token: string;
+    };
+  }> {
+    const email = data.email.trim().toLowerCase();
+
+    const existingUser = await this.usersRepository.findByEmailAndSession(
+      email,
+      session,
+    );
+
+    if (existingUser) {
+      throw new ConflictException({
+        success: false,
+        status: 409,
+        message: 'A user with this email address already exists',
+      });
+    }
+
+    const hashedPassword = await this.passwordHashing(
+      data.temporaryPassword.trim(),
+    );
+
+    const user = await this.usersRepository.createWithSession(
+      {
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        email,
+        phoneNumber: data.phoneNumber.trim(),
+        password: hashedPassword,
+        referredBy: undefined,
+      },
+      session,
+    );
+
+    const verificationToken = generateCode(6);
+
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await this.tokensRepository.createWithSession(
+      {
+        user: user._id,
+        token: verificationToken.toString(),
+        purpose: TokenPurpose.EMAIL_VERIFICATION,
+        expiresAt,
+      },
+      session,
+    );
+
+    await this.walletsRepository.createWalletWithSession(
+      user._id.toString(),
+      session,
+    );
+
+    return {
+      user,
+      verificationEmail: {
+        email: user.email,
+        firstName: user.firstName,
+        token: verificationToken.toString(),
+      },
     };
   }
 

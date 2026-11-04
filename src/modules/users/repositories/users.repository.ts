@@ -71,6 +71,18 @@ export class UsersRepository {
       .session(session);
   }
 
+  async findByEmailAndSession(
+    email: string,
+    session: ClientSession,
+  ): Promise<UserDocument | null> {
+    const user = await this.userModel
+      .findOne({
+        email: email.toLowerCase().trim(),
+      })
+      .session(session);
+
+    return user;
+  }
   async findByEmail(email: string): Promise<UserDocument | null> {
     const user = await this.userModel.findOne({
       email: email.toLowerCase().trim(),
@@ -80,6 +92,74 @@ export class UsersRepository {
     return user;
   }
 
+  async createWithSession(
+    data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phoneNumber: string;
+      password: string;
+      referredBy: string | undefined;
+    },
+    session: ClientSession,
+  ): Promise<UserDocument> {
+    let refCode: string;
+    let exists = true;
+    let referralChain: { userId: Types.ObjectId; level: number }[] = [];
+
+    do {
+      const code = generateRefCode();
+      refCode = code;
+      const existing = await this.userModel
+        .exists({
+          referralCode: refCode.trim().toLowerCase(),
+        })
+        .session(session);
+      exists = !!existing;
+    } while (exists);
+
+    const referralCode = refCode;
+
+    let referredById: Types.ObjectId | null = null;
+
+    if (data.referredBy) {
+      const parent = await this.userModel
+        .findOne({
+          referralCode: data.referredBy,
+        })
+        .session(session);
+
+      if (parent) {
+        referredById = parent?._id;
+      }
+
+      if (parent) {
+        const parentChain = parent.referralChain || [];
+
+        referralChain = [
+          { userId: parent._id, level: 1 },
+          ...parentChain.slice(0, 2).map((item) => ({
+            userId: item.userId,
+            level: item.level + 1,
+          })),
+        ];
+      }
+    }
+
+    const user = new this.userModel({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      password: data.password,
+      email: data.email,
+      phoneNumber: data.phoneNumber,
+      referralCode: referralCode,
+      referredBy: referredById || null,
+      referralChain: referralChain,
+    });
+    await user.save({ session });
+
+    return user;
+  }
   async create(data: {
     firstName: string;
     lastName: string;
