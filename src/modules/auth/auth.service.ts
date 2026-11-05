@@ -32,6 +32,12 @@ import { RegisterUserDto } from './dto/register-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { BlacklistedToken } from './schemas/black-listed-token.schema';
 
+/**
+ * When login or force login, we need to add subdomain as optional
+ * we get the subdomain, use it to get the school document, and
+ * use the schoolId plus the userId to get the school membership
+ * document for the user logging in using the school URL
+ */
 @Injectable()
 export class AuthService {
   private readonly SALT_VALUE = 12;

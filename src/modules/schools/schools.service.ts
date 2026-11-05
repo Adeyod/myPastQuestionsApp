@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
+import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { MailService } from '../../mail/mail.service';
 import { AuthService } from '../auth/auth.service';
 import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
@@ -204,6 +205,12 @@ export class SchoolsService {
         status: 404,
       });
     }
+    return response;
+  }
+
+  async getAllSchools(queryDto: QueryWithPaginationDto) {
+    const response = await this.schoolsRepository.getAllSchools(queryDto);
+
     return response;
   }
 }

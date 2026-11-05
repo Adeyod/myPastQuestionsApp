@@ -11,6 +11,69 @@ export class SchoolRepository {
     private readonly schoolModel: Model<SchoolDocument>,
   ) {}
 
+  async getAllSchools(queryDto: QueryWithPaginationDto): Promise<{
+    schoolObj: SchoolDocument[];
+    totalPages: number;
+    totalCount: number;
+  }> {
+    const { page, searchParams, limit } = queryDto;
+
+    let query = this.schoolModel.find();
+
+    if (searchParams) {
+      const regex = new RegExp(searchParams, 'i');
+
+      query = query.where({
+        $or: [
+          { schoolName: { $regex: regex } },
+          { subDomain: { $regex: regex } },
+          { schoolEmail: { $regex: regex } },
+          { state: { $regex: regex } },
+          { town: { $regex: regex } },
+          { address: { $regex: regex } },
+          { accessMode: { $regex: regex } },
+        ],
+      });
+    }
+
+    const count = await query.clone().countDocuments();
+    let pages = 0;
+
+    if (page !== undefined && limit !== undefined && count !== 0) {
+      const offset = (page - 1) * limit;
+
+      query = query.skip(offset).limit(limit);
+
+      pages = Math.ceil(count / limit);
+
+      if (page > pages) {
+        throw new NotFoundException({
+          message: 'Page can not be found.',
+          status: 404,
+          success: false,
+        });
+      }
+    }
+
+    const schools = await query.sort({ createdAt: -1 });
+
+    if (schools.length === 0) {
+      throw new NotFoundException({
+        message: 'Schools not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const response = {
+      schoolObj: schools,
+      totalPages: pages,
+      totalCount: count,
+    };
+
+    return response;
+  }
+
   async createSchoolWithSession(
     payload: Partial<School>,
     session?: ClientSession,
