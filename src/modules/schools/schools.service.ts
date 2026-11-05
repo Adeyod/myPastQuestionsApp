@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
@@ -177,5 +178,32 @@ export class SchoolsService {
         emailVerificationRequired: Boolean(verificationEmail),
       },
     };
+  }
+
+  async getSchoolBySchoolId(schoolId: string) {
+    const response = await this.schoolsRepository.findSchoolById(schoolId);
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'School not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
+  }
+  async getSchoolBySubdomain(subdomain: string) {
+    const response =
+      await this.schoolsRepository.findSchoolBySubDomain(subdomain);
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'School not found.',
+        success: false,
+        status: 404,
+      });
+    }
+    return response;
   }
 }

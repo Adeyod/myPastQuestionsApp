@@ -151,6 +151,7 @@ export class UsersRepository {
       lastName: data.lastName,
       password: data.password,
       email: data.email,
+      isVerified: true,
       phoneNumber: data.phoneNumber,
       referralCode: referralCode,
       referredBy: referredById || null,

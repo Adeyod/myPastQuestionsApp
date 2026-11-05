@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -35,21 +37,20 @@ export class SchoolsController {
     required: true,
     example: '394ir-84736e5362-yw7qy3i38',
   })
-  @SuccessMessage('Welcome token claimed successfully.')
-  @HttpCode(HttpStatus.OK)
+  @SuccessMessage('School created successfully.')
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Claim welcome token.',
-    description:
-      'This is the endpoint for that user uses to claim welcome token.',
+    summary: 'create school.',
+    description: 'This is the endpoint that admin uses to create school.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Welcome token claimed successfully.',
+    description: 'School created successfully.',
     type: ApiResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request. Unable to claim welcome token.',
+    description: 'Bad request. Unable to create school.',
   })
   @ApiResponse({
     status: 500,
@@ -61,6 +62,79 @@ export class SchoolsController {
   })
   async createSchool(@Body() createSchoolDto: CreateSchoolDto) {
     const response = await this.schoolsService.createSchool(createSchoolDto);
+
+    return response;
+  }
+  @Get('get-school-by-schoolId/:schoolId')
+  @UseGuards(JwtAuthGuard, DeviceSessionGuard, RolesGuard)
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('School fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Fetch school.',
+    description: 'This is the endpoint to fetch school.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'School fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch school.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getSchoolBySchoolId(@Param('schoolId') schoolId: string) {
+    const response = await this.schoolsService.getSchoolBySchoolId(schoolId);
+
+    return response;
+  }
+  @Get('get-school-by-subdomain/:subdomain')
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('School fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Fetch school.',
+    description: 'This is the endpoint to fetch school.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'School fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch school.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getSchoolBySubdomain(@Param('subdomain') subdomain: string) {
+    const response = await this.schoolsService.getSchoolBySubdomain(subdomain);
 
     return response;
   }
