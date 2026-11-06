@@ -173,8 +173,6 @@ export class SchoolsController {
   async getAllSchools(@Query() query: QueryWithPaginationDto) {
     const response = await this.schoolsService.getAllSchools(query);
 
-    console.log('response:', response);
-
     return response;
   }
 }

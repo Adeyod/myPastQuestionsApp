@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
+import { MailModule } from '../../mail/mail.module';
+import { AuthModule } from '../auth/auth.module';
 import { SchoolSecurityModule } from '../school-security/school-security.module';
 import { SchoolMembershipRepository } from './repositories/school-membership.repository';
 import {
@@ -20,6 +22,8 @@ import { SchoolMembershipsService } from './school-memberships.service';
       },
     ]),
     SchoolSecurityModule,
+    AuthModule,
+    MailModule,
   ],
   controllers: [SchoolMembershipController],
   providers: [

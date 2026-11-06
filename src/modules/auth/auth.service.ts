@@ -27,7 +27,7 @@ import { WalletsRepository } from '../wallets/repositories/wallets.repository';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
-import { RegisterSchoolOwnerDto } from './dto/register-school-owner.dto';
+import { RegisterSchoolUserDto } from './dto/register-school-owner.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { BlacklistedToken } from './schemas/black-listed-token.schema';
@@ -111,8 +111,80 @@ export class AuthService {
     };
   }
 
+  async registerSchoolUsers(
+    data: RegisterSchoolUserDto,
+    session: ClientSession,
+  ): Promise<{
+    user: UserDocument;
+    pass: string;
+    verificationEmail: {
+      email: string;
+      firstName: string;
+      token: string;
+    };
+  }> {
+    const email = data.email.trim().toLowerCase();
+
+    const existingUser = await this.usersRepository.findByEmailAndSession(
+      email,
+      session,
+    );
+
+    if (existingUser) {
+      throw new ConflictException({
+        success: false,
+        status: 409,
+        message: 'A user with this email address already exists',
+      });
+    }
+
+    const hashedPassword = await this.passwordHashing(
+      data.temporaryPassword.trim(),
+    );
+
+    const user = await this.usersRepository.createWithSession(
+      {
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        email,
+        phoneNumber: data.phoneNumber.trim(),
+        password: hashedPassword,
+        referredBy: undefined,
+      },
+      session,
+    );
+
+    const verificationToken = generateCode(6);
+
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await this.tokensRepository.createWithSession(
+      {
+        user: user._id,
+        token: verificationToken.toString(),
+        purpose: TokenPurpose.EMAIL_VERIFICATION,
+        expiresAt,
+      },
+      session,
+    );
+
+    await this.walletsRepository.createWalletWithSession(
+      user._id.toString(),
+      session,
+    );
+
+    return {
+      user,
+      pass: data.temporaryPassword,
+      verificationEmail: {
+        email: user.email,
+        firstName: user.firstName,
+        token: verificationToken.toString(),
+      },
+    };
+  }
   async registerSchoolOwner(
-    data: RegisterSchoolOwnerDto,
+    data: RegisterSchoolUserDto,
     session: ClientSession,
   ): Promise<{
     user: UserDocument;

@@ -17,7 +17,6 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 
-import { CreateSchoolMembershipDto } from './dtos/create-school-membership.dto';
 import { UpdateSchoolMembershipRoleDto } from './dtos/update-school-membership-role.dto';
 import { UpdateSchoolMembershipStatusDto } from './dtos/update-school-membership-status.dto';
 
@@ -39,6 +38,7 @@ import { SchoolMembershipGuard } from '../../common/guards/school-membership.gua
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
 import type { SchoolDocument } from '../schools/schemas/schools.schema';
 import { Role } from '../users/schemas/user.schema';
+import { RegisterSchoolMemberDto } from './dtos/register-school-user.dto';
 import { SchoolMembershipsService } from './school-memberships.service';
 
 @Controller('school-memberships')
@@ -47,9 +47,10 @@ export class SchoolMembershipController {
     private readonly schoolMembershipService: SchoolMembershipsService,
   ) {}
 
-  @Post('create-school-membership-account')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Post('register-school-member/register')
+  @UseGuards(JwtAuthGuard, RolesGuard, SchoolMembershipGuard, SchoolRolesGuard)
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
     name: 'x-device-id',
@@ -57,21 +58,26 @@ export class SchoolMembershipController {
     required: true,
     example: '394ir-84736e5362-yw7qy3i38',
   })
-  @SuccessMessage('School membership account created successfully.')
+  @SuccessMessage(
+    'Registration successful and School membership account created successfully.',
+  )
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create a school membership',
-    description: 'Create a school membership',
+    summary:
+      'Register a user and Create a school membership account for the user',
+    description:
+      'Register a user and Create a school membership account for the user',
   })
   @ApiResponse({
     status: 201,
-    description: 'School membership account created successfully.',
+    description:
+      'Registration successful and School membership account created successfully.',
     type: ApiResponseDto,
   })
   @ApiResponse({
     status: 400,
     description:
-      'Bad request. Unable to create school membership account for this user.',
+      'Bad request. Unable to register or create school membership account for this user.',
   })
   @ApiResponse({
     status: 500,
@@ -81,9 +87,17 @@ export class SchoolMembershipController {
     status: 429,
     description: 'Too many requests. Rate limit exceeded',
   })
-  async createSchoolMember(@Body() payload: CreateSchoolMembershipDto) {
+  async registerSchoolMemberWithSessionByOwnerOrAdmin(
+    @Body() payload: RegisterSchoolMemberDto,
+    @CurrentSchoolMembership() member: SchoolMembershipDocument,
+    @CurrentSchool() school: SchoolDocument,
+  ) {
     const membership =
-      await this.schoolMembershipService.createSchoolMember(payload);
+      await this.schoolMembershipService.registerSchoolMemberWithSessionByOwnerOrAdmin(
+        member,
+        school,
+        payload,
+      );
 
     return membership;
   }

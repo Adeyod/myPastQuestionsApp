@@ -5,11 +5,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ClientSession, Types } from 'mongoose';
+import { ClientSession, Connection, Types } from 'mongoose';
 
+import { InjectConnection } from '@nestjs/mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { MailService } from '../../mail/mail.service';
+import { AuthService } from '../auth/auth.service';
 import { SchoolDocument } from '../schools/schemas/schools.schema';
 import { CreateSchoolMembershipDto } from './dtos/create-school-membership.dto';
+import { RegisterSchoolMemberDto } from './dtos/register-school-user.dto';
 import { SchoolMembershipRepository } from './repositories/school-membership.repository';
 import {
   SchoolMembershipDocument,
@@ -20,6 +24,12 @@ import {
 export class SchoolMembershipsService {
   constructor(
     private readonly schoolMembershipRepository: SchoolMembershipRepository,
+    private readonly authService: AuthService,
+
+    @InjectConnection()
+    private readonly connection: Connection,
+
+    private readonly mailService: MailService,
   ) {}
 
   async createSchoolMemberWithSession(
@@ -61,17 +71,203 @@ export class SchoolMembershipsService {
 
     return response;
   }
-  async createSchoolMember(payload: CreateSchoolMembershipDto) {
+  async registerSchoolMemberWithSessionByOwnerOrAdmin(
+    member: SchoolMembershipDocument,
+    school: SchoolDocument,
+    payload: RegisterSchoolMemberDto,
+  ) {
+    const {
+      schoolId,
+      role,
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      password,
+      confirmPassword,
+      referredBy,
+    } = payload;
+    const { role: memberRole } = member;
+
+    if (school._id.toString() !== schoolId) {
+      throw new ConflictException({
+        message: 'School ID mismatch.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    if (memberRole === SchoolRole.ADMIN) {
+      if (role === SchoolRole.ADMIN || role === SchoolRole.OWNER) {
+        throw new BadRequestException({
+          message:
+            'You can only register students and teachers for the school.',
+          success: false,
+          status: 400,
+        });
+      }
+    }
+
+    if (memberRole === SchoolRole.OWNER) {
+      if (role === SchoolRole.OWNER) {
+        throw new BadRequestException({
+          message:
+            'You can only register admin, students and teachers for the school.',
+          success: false,
+          status: 400,
+        });
+      }
+    }
+
+    if (!Types.ObjectId.isValid(schoolId)) {
+      throw new BadRequestException({
+        message: 'Invalid school ID',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    let user: any;
+    let pass: string = '';
+    let verificationEmail: {
+      email: string;
+      firstName: string;
+      token: string;
+    } = {
+      email: '',
+      firstName: '',
+      token: '',
+    };
+
+    try {
+      await session.withTransaction(async () => {
+        const userData = {
+          firstName,
+          lastName,
+          email,
+          phoneNumber,
+          temporaryPassword: password,
+        };
+
+        const registerSchoolUser = await this.authService.registerSchoolUsers(
+          userData,
+          session,
+        );
+
+        const membershipExists =
+          await this.schoolMembershipRepository.userExistsInSchoolWithSession(
+            schoolId,
+            registerSchoolUser.user._id.toString(),
+            session,
+          );
+
+        if (membershipExists) {
+          throw new ConflictException({
+            message: 'This user already has a membership in this school',
+            success: false,
+            status: 409,
+          });
+        }
+
+        const response =
+          await this.schoolMembershipRepository.createSchoolMemberWithSession(
+            {
+              schoolId: new Types.ObjectId(schoolId),
+              userId: registerSchoolUser.user._id,
+              role,
+              isActive: true,
+              joinedAt: new Date(),
+            },
+            session,
+          );
+
+        if (!response) {
+          throw new BadRequestException({
+            message: 'Unable to register school member account.',
+            success: false,
+            status: 400,
+          });
+        }
+
+        verificationEmail = registerSchoolUser.verificationEmail;
+        user = registerSchoolUser.user;
+        pass = registerSchoolUser.pass;
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    if (
+      verificationEmail.email !== '' &&
+      verificationEmail.firstName !== '' &&
+      verificationEmail.token !== '' &&
+      pass !== ''
+    ) {
+      await this.mailService.sendVerificationEmail(
+        verificationEmail.email,
+        verificationEmail.firstName,
+        verificationEmail.token,
+      );
+    }
+
+    const data = {
+      newUser: {
+        email: verificationEmail.email,
+        firstName: verificationEmail.firstName,
+        lastName: user.lastName,
+        password: pass,
+      },
+      message:
+        'Please send the password to the account owner because this is the only time we are showing the password to you.',
+    };
+
+    return data;
+  }
+  async createSchoolMemberWithSessionByOwnerOrAdmin(
+    member: SchoolMembershipDocument,
+    payload: CreateSchoolMembershipDto,
+    session: ClientSession,
+  ) {
     const { schoolId, userId, role } = payload;
+    const { role: memberRole } = member;
+
+    if (memberRole === SchoolRole.ADMIN) {
+      if (role === SchoolRole.ADMIN || role === SchoolRole.OWNER) {
+        throw new BadRequestException({
+          message:
+            'You can only register students and teachers for the school.',
+          success: false,
+          status: 400,
+        });
+      }
+    }
+    if (memberRole === SchoolRole.OWNER) {
+      if (role === SchoolRole.OWNER) {
+        throw new BadRequestException({
+          message:
+            'You can only register admin, students and teachers for the school.',
+          success: false,
+          status: 400,
+        });
+      }
+    }
 
     if (!Types.ObjectId.isValid(schoolId) || !Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('Invalid school ID or user ID');
+      throw new BadRequestException({
+        message: 'Invalid school ID or user ID',
+        success: false,
+        status: 400,
+      });
     }
 
     const membershipExists =
-      await this.schoolMembershipRepository.userExistsInSchool(
+      await this.schoolMembershipRepository.userExistsInSchoolWithSession(
         schoolId,
         userId,
+        session,
       );
 
     if (membershipExists) {
@@ -82,13 +278,17 @@ export class SchoolMembershipsService {
       });
     }
 
-    const response = await this.schoolMembershipRepository.createSchoolMember({
-      schoolId: new Types.ObjectId(schoolId),
-      userId: new Types.ObjectId(userId),
-      role,
-      isActive: true,
-      joinedAt: new Date(),
-    });
+    const response =
+      await this.schoolMembershipRepository.createSchoolMemberWithSession(
+        {
+          schoolId: new Types.ObjectId(schoolId),
+          userId: new Types.ObjectId(userId),
+          role,
+          isActive: true,
+          joinedAt: new Date(),
+        },
+        session,
+      );
 
     return response;
   }
