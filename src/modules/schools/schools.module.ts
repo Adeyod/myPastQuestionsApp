@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { MailModule } from '../../mail/mail.module';
 import { AuthModule } from '../auth/auth.module';
 import { SchoolMembershipsModule } from '../school-memberships/school-memberships.module';
+import { SchoolSecurityModule } from '../school-security/school-security.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import { UsersModule } from '../users/users.module';
 import { SchoolRepository } from './repositories/school.repository';
@@ -17,6 +18,7 @@ import { SchoolsService } from './schools.service';
     UsersModule,
     SchoolMembershipsModule,
     MailModule,
+    SchoolSecurityModule,
     UserSessionModule,
   ],
   controllers: [SchoolsController],

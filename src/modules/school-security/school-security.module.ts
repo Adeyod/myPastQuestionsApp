@@ -43,6 +43,7 @@ import {
   SchoolMembership,
   SchoolMembershipSchema,
 } from '../../modules/school-memberships/schemas/school-membership.schema';
+import { SchoolLoginService } from './school-login.service';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import {
       },
     ]),
   ],
-  exports: [MongooseModule],
+  providers: [SchoolLoginService],
+  exports: [MongooseModule, SchoolLoginService],
 })
 export class SchoolSecurityModule {}

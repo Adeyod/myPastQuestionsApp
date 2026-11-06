@@ -16,6 +16,8 @@ import { addDays } from '../../common/utils/helper';
 import { MailService } from '../../mail/mail.service';
 import { PlanCode } from '../plans/schemas/plan.schema';
 import { RefreshTokensService } from '../refresh-tokens/refresh-tokens.service';
+import { SchoolMembershipDocument } from '../school-memberships/schemas/school-membership.schema';
+import { SchoolLoginService } from '../school-security/school-login.service';
 import { TokensRepository } from '../tokens/repositories/tokens.repository';
 import { TokenPurpose } from '../tokens/schemas/token.schema';
 import { UserSessionDocument } from '../user-session/schemas/user-session.schema';
@@ -50,6 +52,7 @@ export class AuthService {
     private jwtService: JwtService,
     private tokensRepository: TokensRepository,
     private mailService: MailService,
+    private readonly schoolLoginService: SchoolLoginService,
     private userSessionService: UserSessionService,
     private refreshTokensService: RefreshTokensService,
   ) {}
@@ -296,7 +299,10 @@ export class AuthService {
     };
   }
 
-  async forceSwitch(dto: LoginDto): Promise<AuthResponseDto> {
+  async forceSwitch(
+    dto: LoginDto,
+    schoolSubdomain?: string,
+  ): Promise<AuthResponseDto> {
     const { email, password, deviceId, deviceName } = dto;
 
     const user = await this.usersRepository.findByEmail(email);
@@ -335,6 +341,19 @@ export class AuthService {
         success: false,
         status: 400,
       });
+    }
+
+    let schoolContext: {
+      schoolName: string;
+      subDomain: string;
+      userSchoolMembership: SchoolMembershipDocument;
+    } | null = null;
+
+    if (schoolSubdomain) {
+      schoolContext = await this.schoolLoginService.verifySchoolMembership(
+        user._id.toString(),
+        schoolSubdomain,
+      );
     }
 
     const now = new Date();
@@ -400,10 +419,14 @@ export class AuthService {
         userWallet,
         ...others,
       },
+      schoolContext,
     };
   }
 
-  async loginUser(loginDto: LoginDto): Promise<AuthResponseDto> {
+  async loginUser(
+    loginDto: LoginDto,
+    schoolSubdomain?: string,
+  ): Promise<AuthResponseDto> {
     const { email, password, deviceId, deviceName } = loginDto;
 
     const user = await this.usersRepository.findByEmail(email);
@@ -467,6 +490,19 @@ export class AuthService {
       let session: UserSessionDocument;
       const role = user.role;
 
+      let schoolContext: {
+        schoolName: string;
+        subDomain: string;
+        userSchoolMembership: SchoolMembershipDocument;
+      } | null = null;
+
+      if (schoolSubdomain) {
+        schoolContext = await this.schoolLoginService.verifySchoolMembership(
+          user._id.toString(),
+          schoolSubdomain,
+        );
+      }
+
       try {
         session = await this.userSessionService.handleLogin({
           userId,
@@ -488,6 +524,7 @@ export class AuthService {
         user.role,
         user._id,
       );
+
       const accessToken = await this.generateAccessTokens(
         user.email,
         user._id,
@@ -517,6 +554,7 @@ export class AuthService {
           userWallet,
           ...others,
         },
+        schoolContext,
       };
     }
   }

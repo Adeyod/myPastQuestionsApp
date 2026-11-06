@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -94,6 +95,11 @@ export class AuthController {
   @Post('login')
   @SuccessMessage('User login successful')
   @HttpCode(HttpStatus.OK)
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Optional school subdomain for multi-tenant login',
+    required: false,
+  })
   @ApiOperation({
     summary: 'Login user',
     description:
@@ -112,13 +118,21 @@ export class AuthController {
     status: 500,
     description: 'Internal server error',
   })
-  async loginUser(@Body() loginDto: LoginDto) {
-    return await this.authService.loginUser(loginDto);
+  async loginUser(
+    @Body() loginDto: LoginDto,
+    @Headers('x-school-subdomain') schoolSubdomain?: string,
+  ) {
+    return await this.authService.loginUser(loginDto, schoolSubdomain);
   }
 
   @Post('force-switch')
   @SuccessMessage('User force switch successful')
   @HttpCode(HttpStatus.OK)
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Optional school subdomain for multi-tenant login',
+    required: false,
+  })
   @ApiOperation({
     summary: 'User forced switch',
     description:
@@ -137,8 +151,14 @@ export class AuthController {
     status: 500,
     description: 'Internal server error',
   })
-  async forceSwitch(@Body() loginDto: LoginDto) {
-    const response = await this.authService.forceSwitch(loginDto);
+  async forceSwitch(
+    @Body() loginDto: LoginDto,
+    @Headers('x-school-subdomain') schoolSubdomain?: string,
+  ) {
+    const response = await this.authService.forceSwitch(
+      loginDto,
+      schoolSubdomain,
+    );
 
     return response;
   }

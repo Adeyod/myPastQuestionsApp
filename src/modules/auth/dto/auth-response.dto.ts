@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { Role } from '../../../modules/users/schemas/user.schema';
 import { WalletResponseDto } from '../../../modules/wallets/dto/wallet-response.dto';
+import { SchoolRole } from '../../school-memberships/schemas/school-membership.schema';
 import { SessionResponseDto } from '../../user-session/dtos/session-response.dto';
 
 export class AuthResponseDto {
@@ -51,6 +52,20 @@ export class AuthResponseDto {
     isVerified: boolean;
     userWallet: WalletResponseDto;
   };
+
+  schoolContext?: {
+    schoolName: string;
+    subDomain: string;
+    userSchoolMembership: {
+      schoolId: Types.ObjectId;
+      userId: Types.ObjectId;
+      role: SchoolRole;
+      isActive: boolean;
+      joinedAt: Date;
+      createdAt?: Date;
+      updatedAt?: Date;
+    };
+  } | null;
 
   @ApiProperty({
     description: 'Successful registration message',

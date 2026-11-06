@@ -422,4 +422,11 @@ export class SchoolMembershipsService {
 
     return membership;
   }
+
+  async getSchoolMembershipStats(schoolId: string) {
+    const response =
+      await this.schoolMembershipRepository.getSchoolMembershipStats(schoolId);
+
+    return response;
+  }
 }

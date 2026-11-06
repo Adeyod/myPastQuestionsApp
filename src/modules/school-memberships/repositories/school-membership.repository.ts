@@ -192,4 +192,75 @@ export class SchoolMembershipRepository {
 
     return Boolean(membership);
   }
+
+  async getSchoolMembershipStats(schoolId: string) {
+    const [result] = await this.schoolMembershipModel.aggregate([
+      {
+        $match: {
+          schoolId: new Types.ObjectId(schoolId),
+        },
+      },
+      {
+        $group: {
+          _id: null,
+
+          totalStudents: {
+            $sum: {
+              $cond: [{ $eq: ['$role', SchoolRole.STUDENT] }, 1, 0],
+            },
+          },
+
+          totalTeachers: {
+            $sum: {
+              $cond: [{ $eq: ['$role', SchoolRole.TEACHER] }, 1, 0],
+            },
+          },
+
+          totalAdministrators: {
+            $sum: {
+              $cond: [{ $eq: ['$role', SchoolRole.ADMIN] }, 1, 0],
+            },
+          },
+
+          activeStudents: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$role', SchoolRole.STUDENT] },
+                    { $eq: ['$isActive', true] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+
+          inactiveStudents: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$role', SchoolRole.STUDENT] },
+                    { $eq: ['$isActive', false] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    return {
+      totalStudents: result?.totalStudents ?? 0,
+      totalTeachers: result?.totalTeachers ?? 0,
+      totalAdministrators: result?.totalAdministrators ?? 0,
+      activeStudents: result?.activeStudents ?? 0,
+      inactiveStudents: result?.inactiveStudents ?? 0,
+    };
+  }
 }

@@ -53,6 +53,12 @@ export class SchoolMembershipController {
   @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'greater-tomorrow',
+  })
+  @ApiHeader({
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,

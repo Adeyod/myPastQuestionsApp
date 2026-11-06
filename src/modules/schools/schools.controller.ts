@@ -15,15 +15,21 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+import { CurrentSchool } from '../../common/decorators/current-school.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { SchoolRoles } from '../../common/decorators/school-roles.decorator';
 import { SuccessMessage } from '../../common/decorators/success-message.decorator';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { DeviceSessionGuard } from '../../common/guards/device-session.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
+import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
+import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
 import { Role } from '../users/schemas/user.schema';
 import { CreateSchoolDto } from './dtos/create-school.dto';
+import type { SchoolDocument } from './schemas/schools.schema';
 import { SchoolsService } from './schools.service';
 
 @Controller('schools')
@@ -64,6 +70,63 @@ export class SchoolsController {
   })
   async createSchool(@Body() createSchoolDto: CreateSchoolDto) {
     const response = await this.schoolsService.createSchool(createSchoolDto);
+
+    return response;
+  }
+  @Get('get-school-dashboard/:schoolId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'greater-tomorrow',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('School dashboard fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Fetch school.',
+    description: 'This is the endpoint to fetch school dashboard.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'School dashboard fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch school dashboard.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getSchoolDashboardBySchoolId(
+    @Param('schoolId') schoolId: string,
+    @CurrentSchool() school: SchoolDocument,
+  ) {
+    const response = await this.schoolsService.getSchoolDashboardBySchoolId(
+      schoolId,
+      school,
+    );
 
     return response;
   }

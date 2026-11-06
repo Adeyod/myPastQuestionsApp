@@ -14,6 +14,7 @@ import { SchoolMembershipsService } from '../school-memberships/school-membershi
 import { UsersRepository } from '../users/repositories/users.repository';
 import { CreateSchoolDto } from './dtos/create-school.dto';
 import { SchoolRepository } from './repositories/school.repository';
+import { SchoolDocument } from './schemas/schools.schema';
 
 @Injectable()
 export class SchoolsService {
@@ -193,6 +194,39 @@ export class SchoolsService {
     }
 
     return response;
+  }
+
+  async getSchoolDashboardBySchoolId(schoolId: string, school: SchoolDocument) {
+    if (schoolId !== school._id.toString()) {
+      throw new ConflictException({
+        message: 'School ID mis match.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    const schoolDoc = await this.schoolsRepository.findSchoolById(schoolId);
+
+    if (!schoolDoc) {
+      throw new NotFoundException({
+        message: 'School not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const [membershipStats] = await Promise.all([
+      this.schoolMembershipsService.getSchoolMembershipStats(schoolId),
+    ]);
+
+    const stats = {
+      ...membershipStats,
+    };
+
+    return {
+      schoolDoc,
+      stats,
+    };
   }
   async getSchoolBySubdomain(subdomain: string) {
     const response =
