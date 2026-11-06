@@ -1,15 +1,20 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { ClientSession, Types } from 'mongoose';
 
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { SchoolDocument } from '../schools/schemas/schools.schema';
 import { CreateSchoolMembershipDto } from './dtos/create-school-membership.dto';
 import { SchoolMembershipRepository } from './repositories/school-membership.repository';
-import { SchoolRole } from './schemas/school-membership.schema';
+import {
+  SchoolMembershipDocument,
+  SchoolRole,
+} from './schemas/school-membership.schema';
 
 @Injectable()
 export class SchoolMembershipsService {
@@ -88,34 +93,52 @@ export class SchoolMembershipsService {
     return response;
   }
 
-  async findSchoolMemberById(membershipId: string) {
-    if (!Types.ObjectId.isValid(membershipId)) {
+  async findSchoolMembershipByUserIdAndSchoolId(
+    school: SchoolDocument,
+    member: SchoolMembershipDocument,
+    schoolMemberId: string,
+  ) {
+    if (!Types.ObjectId.isValid(schoolMemberId)) {
       throw new BadRequestException({
-        message: 'Invalid membership ID',
+        message: 'Invalid school membership ID.',
         success: false,
         status: 400,
       });
     }
 
-    const membership =
-      await this.schoolMembershipRepository.findSchoolMemberById(membershipId);
+    const targetMembership =
+      await this.schoolMembershipRepository.findSchoolMembershipByUserIdAndSchoolId(
+        new Types.ObjectId(schoolMemberId),
+        school._id,
+      );
 
-    if (!membership) {
+    if (!targetMembership) {
       throw new NotFoundException({
-        message: 'School membership not found',
+        message: 'School membership not found.',
         success: false,
         status: 404,
       });
     }
 
-    return membership;
+    const isOwnMembership =
+      member._id.toString() === targetMembership._id.toString();
+
+    const canViewOtherMembers = [SchoolRole.OWNER, SchoolRole.ADMIN].includes(
+      member.role,
+    );
+
+    if (!isOwnMembership && !canViewOtherMembers) {
+      throw new ForbiddenException({
+        message: "You are not permitted to view another member's membership.",
+        success: false,
+        status: 403,
+      });
+    }
+
+    return targetMembership;
   }
 
-  async findBySchool(
-    schoolId: string,
-    query: QueryWithPaginationDto,
-    role?: SchoolRole,
-  ) {
+  async findBySchool(schoolId: string, query: QueryWithPaginationDto) {
     const { page, limit, searchParams } = query;
 
     if (!Types.ObjectId.isValid(schoolId)) {

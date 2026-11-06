@@ -37,13 +37,15 @@ export class SchoolMembershipRepository {
     return response;
   }
 
-  async findSchoolMemberById(
-    membershipId: string,
+  async findSchoolMembershipByUserIdAndSchoolId(
+    membershipId: Types.ObjectId,
+    schoolId: Types.ObjectId,
   ): Promise<SchoolMembershipDocument | null> {
-    const id = new Types.ObjectId(membershipId);
-
     const response = await this.schoolMembershipModel
-      .findById(id)
+      .findOne({
+        userId: membershipId,
+        schoolId: schoolId,
+      })
       .populate('schoolId')
       .populate('userId')
       .exec();

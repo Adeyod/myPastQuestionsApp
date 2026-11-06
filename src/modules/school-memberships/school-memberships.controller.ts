@@ -21,14 +21,23 @@ import { CreateSchoolMembershipDto } from './dtos/create-school-membership.dto';
 import { UpdateSchoolMembershipRoleDto } from './dtos/update-school-membership-role.dto';
 import { UpdateSchoolMembershipStatusDto } from './dtos/update-school-membership-status.dto';
 
-import { SchoolRole } from './schemas/school-membership.schema';
+import {
+  type SchoolMembershipDocument,
+  SchoolRole,
+} from './schemas/school-membership.schema';
 
+import { CurrentSchoolMembership } from '../../common/decorators/current-school-membership.decorator';
+import { CurrentSchool } from '../../common/decorators/current-school.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { SchoolRoles } from '../../common/decorators/school-roles.decorator';
 import { SuccessMessage } from '../../common/decorators/success-message.decorator';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
+import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
+import type { SchoolDocument } from '../schools/schemas/schools.schema';
 import { Role } from '../users/schemas/user.schema';
 import { SchoolMembershipsService } from './school-memberships.service';
 
@@ -79,21 +88,34 @@ export class SchoolMembershipController {
     return membership;
   }
 
-  @Get('get-school-membership-by-membershipId/:membershipId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('get-school-membership-by-schoolMemberId/:schoolMemberId')
+  @UseGuards(JwtAuthGuard, RolesGuard, SchoolMembershipGuard, SchoolRolesGuard)
   @Roles(Role.USER)
+  @SchoolRoles(
+    SchoolRole.OWNER,
+    SchoolRole.ADMIN,
+    SchoolRole.STUDENT,
+    SchoolRole.TEACHER,
+  )
   @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'greater-tomorrow',
+  })
   @ApiHeader({
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
     required: true,
     example: '394ir-84736e5362-yw7qy3i38',
   })
-  @SuccessMessage('School membership fetched successfully.')
+  @SuccessMessage('School membership account fetched successfully.')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get a school membership by ID',
-    description: 'Get a school membership by ID',
+    summary: 'Get a school membership by membership ID.',
+    description:
+      'Members can retrieve their own membership. School owners and admins can retrieve other members within their school.',
   })
   @ApiResponse({
     status: 200,
@@ -113,17 +135,32 @@ export class SchoolMembershipController {
     status: 429,
     description: 'Too many requests. Rate limit exceeded',
   })
-  async findSchoolMemberById(@Param('membershipId') membershipId: string) {
+  async findSchoolMembershipByUserIdAndSchoolId(
+    @Param('schoolMemberId') schoolMemberId: string,
+    @CurrentSchool() school: SchoolDocument,
+    @CurrentSchoolMembership() member: SchoolMembershipDocument,
+  ) {
     const membership =
-      await this.schoolMembershipService.findSchoolMemberById(membershipId);
+      await this.schoolMembershipService.findSchoolMembershipByUserIdAndSchoolId(
+        school,
+        member,
+        schoolMemberId,
+      );
 
     return membership;
   }
 
   @Get('get-all-membership-of-a-school/:schoolId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, SchoolMembershipGuard, SchoolRolesGuard)
   @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'greater-tomorrow',
+  })
   @ApiHeader({
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
@@ -156,66 +193,26 @@ export class SchoolMembershipController {
   async findBySchool(
     @Param('schoolId') schoolId: string,
     @Query() queryDto: QueryWithPaginationDto,
-    @Query('role') role?: SchoolRole,
   ) {
     const result = await this.schoolMembershipService.findBySchool(
       schoolId,
       queryDto,
-      role,
     );
 
     return result;
   }
 
-  @Get('get-all-user-school-memberships/:userId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.USER)
+  @Patch('update-user-school-membership-role/:membershipId/role')
+  @UseGuards(JwtAuthGuard, RolesGuard, SchoolMembershipGuard, SchoolRolesGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  @SchoolRoles(SchoolRole.OWNER)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
-    name: 'x-device-id',
-    description: 'Unique device identifier for the user session',
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
     required: true,
-    example: '394ir-84736e5362-yw7qy3i38',
+    example: 'greater-tomorrow',
   })
-  @SuccessMessage('User School memberships fetched successfully.')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Get all school memberships belonging to a user',
-    description:
-      'Get all school memberships belonging to a user. User can belong to more than one school in different capacities',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'User School memberships fetched successfully.',
-    type: ApiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request. Unable to fetch user school membership accounts',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  @ApiResponse({
-    status: 429,
-    description: 'Too many requests. Rate limit exceeded',
-  })
-  async findByUser(@Param('userId') userId: string) {
-    const memberships = await this.schoolMembershipService.findByUser(userId);
-
-    return {
-      success: true,
-      status: 200,
-      message: 'User school memberships retrieved successfully',
-      data: memberships,
-    };
-  }
-
-  @Patch('update-user-school-membership-role/:membershipId/role')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.USER)
-  @ApiBearerAuth('JWT-auth')
   @ApiHeader({
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
@@ -259,9 +256,16 @@ export class SchoolMembershipController {
   }
 
   @Patch('user-school-membership-status-update/:membershipId/status')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, SchoolMembershipGuard, SchoolRolesGuard)
   @Roles(Role.ADMIN, Role.USER)
+  @SchoolRoles(SchoolRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'greater-tomorrow',
+  })
   @ApiHeader({
     name: 'x-device-id',
     description: 'Unique device identifier for the user session',
