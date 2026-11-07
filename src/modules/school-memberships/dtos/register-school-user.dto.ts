@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsEnum,
-  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -92,14 +91,6 @@ export class RegisterSchoolMemberDto {
     message: 'Referral code must follow the format AP-293DR4',
   })
   referredBy?: string;
-
-  @ApiProperty({
-    description: 'This is the ID of the school.',
-    example: '20394jfh48392j84th483jw',
-  })
-  @IsMongoId()
-  @IsNotEmpty()
-  schoolId!: string;
 
   @ApiProperty({
     description: 'This is the that the person will have in the school.',

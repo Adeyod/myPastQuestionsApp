@@ -77,7 +77,6 @@ export class SchoolMembershipsService {
     payload: RegisterSchoolMemberDto,
   ) {
     const {
-      schoolId,
       role,
       firstName,
       lastName,
@@ -88,14 +87,6 @@ export class SchoolMembershipsService {
       referredBy,
     } = payload;
     const { role: memberRole } = member;
-
-    if (school._id.toString() !== schoolId) {
-      throw new ConflictException({
-        message: 'School ID mismatch.',
-        success: false,
-        status: 409,
-      });
-    }
 
     if (memberRole === SchoolRole.ADMIN) {
       if (role === SchoolRole.ADMIN || role === SchoolRole.OWNER) {
@@ -117,14 +108,6 @@ export class SchoolMembershipsService {
           status: 400,
         });
       }
-    }
-
-    if (!Types.ObjectId.isValid(schoolId)) {
-      throw new BadRequestException({
-        message: 'Invalid school ID',
-        success: false,
-        status: 400,
-      });
     }
 
     const session = await this.connection.startSession();
@@ -160,7 +143,7 @@ export class SchoolMembershipsService {
 
         const membershipExists =
           await this.schoolMembershipRepository.userExistsInSchoolWithSession(
-            schoolId,
+            school._id.toString(),
             registerSchoolUser.user._id.toString(),
             session,
           );
@@ -178,7 +161,7 @@ export class SchoolMembershipsService {
         const response =
           await this.schoolMembershipRepository.createSchoolMemberWithSession(
             {
-              schoolId: new Types.ObjectId(schoolId),
+              schoolId: school._id,
               userId: registerSchoolUser.user._id,
               role,
               isActive: true,
