@@ -128,7 +128,6 @@ export class SchoolMembershipsService {
     }
 
     const session = await this.connection.startSession();
-    session.startTransaction();
 
     let user: any;
     let pass: string = '';
@@ -157,12 +156,16 @@ export class SchoolMembershipsService {
           session,
         );
 
+        console.log('registerSchoolUser:', registerSchoolUser);
+
         const membershipExists =
           await this.schoolMembershipRepository.userExistsInSchoolWithSession(
             schoolId,
             registerSchoolUser.user._id.toString(),
             session,
           );
+
+        console.log('membershipExists:', membershipExists);
 
         if (membershipExists) {
           throw new ConflictException({
@@ -183,6 +186,8 @@ export class SchoolMembershipsService {
             },
             session,
           );
+
+        console.log('create school membership response:', response);
 
         if (!response) {
           throw new BadRequestException({
@@ -223,6 +228,8 @@ export class SchoolMembershipsService {
       message:
         'Please send the password to the account owner because this is the only time we are showing the password to you.',
     };
+
+    console.log('return data:', data);
 
     return data;
   }
