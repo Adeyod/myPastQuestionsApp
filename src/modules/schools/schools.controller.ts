@@ -88,7 +88,7 @@ export class SchoolsController {
     name: 'x-school-subdomain',
     description: 'Subdomain identifying the school being accessed.',
     required: true,
-    example: 'greater-tomorrow',
+    example: 'csae',
   })
   @ApiHeader({
     name: 'x-device-id',

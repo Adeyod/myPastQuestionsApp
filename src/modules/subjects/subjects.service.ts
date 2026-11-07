@@ -50,12 +50,20 @@ export class SubjectsService {
   }
 
   async getAllSubjects(queryWithPaginationDto: QueryWithPaginationDto) {
-    return this.subjectsRepository.findAll(queryWithPaginationDto);
+    console.log(
+      'I want to get all subjects of the platform and not the subjects of schools',
+    );
+
+    const response = await this.subjectsRepository.findAll(
+      queryWithPaginationDto,
+    );
+    return response;
   }
   async getAllSubjectsPerCategory(
     plan: PlanCode,
     queryWithPaginationDto: QueryWithPaginationDto,
   ) {
+    console.log('I want to get all subjects per category');
     if (!plan) {
       throw new BadRequestException({
         message: 'Category (Plan) is required',
@@ -63,13 +71,16 @@ export class SubjectsService {
         status: 400,
       });
     }
-    return this.subjectsRepository.getAllSubjectsPerCategory(
+    const response = await this.subjectsRepository.getAllSubjectsPerCategory(
       plan,
       queryWithPaginationDto,
     );
+
+    return response;
   }
 
   async getSubjectById(subjectId: string) {
+    console.log('I want to get a single platform subject');
     const id = new Types.ObjectId(subjectId);
     const subject = await this.subjectsRepository.findById(id);
 

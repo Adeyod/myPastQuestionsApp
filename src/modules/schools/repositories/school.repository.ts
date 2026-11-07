@@ -195,7 +195,7 @@ export class SchoolRepository {
       .findByIdAndUpdate(
         id,
         { $set: { isActive } },
-        { new: true, runValidators: true },
+        { returnDocuments: 'after', runValidators: true },
       )
       .exec();
 
