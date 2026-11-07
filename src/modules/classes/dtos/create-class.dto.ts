@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsNotEmpty,
   IsOptional,
@@ -7,22 +8,34 @@ import {
 } from 'class-validator';
 
 export class CreateClassDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
+  @ApiProperty({
+    description: 'This is the class name of the school.',
+    example: 'JSS 1',
+  })
+  @IsString({ message: 'Class name is a string' })
+  @IsNotEmpty({ message: 'Class name is required' })
+  @MaxLength(100, { message: 'Class name can have maximum of 100 characters.' })
   className!: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @ApiProperty({
+    description: 'This is the class code.',
+    example: 'JSS 1A',
+  })
+  @IsString({ message: 'Class code is a string' })
+  @IsNotEmpty({ message: 'Class code is required.' })
   @MaxLength(30)
-  @Matches(/^[a-zA-Z0-9_-]+$/, {
+  @Matches(/^[a-zA-Z0-9 _-]+$/, {
     message:
-      'Class code can only contain letters, numbers, underscores and hyphens.',
+      'Class code can only contain letters, numbers, spaces, underscores and hyphens.',
   })
   classCode!: string;
 
+  @ApiPropertyOptional({
+    description: 'This is the description about the class. This is optional.',
+    example: 'This is the first class in the school.',
+  })
   @IsOptional()
-  @IsString()
-  @MaxLength(500)
+  @IsString({ message: 'Description is a string' })
+  @MaxLength(500, { message: 'Description is maximum of 500 characters.' })
   description?: string;
 }

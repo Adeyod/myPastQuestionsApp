@@ -19,8 +19,6 @@ export class UserSessionRepository {
       isActive: true,
     });
 
-    console.log('findActiveSession response:', response);
-
     return response;
   }
 
@@ -30,8 +28,6 @@ export class UserSessionRepository {
   ): Promise<UserSessionDocument | null> {
     const response = await this.sessionModel.findOne({ userId, deviceId });
     // .exec();
-
-    console.log('findByUserAndDevice response:', response);
 
     return response;
   }

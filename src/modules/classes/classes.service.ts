@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 
+import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { CreateClassDto } from './dtos/create-class.dto';
 import { UpdateClassDto } from './dtos/update-class.dto';
 import { ClassesRepository } from './repositories/classes.repository';
@@ -16,24 +17,48 @@ export class ClassesService {
 
   async createClass(schoolId: string, createClassDto: CreateClassDto) {
     try {
+      const id = new Types.ObjectId(schoolId);
+
+      const classNameExist = await this.classesRepository.findClassByClassName(
+        id,
+        createClassDto.className,
+      );
+
+      if (classNameExist) {
+        throw new ConflictException({
+          message: 'Class name already exist for this school.',
+          success: false,
+          status: 409,
+        });
+      }
+
+      const classCodeExist = await this.classesRepository.findClassByClassCode(
+        id,
+        createClassDto.classCode,
+      );
+
+      if (classCodeExist) {
+        throw new ConflictException({
+          message: 'Class code already exist for this school.',
+          success: false,
+          status: 409,
+        });
+      }
+
       const schoolClass = await this.classesRepository.createClass(schoolId, {
         ...createClassDto,
-        className: createClassDto.className.trim(),
+        className: createClassDto.className.trim().toUpperCase(),
         classCode: createClassDto.classCode.trim().toUpperCase(),
       });
 
-      return {
-        success: true,
-        status: 201,
-        message: 'Class created successfully.',
-        data: schoolClass,
-      };
+      return schoolClass;
     } catch (error) {
       if (this.isDuplicateKeyError(error)) {
         throw new ConflictException({
           success: false,
           message: 'A class with this code already exists in this school.',
           error: 'Conflict',
+          err: error,
           statusCode: 409,
         });
       }
@@ -42,15 +67,24 @@ export class ClassesService {
     }
   }
 
-  async getAllSchoolClasses(schoolId: string) {
-    const classes = await this.classesRepository.findAllSchoolClasses(schoolId);
+  async getAllSchoolClasses(
+    schoolId: string,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    const classes = await this.classesRepository.findAllSchoolClasses(
+      schoolId,
+      queryDto,
+    );
 
-    return {
-      success: true,
-      status: 200,
-      message: 'School classes fetched successfully.',
-      data: classes,
-    };
+    if (!classes.classesObj || classes.classesObj.length === 0) {
+      throw new NotFoundException({
+        message: 'Classes not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return classes;
   }
 
   async getSchoolClassById(schoolId: string, classId: string) {
@@ -70,12 +104,7 @@ export class ClassesService {
       });
     }
 
-    return {
-      success: true,
-      status: 200,
-      message: 'Class fetched successfully.',
-      data: schoolClass,
-    };
+    return schoolClass;
   }
 
   async updateSchoolClass(
@@ -122,12 +151,7 @@ export class ClassesService {
         });
       }
 
-      return {
-        success: true,
-        status: 200,
-        message: 'Class updated successfully.',
-        data: updatedClass,
-      };
+      return updatedClass;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -169,8 +193,6 @@ export class ClassesService {
     }
 
     return {
-      success: true,
-      status: 200,
       message: `Class ${isActive ? 'activated' : 'deactivated'} successfully.`,
       data: updatedClass,
     };

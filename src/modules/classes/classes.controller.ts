@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -35,6 +36,7 @@ import { SchoolRoles } from '../../common/decorators/school-roles.decorator';
 
 import { SuccessMessage } from '../../common/decorators/success-message.decorator';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
+import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
 import type { SchoolDocument } from '../schools/schemas/schools.schema';
 import { Role } from '../users/schemas/user.schema';
@@ -66,9 +68,7 @@ export class ClassesController {
     required: true,
     example: '394ir-84736e5362-yw7qy3i38',
   })
-  @SuccessMessage(
-    'Registration successful and School membership account created successfully.',
-  )
+  @SuccessMessage('Class created successfully.')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a school class',
@@ -76,14 +76,12 @@ export class ClassesController {
   })
   @ApiResponse({
     status: 201,
-    description:
-      'Registration successful and School membership account created successfully.',
+    description: 'Class created successfully.',
     type: ApiResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description:
-      'Bad request. Unable to register or create school membership account for this user.',
+    description: 'Bad request. Unable to create class.',
   })
   @ApiResponse({
     status: 500,
@@ -103,14 +101,108 @@ export class ClassesController {
     );
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Get all classes belonging to a school' })
-  async getAllSchoolClasses(@CurrentSchool() school: SchoolDocument) {
-    return await this.classesService.getAllSchoolClasses(school._id.toString());
+  @Get('get-all-classes-for-the-school')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'greater-tomorrow',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Classes fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Fetch classes',
+    description: 'Get all classes in a school.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Classes fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch classes.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllSchoolClasses(
+    @CurrentSchool() school: SchoolDocument,
+    @Query() queryDto: QueryWithPaginationDto,
+  ) {
+    return await this.classesService.getAllSchoolClasses(
+      school._id.toString(),
+      queryDto,
+    );
   }
 
-  @Get(':classId')
-  @ApiOperation({ summary: 'Get a school class by ID' })
+  @Get('get-single-class-of-a-school/:classId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'greater-tomorrow',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Class fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get a class',
+    description: 'Get a class in a school.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Class fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to get class.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
   async getSchoolClassById(
     @Param('classId') classId: string,
     @CurrentSchool() school: SchoolDocument,
@@ -121,8 +213,52 @@ export class ClassesController {
     );
   }
 
-  @Patch(':classId')
-  @ApiOperation({ summary: 'Update a school class' })
+  @Patch('update-a-class-in-a-school/:classId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'greater-tomorrow',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Class updated successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update class',
+    description: 'Update a class in a school.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Class updated successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to update class.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
   async updateSchoolClass(
     @Param('classId') classId: string,
     @Body() updateClassDto: UpdateClassDto,
@@ -135,8 +271,52 @@ export class ClassesController {
     );
   }
 
-  @Patch(':classId/status')
-  @ApiOperation({ summary: 'Activate or deactivate a school class' })
+  @Patch('update-class-status/:classId/status')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'greater-tomorrow',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Class status updated successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Activate or deactivate a school class',
+    description: 'Activate or deactivate a school class.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Class status updated successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to update class status.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
   async updateSchoolClassStatus(
     @Param('classId') classId: string,
     @Body() updateClassStatusDto: UpdateClassStatusDto,
