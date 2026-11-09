@@ -19,6 +19,16 @@ export class MongoExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
+    console.error('Database exception:', {
+      name: exception?.name,
+      message: exception?.message,
+      code: exception?.code,
+      keyPattern: exception?.keyPattern,
+      keyValue: exception?.keyValue,
+      errors: exception?.errors,
+      stack: exception?.stack,
+    });
+
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
 

@@ -15,6 +15,7 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+import { CurrentSchoolMembership } from '../../common/decorators/current-school-membership.decorator';
 import { CurrentSchool } from '../../common/decorators/current-school.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SchoolRoles } from '../../common/decorators/school-roles.decorator';
@@ -26,7 +27,10 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
-import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
+import {
+  type SchoolMembershipDocument,
+  SchoolRole,
+} from '../school-memberships/schemas/school-membership.schema';
 import { Role } from '../users/schemas/user.schema';
 import { CreateSchoolDto } from './dtos/create-school.dto';
 import type { SchoolDocument } from './schemas/schools.schema';
@@ -82,7 +86,12 @@ export class SchoolsController {
     SchoolRolesGuard,
   )
   @Roles(Role.USER)
-  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @SchoolRoles(
+    SchoolRole.OWNER,
+    SchoolRole.ADMIN,
+    SchoolRole.TEACHER,
+    SchoolRole.STUDENT,
+  )
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
     name: 'x-school-subdomain',
@@ -122,10 +131,12 @@ export class SchoolsController {
   async getSchoolDashboardBySchoolId(
     @Param('schoolId') schoolId: string,
     @CurrentSchool() school: SchoolDocument,
+    @CurrentSchoolMembership() member: SchoolMembershipDocument,
   ) {
     const response = await this.schoolsService.getSchoolDashboardBySchoolId(
       schoolId,
       school,
+      member,
     );
 
     return response;

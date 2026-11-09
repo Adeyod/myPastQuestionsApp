@@ -44,6 +44,8 @@ import { UserSessionModule } from './modules/user-session/user-session.module';
 import { UsersModule } from './modules/users/users.module';
 import { WalletsModule } from './modules/wallets/wallets.module';
 import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
+import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
+import { AcademicPeriodsModule } from './modules/academic-periods/academic-periods.module';
 
 @Module({
   imports: [
@@ -149,6 +151,8 @@ import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
     SchoolAssessmentAttemptsModule,
     SchoolReportsModule,
     SchoolSecurityModule,
+    AcademicSessionsModule,
+    AcademicPeriodsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
