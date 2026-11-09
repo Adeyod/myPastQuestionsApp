@@ -66,7 +66,7 @@ export class AcademicSessionsController {
     example: '394ir-84736e5362-yw7qy3i38',
   })
   @SuccessMessage('Academic session created successfully.')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create an academic session.',
     description:

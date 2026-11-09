@@ -43,13 +43,10 @@ export class AcademicSessionsRepository {
 
       query = query.where({
         $or: [
-          { schoolName: { $regex: regex } },
-          { subDomain: { $regex: regex } },
-          { schoolEmail: { $regex: regex } },
-          { state: { $regex: regex } },
-          { town: { $regex: regex } },
-          { address: { $regex: regex } },
-          { accessMode: { $regex: regex } },
+          { sessionName: { $regex: regex } },
+          { sectionName: { $regex: regex } },
+          { periodType: { $regex: regex } },
+          { status: { $regex: regex } },
         ],
       });
     }
@@ -160,7 +157,7 @@ export class AcademicSessionsRepository {
           schoolId: new Types.ObjectId(schoolId),
         },
         { $set: { status } },
-        { new: true, runValidators: true },
+        { returnDocument: 'after', runValidators: true },
       )
       .exec();
 
