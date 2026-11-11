@@ -8,6 +8,7 @@ import { SchoolSecurityModule } from '../school-security/school-security.module'
 
 import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
+import { SchoolSubjectsModule } from '../school-subjects/school-subjects.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import { ClassesRepository } from './repositories/classes.repository';
 import { SchoolClass, SchoolClassSchema } from './schemas/school-class.schema';
@@ -21,6 +22,7 @@ import { SchoolClass, SchoolClassSchema } from './schemas/school-class.schema';
       },
     ]),
     SchoolSecurityModule,
+    SchoolSubjectsModule,
     UserSessionModule,
   ],
   controllers: [ClassesController],

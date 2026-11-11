@@ -263,4 +263,21 @@ export class SchoolMembershipRepository {
       inactiveStudents: result?.inactiveStudents ?? 0,
     };
   }
+
+  async getSchoolMemberShipByUserIdSchoolIdAndRole(
+    schoolId: Types.ObjectId,
+    membershipId: Types.ObjectId,
+    role: SchoolRole,
+    session: ClientSession,
+  ): Promise<SchoolMembershipDocument | null> {
+    const response = await this.schoolMembershipModel
+      .findOne({
+        _id: membershipId,
+        schoolId,
+        role,
+      })
+      .session(session);
+
+    return response;
+  }
 }

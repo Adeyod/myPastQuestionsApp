@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { ClientSession, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { CreateSchoolSubjectDto } from './dtos/create-subject.dto';
 import { UpdateSchoolSubjectDto } from './dtos/update-subject.dto';
@@ -50,7 +50,7 @@ export class SchoolSubjectsService {
       }
       const subject = await this.subjectsRepository.createSubject(schoolId, {
         ...createSubjectDto,
-        subjectName: createSubjectDto.subjectName.trim(),
+        subjectName: createSubjectDto.subjectName.trim().toLowerCase(),
         subjectCode: createSubjectDto.subjectCode.trim().toUpperCase(),
       });
 
@@ -89,6 +89,61 @@ export class SchoolSubjectsService {
     return subjects;
   }
 
+  async getSchoolActiveSubjectById(
+    schoolId: string,
+    subjectId: string,
+    session: ClientSession,
+  ) {
+    this.validateObjectId(subjectId, 'subject ID');
+
+    const subject = await this.subjectsRepository.findActiveSubjectById(
+      schoolId,
+      subjectId,
+      session,
+    );
+
+    if (!subject) {
+      throw new NotFoundException({
+        success: false,
+        message: 'Subject not found.',
+        error: 'Not Found',
+        statusCode: 404,
+      });
+    }
+
+    return subject;
+  }
+  async getSchoolSubjectsByIds(schoolId: string, subjectIds: string[]) {
+    subjectIds.map((item) => this.validateObjectId(item, 'subject ID'));
+
+    const subjects = await this.subjectsRepository.findSubjectsByIds(
+      schoolId,
+      subjectIds,
+    );
+
+    if (!subjects) {
+      throw new NotFoundException({
+        success: false,
+        message: 'Subjects not found.',
+        error: 'Not Found',
+        statusCode: 404,
+      });
+    }
+
+    if (subjects.length !== subjectIds.length) {
+      const foundIds = subjects.map((a) => a._id.toString());
+
+      const invalidSubjects = subjectIds.filter((s) => !foundIds.includes(s));
+
+      throw new NotFoundException({
+        message: `The following subjects IDs are not found: ${invalidSubjects.join(', ')}`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    return subjects;
+  }
   async getSchoolSubjectById(schoolId: string, subjectId: string) {
     this.validateObjectId(subjectId, 'subject ID');
 

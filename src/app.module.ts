@@ -46,6 +46,7 @@ import { WalletsModule } from './modules/wallets/wallets.module';
 import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
 import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
 import { AcademicPeriodsModule } from './modules/academic-periods/academic-periods.module';
+import { TeachingAssignmentsModule } from './modules/teaching-assignments/teaching-assignments.module';
 
 @Module({
   imports: [
@@ -153,6 +154,7 @@ import { AcademicPeriodsModule } from './modules/academic-periods/academic-perio
     SchoolSecurityModule,
     AcademicSessionsModule,
     AcademicPeriodsModule,
+    TeachingAssignmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

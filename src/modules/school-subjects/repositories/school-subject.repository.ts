@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import { CreateSchoolSubjectDto } from '../dtos/create-subject.dto';
 import { UpdateSchoolSubjectDto } from '../dtos/update-subject.dto';
@@ -33,7 +33,7 @@ export class SchoolSubjectsRepository {
   ): Promise<SchoolSubjectDocument | null> {
     const response = await this.schoolSubjectModel.findOne({
       schoolId: schoolId,
-      subjectName: subjectName.trim().toUpperCase(),
+      subjectName: subjectName.trim().toLowerCase(),
     });
 
     return response;
@@ -117,6 +117,36 @@ export class SchoolSubjectsRepository {
     return response;
   }
 
+  async findActiveSubjectById(
+    schoolId: string,
+    subjectId: string,
+    session: ClientSession,
+  ): Promise<SchoolSubjectDocument | null> {
+    const response = await this.schoolSubjectModel
+      .findOne({
+        _id: new Types.ObjectId(subjectId),
+        schoolId: new Types.ObjectId(schoolId),
+        isActive: true,
+      })
+      .session(session)
+      .exec();
+
+    return response;
+  }
+  async findSubjectsByIds(
+    schoolId: string,
+    subjectIds: string[],
+  ): Promise<SchoolSubjectDocument[] | null> {
+    const ids = subjectIds.map((item) => new Types.ObjectId(item));
+    const response = await this.schoolSubjectModel
+      .find({
+        _id: { $in: ids },
+        schoolId: new Types.ObjectId(schoolId),
+      })
+      .exec();
+
+    return response;
+  }
   async findSubjectById(
     schoolId: string,
     subjectId: string,

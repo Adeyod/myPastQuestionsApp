@@ -1,5 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import {
+  TeacherSubjectAssignment,
+  TeacherSubjectAssignmentSchema,
+} from '../../teaching-assignments/schemas/teacher-subject-assignment.schema';
 
 export type SchoolClassDocument = HydratedDocument<SchoolClass>;
 
@@ -28,11 +32,24 @@ export class SchoolClass {
   classCode!: string;
 
   @Prop({
+    type: [TeacherSubjectAssignmentSchema],
+    default: [],
+  })
+  teacherSubjectAssignments!: TeacherSubjectAssignment[];
+
+  @Prop({
     type: String,
     default: '',
     trim: true,
   })
   description!: string;
+
+  @Prop({
+    type: [{ type: Types.ObjectId, ref: 'SchoolSubject' }],
+    required: [true],
+    default: undefined,
+  })
+  subjects!: Types.ObjectId[];
 
   @Prop({
     type: Boolean,

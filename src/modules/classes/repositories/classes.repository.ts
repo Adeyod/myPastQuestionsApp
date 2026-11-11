@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import { CreateClassDto } from '../dtos/create-class.dto';
 import { UpdateClassDto } from '../dtos/update-class.dto';
@@ -99,7 +99,30 @@ export class ClassesRepository {
       .findOne({
         _id: new Types.ObjectId(classId),
         schoolId: new Types.ObjectId(schoolId),
+        isActive: true,
       })
+      .populate(
+        'teacherSubjectAssignments.subject teacherSubjectAssignments.teacher',
+      )
+      .exec();
+
+    return response;
+  }
+  async findActiveClassById(
+    schoolId: string,
+    classId: string,
+    session: ClientSession,
+  ): Promise<SchoolClassDocument | null> {
+    const response = await this.schoolClassModel
+      .findOne({
+        _id: new Types.ObjectId(classId),
+        schoolId: new Types.ObjectId(schoolId),
+        isActive: true,
+      })
+      .session(session)
+      .populate(
+        'teacherSubjectAssignments.subject teacherSubjectAssignments.teacher',
+      )
       .exec();
 
     return response;

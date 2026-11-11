@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
 import {
   AcademicSession,
@@ -89,6 +89,21 @@ export class AcademicSessionsRepository {
     return response;
   }
 
+  async findAcademicSessionByIdWithSession(
+    schoolId: string,
+    sessionId: string,
+    session: ClientSession,
+  ): Promise<AcademicSessionDocument | null> {
+    const response = await this.academicSessionModel
+      .findOne({
+        _id: new Types.ObjectId(sessionId),
+        schoolId: new Types.ObjectId(schoolId),
+      })
+      .session(session)
+      .exec();
+
+    return response;
+  }
   async findAcademicSessionById(
     schoolId: string,
     sessionId: string,

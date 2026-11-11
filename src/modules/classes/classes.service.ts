@@ -4,16 +4,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { ClientSession, Types } from 'mongoose';
 
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { SchoolSubjectsService } from '../school-subjects/school-subjects.service';
 import { CreateClassDto } from './dtos/create-class.dto';
 import { UpdateClassDto } from './dtos/update-class.dto';
 import { ClassesRepository } from './repositories/classes.repository';
 
 @Injectable()
 export class ClassesService {
-  constructor(private readonly classesRepository: ClassesRepository) {}
+  constructor(
+    private readonly classesRepository: ClassesRepository,
+    private readonly subjectsService: SchoolSubjectsService,
+  ) {}
 
   async createClass(schoolId: string, createClassDto: CreateClassDto) {
     try {
@@ -44,6 +48,11 @@ export class ClassesService {
           status: 409,
         });
       }
+
+      const findSubjects = await this.subjectsService.getSchoolSubjectsByIds(
+        schoolId,
+        createClassDto.subjects,
+      );
 
       const schoolClass = await this.classesRepository.createClass(schoolId, {
         ...createClassDto,
@@ -87,6 +96,30 @@ export class ClassesService {
     return classes;
   }
 
+  async getSchoolActiveClassById(
+    schoolId: string,
+    classId: string,
+    session: ClientSession,
+  ) {
+    this.validateObjectId(classId, 'class ID');
+
+    const schoolClass = await this.classesRepository.findActiveClassById(
+      schoolId,
+      classId,
+      session,
+    );
+
+    if (!schoolClass) {
+      throw new NotFoundException({
+        success: false,
+        message: 'Class not found.',
+        error: 'Not Found',
+        statusCode: 404,
+      });
+    }
+
+    return schoolClass;
+  }
   async getSchoolClassById(schoolId: string, classId: string) {
     this.validateObjectId(classId, 'class ID');
 

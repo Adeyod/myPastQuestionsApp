@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
+  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -16,6 +18,20 @@ export class CreateClassDto {
   @IsNotEmpty({ message: 'Class name is required' })
   @MaxLength(100, { message: 'Class name can have maximum of 100 characters.' })
   className!: string;
+
+  @ApiProperty({
+    description:
+      'Array of subject IDs that students enrolled in this class can offer.',
+    example: ['65a1b2c3d4e5f6789012345a', '65a1b2c3d4e5f6789012345b'],
+    type: [String],
+  })
+  @IsArray({ message: 'Subjects must be an array' })
+  @IsNotEmpty({ message: 'Subjects array cannot be empty' })
+  @IsMongoId({
+    each: true,
+    message: 'Each subject ID must be a valid MongoDB ObjectId',
+  })
+  subjects!: string[];
 
   @ApiProperty({
     description: 'This is the class code.',

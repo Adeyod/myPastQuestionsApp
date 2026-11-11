@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 
+import { ClientSession } from 'mongoose';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { CreateAcademicSessionDto } from './dtos/create-academic-session.dto';
 import { UpdateAcademicSessionStatusDto } from './dtos/update-academic-session-status.dto';
@@ -94,6 +95,31 @@ export class AcademicSessionsService {
     return result;
   }
 
+  async getAcademicSessionByIdWithSession(
+    schoolId: string,
+    sessionId: string,
+    session: ClientSession,
+  ) {
+    this.validateObjectId(schoolId, 'school ID');
+    this.validateObjectId(sessionId, 'academic session ID');
+
+    const academicSession =
+      await this.academicSessionsRepository.findAcademicSessionByIdWithSession(
+        schoolId,
+        sessionId,
+        session,
+      );
+
+    if (!academicSession) {
+      throw new NotFoundException({
+        success: false,
+        status: 404,
+        message: 'Academic session not found.',
+      });
+    }
+
+    return academicSession;
+  }
   async getAcademicSessionById(schoolId: string, sessionId: string) {
     this.validateObjectId(schoolId, 'school ID');
     this.validateObjectId(sessionId, 'academic session ID');
