@@ -280,4 +280,18 @@ export class SchoolMembershipRepository {
 
     return response;
   }
+  async getActiveSchoolMemberShipByUserIdSchoolIdAndRole(
+    schoolId: Types.ObjectId,
+    membershipId: Types.ObjectId,
+    role: SchoolRole,
+  ): Promise<SchoolMembershipDocument | null> {
+    const response = await this.schoolMembershipModel.findOne({
+      _id: membershipId,
+      schoolId,
+      role,
+      isActive: true,
+    });
+
+    return response;
+  }
 }

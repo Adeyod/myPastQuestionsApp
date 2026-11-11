@@ -307,6 +307,28 @@ export class SchoolMembershipsService {
 
     return memberDoc;
   }
+  async findActiveSchoolMemberShipByUserIdSchoolIdAndRole(
+    schoolId: Types.ObjectId,
+    membershipId: Types.ObjectId,
+    role: SchoolRole,
+  ) {
+    const memberDoc =
+      await this.schoolMembershipRepository.getActiveSchoolMemberShipByUserIdSchoolIdAndRole(
+        schoolId,
+        membershipId,
+        role,
+      );
+
+    if (!memberDoc) {
+      throw new NotFoundException({
+        message: 'Member not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return memberDoc;
+  }
 
   async findSchoolMembershipByUserIdAndSchoolId(
     school: SchoolDocument,

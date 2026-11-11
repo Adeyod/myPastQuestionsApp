@@ -9,6 +9,7 @@ import { SchoolMembershipGuard } from '../../common/guards/school-membership.gua
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
 import { AcademicSessionsModule } from '../academic-sessions/academic-sessions.module';
 import { ClassesModule } from '../classes/classes.module';
+import { SchoolMembershipsModule } from '../school-memberships/school-memberships.module';
 import { SchoolSecurityModule } from '../school-security/school-security.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import { StudentEnrollmentsRepository } from './repositories/student-enrollments.repository';
@@ -28,6 +29,7 @@ import {
     ClassesModule,
     AcademicSessionsModule,
     SchoolSecurityModule,
+    SchoolMembershipsModule,
     UserSessionModule,
   ],
   controllers: [StudentEnrollmentsController],

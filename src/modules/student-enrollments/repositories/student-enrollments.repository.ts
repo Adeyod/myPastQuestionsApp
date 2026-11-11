@@ -69,6 +69,44 @@ export class StudentEnrollmentsRepository {
     return response;
   }
 
+  // async addStudentToClassEnrollment(
+  //   schoolId: string,
+  //   classId: string,
+  //   academicSessionId: string,
+  //   student: EnrolledStudentPayload,
+  //   session?: ClientSession,
+  // ): Promise<ClassEnrollmentDocument | null> {
+  //   const response = await this.classEnrollmentModel
+  //     .findOneAndUpdate(
+  //       {
+  //         schoolId: new Types.ObjectId(schoolId),
+  //         classId: new Types.ObjectId(classId),
+  //         academicSessionId: new Types.ObjectId(academicSessionId),
+  //         'students.schoolMembershipId': {
+  //           $ne: student.schoolMembershipId,
+  //         },
+  //       },
+  //       {
+  //         $push: {
+  //           students: {
+  //             ...student,
+  //             status: student.status ?? ClassStudentEnrollmentStatus.ACTIVE,
+  //             enrolledAt: student.enrolledAt ?? new Date(),
+  //             endedAt: student.endedAt ?? null,
+  //           },
+  //         },
+  //       },
+  //       {
+  //         returnDocument: 'after',
+  //         runValidators: true,
+  //         session,
+  //       },
+  //     )
+  //     .exec();
+
+  //   return response;
+  // }
+
   async addStudentToClassEnrollment(
     schoolId: string,
     classId: string,
@@ -83,13 +121,19 @@ export class StudentEnrollmentsRepository {
           classId: new Types.ObjectId(classId),
           academicSessionId: new Types.ObjectId(academicSessionId),
           'students.schoolMembershipId': {
-            $ne: student.schoolMembershipId,
+            $ne: new Types.ObjectId(student.schoolMembershipId),
           },
         },
         {
           $push: {
             students: {
               ...student,
+              schoolMembershipId: new Types.ObjectId(
+                student.schoolMembershipId,
+              ),
+              subjectsOffered:
+                student.subjectsOffered?.map((id) => new Types.ObjectId(id)) ||
+                [],
               status: student.status ?? ClassStudentEnrollmentStatus.ACTIVE,
               enrolledAt: student.enrolledAt ?? new Date(),
               endedAt: student.endedAt ?? null,
@@ -103,6 +147,18 @@ export class StudentEnrollmentsRepository {
         },
       )
       .exec();
+
+    if (!response) {
+      return null;
+    }
+
+    const newlyAddedStudent = response.students.find(
+      (s) =>
+        s.schoolMembershipId.toString() ===
+        student.schoolMembershipId.toString(),
+    );
+
+    response.students = newlyAddedStudent ? [newlyAddedStudent] : [];
 
     return response;
   }

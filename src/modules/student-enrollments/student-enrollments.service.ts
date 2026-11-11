@@ -4,9 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 import { MongoServerError } from 'mongodb';
-import { isValidObjectId, Model, Types } from 'mongoose';
+import { isValidObjectId, Types } from 'mongoose';
 
 import { CreateStudentEnrollmentDto } from './dtos/create-student-enrollment.dto';
 import { UpdateStudentEnrollmentStatusDto } from './dtos/update-student-enrollment-status.dto';
@@ -16,13 +15,11 @@ import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { AcademicSessionsService } from '../academic-sessions/academic-sessions.service';
 import { AcademicSessionStatus } from '../academic-sessions/schemas/academic-session.schema';
 import { ClassesService } from '../classes/classes.service';
-import {
-  SchoolMembership,
-  SchoolRole,
-} from '../school-memberships/schemas/school-membership.schema';
+import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
 
 import { ClassStudentEnrollmentStatus } from './schemas/student-enrollment.schema';
 
+import { SchoolMembershipsService } from '../school-memberships/school-memberships.service';
 import { StudentEnrollmentsRepository } from './repositories/student-enrollments.repository';
 
 @Injectable()
@@ -31,9 +28,7 @@ export class StudentEnrollmentsService {
     private readonly studentEnrollmentsRepository: StudentEnrollmentsRepository,
     private readonly classesService: ClassesService,
     private readonly academicSessionsService: AcademicSessionsService,
-
-    @InjectModel(SchoolMembership.name)
-    private readonly schoolMembershipModel: Model<SchoolMembership>,
+    private readonly schoolMembershipService: SchoolMembershipsService,
   ) {}
 
   async createStudentEnrollment(
@@ -491,14 +486,12 @@ export class StudentEnrollmentsService {
     schoolId: string,
     schoolMembershipId: string,
   ) {
-    const membership = await this.schoolMembershipModel
-      .findOne({
-        _id: new Types.ObjectId(schoolMembershipId),
-        schoolId: new Types.ObjectId(schoolId),
-        role: SchoolRole.STUDENT,
-        isActive: true,
-      })
-      .exec();
+    const membership =
+      await this.schoolMembershipService.findActiveSchoolMemberShipByUserIdSchoolIdAndRole(
+        new Types.ObjectId(schoolId),
+        new Types.ObjectId(schoolMembershipId),
+        SchoolRole.STUDENT,
+      );
 
     if (!membership) {
       throw new NotFoundException({
