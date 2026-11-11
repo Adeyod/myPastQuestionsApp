@@ -1,24 +1,17 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 
-export enum StudentEnrollmentStatus {
+export enum ClassStudentEnrollmentStatus {
   ACTIVE = 'ACTIVE',
   COMPLETED = 'COMPLETED',
   TRANSFERRED = 'TRANSFERRED',
   WITHDRAWN = 'WITHDRAWN',
 }
 
-export type StudentEnrollmentDocument = HydratedDocument<StudentEnrollment>;
+export type ClassEnrollmentDocument = HydratedDocument<ClassEnrollment>;
 
-@Schema({ timestamps: true })
-export class StudentEnrollment {
-  @Prop({
-    type: Types.ObjectId,
-    ref: 'School',
-    required: true,
-  })
-  schoolId!: Types.ObjectId;
-
+@Schema({ _id: false })
+export class EnrolledStudent {
   @Prop({
     type: Types.ObjectId,
     ref: 'User',
@@ -32,6 +25,51 @@ export class StudentEnrollment {
     required: true,
   })
   schoolMembershipId!: Types.ObjectId;
+
+  @Prop({
+    type: [
+      {
+        type: Types.ObjectId,
+        ref: 'SchoolSubject',
+      },
+    ],
+    default: [],
+  })
+  subjectsOffered!: Types.ObjectId[];
+
+  @Prop({
+    type: String,
+    enum: ClassStudentEnrollmentStatus,
+    default: ClassStudentEnrollmentStatus.ACTIVE,
+    required: true,
+  })
+  status!: ClassStudentEnrollmentStatus;
+
+  @Prop({
+    type: Date,
+    default: Date.now,
+    required: true,
+  })
+  enrolledAt!: Date;
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  endedAt!: Date | null;
+}
+
+export const EnrolledStudentSchema =
+  SchemaFactory.createForClass(EnrolledStudent);
+
+@Schema({ timestamps: true })
+export class ClassEnrollment {
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'School',
+    required: true,
+  })
+  schoolId!: Types.ObjectId;
 
   @Prop({
     type: Types.ObjectId,
@@ -48,60 +86,26 @@ export class StudentEnrollment {
   academicSessionId!: Types.ObjectId;
 
   @Prop({
-    type: String,
-    enum: StudentEnrollmentStatus,
-    default: StudentEnrollmentStatus.ACTIVE,
-    required: true,
+    type: [EnrolledStudentSchema],
+    default: [],
   })
-  status!: StudentEnrollmentStatus;
-
-  @Prop({
-    type: Date,
-    default: Date.now,
-    required: true,
-  })
-  enrolledAt!: Date;
-
-  @Prop({
-    type: Date,
-    default: null,
-  })
-  endedAt!: Date | null;
+  students!: EnrolledStudent[];
 }
 
-export const StudentEnrollmentSchema =
-  SchemaFactory.createForClass(StudentEnrollment);
+export const ClassEnrollmentSchema =
+  SchemaFactory.createForClass(ClassEnrollment);
 
-StudentEnrollmentSchema.index(
+ClassEnrollmentSchema.index(
   {
     schoolId: 1,
-    schoolMembershipId: 1,
+    classId: 1,
     academicSessionId: 1,
   },
-  {
-    unique: true,
-    partialFilterExpression: {
-      status: StudentEnrollmentStatus.ACTIVE,
-    },
-  },
+  { unique: true },
 );
 
-// Useful for retrieving students enrolled in a particular class.
-StudentEnrollmentSchema.index({
-  schoolId: 1,
-  classId: 1,
-  status: 1,
-});
-
-// Useful for retrieving a student's enrolment history.
-StudentEnrollmentSchema.index({
-  schoolId: 1,
-  studentId: 1,
-  enrolledAt: -1,
-});
-
-StudentEnrollmentSchema.index({
+ClassEnrollmentSchema.index({
   schoolId: 1,
   academicSessionId: 1,
-  status: 1,
+  classId: 1,
 });

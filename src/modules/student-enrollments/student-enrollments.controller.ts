@@ -31,11 +31,10 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
 import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
+import { type SchoolDocument } from '../schools/schemas/schools.schema';
 import { Role } from '../users/schemas/user.schema';
 import { CreateStudentEnrollmentDto } from './dtos/create-student-enrollment.dto';
 import { UpdateStudentEnrollmentStatusDto } from './dtos/update-student-enrollment-status.dto';
-import { UpdateStudentEnrollmentDto } from './dtos/update-student-enrollment.dto';
-import { StudentEnrollmentStatus } from './schemas/student-enrollment.schema';
 
 @Controller('school/academic-sessions/:academicSessionId/enrollments')
 export class StudentEnrollmentsController {
@@ -91,7 +90,7 @@ export class StudentEnrollmentsController {
     description: 'Too many requests. Rate limit exceeded',
   })
   async createStudentEnrollment(
-    @CurrentSchool() school: any,
+    @CurrentSchool() school: SchoolDocument,
     @Param('academicSessionId') academicSessionId: string,
     @Body() createDto: CreateStudentEnrollmentDto,
   ) {
@@ -105,7 +104,7 @@ export class StudentEnrollmentsController {
     return response;
   }
 
-  @Get('get-student-enrollment-in-academic-session')
+  @Get('get-all-enrollments-in-academic-session-for-a-school')
   @UseGuards(
     JwtAuthGuard,
     DeviceSessionGuard,
@@ -128,22 +127,22 @@ export class StudentEnrollmentsController {
     required: true,
     example: '394ir-84736e5362-yw7qy3i38',
   })
-  @SuccessMessage('Student enrollment fetched successfully.')
+  @SuccessMessage('School session enrollments fetched successfully.')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get student enrolments in an academic session.',
+    summary: 'Get school enrolments in an academic session.',
     description:
-      'This is the endpoint that teachers, owner or school admin is going to use to Get student enrolments in an academic session.',
+      'This is the endpoint that teachers, owner or school admin is going to use to Get school enrolments in an academic session.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Student enrollment fetched successfully.',
+    description: 'School session enrollments fetched successfully.',
     type: ApiResponseDto,
   })
   @ApiResponse({
     status: 400,
     description:
-      'Bad request. Unable to Get student enrolments in an academic session.',
+      'Bad request. Unable to Get school enrolments in an academic session.',
   })
   @ApiResponse({
     status: 500,
@@ -154,21 +153,20 @@ export class StudentEnrollmentsController {
     description: 'Too many requests. Rate limit exceeded',
   })
   async findAllStudentEnrollments(
-    @CurrentSchool() school: any,
+    @CurrentSchool() school: SchoolDocument,
     @Param('academicSessionId') academicSessionId: string,
     @Query() queryDto: QueryWithPaginationDto,
   ) {
     const response =
-      await this.studentEnrollmentsService.findAllStudentEnrollments(
+      await this.studentEnrollmentsService.findAllEnrollmentsOfASchoolInASession(
         school._id.toString(),
         academicSessionId,
         queryDto,
       );
-
     return response;
   }
 
-  @Get('count-class-enrollments')
+  @Get('count-total-enrollments-in-a-session')
   @UseGuards(
     JwtAuthGuard,
     DeviceSessionGuard,
@@ -194,9 +192,9 @@ export class StudentEnrollmentsController {
   @SuccessMessage('Student enrollment counted successfully.')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Count student enrolments in a class.',
+    summary: 'Count number of student enrolments in a session.',
     description:
-      'This is the endpoint that owner or school admin is going to use to Count student enrolments in a class.',
+      'This is the endpoint that owner or school admin is going to use to Count student enrolments in a session.',
   })
   @ApiResponse({
     status: 200,
@@ -216,85 +214,18 @@ export class StudentEnrollmentsController {
     description: 'Too many requests. Rate limit exceeded',
   })
   async countStudentEnrollments(
-    @CurrentSchool() school: any,
+    @CurrentSchool() school: SchoolDocument,
     @Param('academicSessionId') academicSessionId: string,
-    @Query('classId') classId?: string,
-    @Query('status') status?: StudentEnrollmentStatus,
   ) {
     const response =
       await this.studentEnrollmentsService.countStudentEnrollments(
         school._id.toString(),
         academicSessionId,
-        classId,
-        status,
       );
-
     return response;
   }
 
-  @Get('get-student-enrollment-by-enrollmentId/:enrollmentId')
-  @UseGuards(
-    JwtAuthGuard,
-    DeviceSessionGuard,
-    RolesGuard,
-    SchoolMembershipGuard,
-    SchoolRolesGuard,
-  )
-  @Roles(Role.USER)
-  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN, SchoolRole.TEACHER)
-  @ApiBearerAuth('JWT-auth')
-  @ApiHeader({
-    name: 'x-school-subdomain',
-    description: 'Subdomain identifying the school being accessed.',
-    required: true,
-    example: 'csae',
-  })
-  @ApiHeader({
-    name: 'x-device-id',
-    description: 'Unique device identifier for the user session',
-    required: true,
-    example: '394ir-84736e5362-yw7qy3i38',
-  })
-  @SuccessMessage('Student enrollment fetched successfully.')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Get a student enrolment by ID.',
-    description:
-      'This is the endpoint that teacher, owner or school admin is going to use to Get a student enrolment by ID.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Student enrollment fetched successfully.',
-    type: ApiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request. Unable to Get student enrolment by ID.',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  @ApiResponse({
-    status: 429,
-    description: 'Too many requests. Rate limit exceeded',
-  })
-  async findStudentEnrollmentById(
-    @CurrentSchool() school: any,
-    @Param('academicSessionId') academicSessionId: string,
-    @Param('enrollmentId') enrollmentId: string,
-  ) {
-    const response =
-      await this.studentEnrollmentsService.findStudentEnrollmentById(
-        school._id.toString(),
-        academicSessionId,
-        enrollmentId,
-      );
-
-    return response;
-  }
-
-  @Post('transfer-student-to-another-class/:enrollmentId/transfer')
+  @Get('count-total-enrollments-in-a-class-in-a-session')
   @UseGuards(
     JwtAuthGuard,
     DeviceSessionGuard,
@@ -317,21 +248,21 @@ export class StudentEnrollmentsController {
     required: true,
     example: '394ir-84736e5362-yw7qy3i38',
   })
-  @SuccessMessage('Student transfered successfully.')
+  @SuccessMessage('Student enrollment counted successfully.')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Transfer student to another class.',
+    summary: 'Count number of student enrolments in a class in a session.',
     description:
-      'This is the endpoint that owner or school admin is going to use to Transfer a student to another class.',
+      'This is the endpoint that owner or school admin is going to use to Count student enrolments in a class in a session.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Student transfered successfully.',
+    description: 'Student enrollment counted successfully.',
     type: ApiResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request. Unable to Transfer student to another class.',
+    description: 'Bad request. Unable to Count student enrolments.',
   })
   @ApiResponse({
     status: 500,
@@ -341,22 +272,147 @@ export class StudentEnrollmentsController {
     status: 429,
     description: 'Too many requests. Rate limit exceeded',
   })
-  async transferStudentEnrollment(
-    @CurrentSchool() school: any,
+  async countStudentEnrollmentsInAClass(
+    @CurrentSchool() school: SchoolDocument,
     @Param('academicSessionId') academicSessionId: string,
-    @Param('enrollmentId') enrollmentId: string,
-    @Body() updateDto: UpdateStudentEnrollmentDto,
+    @Query('classId') classId: string,
   ) {
     const response =
-      await this.studentEnrollmentsService.transferStudentEnrollment(
+      await this.studentEnrollmentsService.countStudentEnrollmentsInAClass(
+        school._id.toString(),
+        academicSessionId,
+        classId,
+      );
+    return response;
+  }
+
+  @Get('get-enrollment-by-enrollmentId/:enrollmentId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN, SchoolRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Class enrollment fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get a class enrolment by enrollment ID.',
+    description:
+      'This is the endpoint that teacher, owner or school admin is going to use to Get a class enrolment by enrollment ID.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Class enrollment fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to Get class enrolment by ID.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async findClassEnrollmentById(
+    @CurrentSchool() school: SchoolDocument,
+    @Param('academicSessionId') academicSessionId: string,
+    @Param('enrollmentId') enrollmentId: string,
+  ) {
+    const response =
+      await this.studentEnrollmentsService.findClassEnrollmentById(
         school._id.toString(),
         academicSessionId,
         enrollmentId,
-        updateDto,
       );
 
     return response;
   }
+
+  // @Post('transfer-student-to-another-class/:enrollmentId/transfer')
+  // @UseGuards(
+  //   JwtAuthGuard,
+  //   DeviceSessionGuard,
+  //   RolesGuard,
+  //   SchoolMembershipGuard,
+  //   SchoolRolesGuard,
+  // )
+  // @Roles(Role.USER)
+  // @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  // @ApiBearerAuth('JWT-auth')
+  // @ApiHeader({
+  //   name: 'x-school-subdomain',
+  //   description: 'Subdomain identifying the school being accessed.',
+  //   required: true,
+  //   example: 'csae',
+  // })
+  // @ApiHeader({
+  //   name: 'x-device-id',
+  //   description: 'Unique device identifier for the user session',
+  //   required: true,
+  //   example: '394ir-84736e5362-yw7qy3i38',
+  // })
+  // @SuccessMessage('Student transfered successfully.')
+  // @HttpCode(HttpStatus.OK)
+  // @ApiOperation({
+  //   summary: 'Transfer student to another class.',
+  //   description:
+  //     'This is the endpoint that owner or school admin is going to use to Transfer a student to another class.',
+  // })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Student transfered successfully.',
+  //   type: ApiResponseDto,
+  // })
+  // @ApiResponse({
+  //   status: 400,
+  //   description: 'Bad request. Unable to Transfer student to another class.',
+  // })
+  // @ApiResponse({
+  //   status: 500,
+  //   description: 'Internal server error',
+  // })
+  // @ApiResponse({
+  //   status: 429,
+  //   description: 'Too many requests. Rate limit exceeded',
+  // })
+  // async transferStudentEnrollment(
+  //   @CurrentSchool() school: SchoolDocument,
+  //   @Param('academicSessionId') academicSessionId: string,
+  //   @Param('enrollmentId') enrollmentId: string,
+  //   @Param('schoolMembershipId') schoolMembershipId: string,
+  //   @Body() updateDto: UpdateStudentEnrollmentDto,
+  // ) {
+  //   const response =
+  //     await this.studentEnrollmentsService.transferStudentEnrollment(
+  //       school._id.toString(),
+  //       academicSessionId,
+  //       enrollmentId,
+  //       schoolMembershipId,
+  //       updateDto,
+  //     );
+
+  //   return response;
+  // }
 
   @Patch('complete-or-withdraw-student-enrollment/:enrollmentId/status')
   @UseGuards(
@@ -406,17 +462,82 @@ export class StudentEnrollmentsController {
     description: 'Too many requests. Rate limit exceeded',
   })
   async updateStudentEnrollmentStatus(
-    @CurrentSchool() school: any,
+    @CurrentSchool() school: SchoolDocument,
     @Param('academicSessionId') academicSessionId: string,
     @Param('enrollmentId') enrollmentId: string,
+    @Param('schoolMembershipId') schoolMembershipId: string,
     @Body() updateDto: UpdateStudentEnrollmentStatusDto,
   ) {
     const response =
-      this.studentEnrollmentsService.updateStudentEnrollmentStatus(
+      await this.studentEnrollmentsService.updateStudentEnrollmentStatus(
         school._id.toString(),
         academicSessionId,
         enrollmentId,
+        schoolMembershipId,
         updateDto,
+      );
+
+    return response;
+  }
+
+  @Get('get-active-enrollment-of-a-student-in-a-session/:schoolMembershipId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN, SchoolRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Student active enrollment fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get the active enrollment of a student in a session.',
+    description:
+      'This is the endpoint that teacher, owner or school admin is going to use to Get active enrollment of a student in a session.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Student active enrollment fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to Get student active enrollment.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async findActiveStudentEnrollment(
+    @CurrentSchool() school: SchoolDocument,
+    @Param('academicSessionId') academicSessionId: string,
+    @Param('schoolMembershipId') schoolMembershipId: string,
+  ) {
+    console.log('schoolMembershipId:', schoolMembershipId);
+    const response =
+      await this.studentEnrollmentsService.findActiveStudentEnrollment(
+        school._id.toString(),
+        academicSessionId,
+        schoolMembershipId,
       );
 
     return response;

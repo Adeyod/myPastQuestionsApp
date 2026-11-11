@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsMongoId } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsMongoId } from 'class-validator';
 
 export class CreateStudentEnrollmentDto {
   @ApiProperty({
@@ -15,4 +15,14 @@ export class CreateStudentEnrollmentDto {
   })
   @IsMongoId()
   classId!: string;
+
+  @ApiProperty({
+    example: ['671a12345678901234567891'],
+    description:
+      'IDs of the subjects that the student will be offering in the class.',
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsMongoId({ each: true })
+  subjectsOffered!: string[];
 }

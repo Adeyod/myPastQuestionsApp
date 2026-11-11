@@ -1,17 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
 
-import { StudentEnrollmentStatus } from '../schemas/student-enrollment.schema';
+import { ClassStudentEnrollmentStatus } from '../schemas/student-enrollment.schema';
 
 export class UpdateStudentEnrollmentStatusDto {
   @ApiProperty({
     enum: [
-      StudentEnrollmentStatus.COMPLETED,
-      StudentEnrollmentStatus.WITHDRAWN,
+      ClassStudentEnrollmentStatus.COMPLETED,
+      ClassStudentEnrollmentStatus.WITHDRAWN,
     ],
-    example: StudentEnrollmentStatus.WITHDRAWN,
+    example: ClassStudentEnrollmentStatus.WITHDRAWN,
     description: 'New status for the student enrolment.',
   })
-  @IsEnum(StudentEnrollmentStatus)
-  status!: StudentEnrollmentStatus;
+  @IsEnum(ClassStudentEnrollmentStatus)
+  status!: ClassStudentEnrollmentStatus;
 }

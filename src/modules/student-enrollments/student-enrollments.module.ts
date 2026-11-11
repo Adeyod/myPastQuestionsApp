@@ -1,11 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
-import {
-  StudentEnrollment,
-  StudentEnrollmentSchema,
-} from './schemas/student-enrollment.schema';
-
 import { StudentEnrollmentsController } from './student-enrollments.controller';
 import { StudentEnrollmentsService } from './student-enrollments.service';
 
@@ -17,13 +12,17 @@ import { ClassesModule } from '../classes/classes.module';
 import { SchoolSecurityModule } from '../school-security/school-security.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import { StudentEnrollmentsRepository } from './repositories/student-enrollments.repository';
+import {
+  ClassEnrollment,
+  ClassEnrollmentSchema,
+} from './schemas/student-enrollment.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       {
-        name: StudentEnrollment.name,
-        schema: StudentEnrollmentSchema,
+        name: ClassEnrollment.name,
+        schema: ClassEnrollmentSchema,
       },
     ]),
     ClassesModule,

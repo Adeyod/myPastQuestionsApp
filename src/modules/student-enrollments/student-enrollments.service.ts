@@ -5,13 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { MongoServerError } from 'mongodb';
 import { isValidObjectId, Model, Types } from 'mongoose';
 
 import { CreateStudentEnrollmentDto } from './dtos/create-student-enrollment.dto';
 import { UpdateStudentEnrollmentStatusDto } from './dtos/update-student-enrollment-status.dto';
 import { UpdateStudentEnrollmentDto } from './dtos/update-student-enrollment.dto';
-
-import { StudentEnrollmentStatus } from './schemas/student-enrollment.schema';
 
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { AcademicSessionsService } from '../academic-sessions/academic-sessions.service';
@@ -21,6 +20,9 @@ import {
   SchoolMembership,
   SchoolRole,
 } from '../school-memberships/schemas/school-membership.schema';
+
+import { ClassStudentEnrollmentStatus } from './schemas/student-enrollment.schema';
+
 import { StudentEnrollmentsRepository } from './repositories/student-enrollments.repository';
 
 @Injectable()
@@ -44,6 +46,8 @@ export class StudentEnrollmentsService {
     this.validateObjectId(createDto.schoolMembershipId, 'school membership ID');
     this.validateObjectId(createDto.classId, 'class ID');
 
+    this.validateSubjectsOffered(createDto.subjectsOffered);
+
     const session = await this.findSessionOrThrow(schoolId, academicSessionId);
 
     if (session.status === AcademicSessionStatus.COMPLETED) {
@@ -60,16 +64,32 @@ export class StudentEnrollmentsService {
       createDto.schoolMembershipId,
     );
 
-    await this.findClassOrThrow(schoolId, createDto.classId);
+    const schoolClass = await this.findClassOrThrow(
+      schoolId,
+      createDto.classId,
+    );
 
-    const existingEnrollment =
-      await this.studentEnrollmentsRepository.findActiveEnrollment(
+    if (!schoolClass?.subjects?.length) {
+      throw new BadRequestException({
+        message: 'Subjects not found for this class.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    this.validateStudentSubjects(
+      createDto.subjectsOffered,
+      schoolClass.subjects,
+    );
+
+    const existingActiveEnrollment =
+      await this.studentEnrollmentsRepository.findActiveStudentEnrollment(
         schoolId,
         createDto.schoolMembershipId,
-        academicSessionId,
+        session._id.toString(),
       );
 
-    if (existingEnrollment) {
+    if (existingActiveEnrollment) {
       throw new ConflictException({
         message:
           'This student already has an active enrolment in this academic session. Use the transfer operation to change the class.',
@@ -78,22 +98,82 @@ export class StudentEnrollmentsService {
       });
     }
 
-    const enrollment =
-      await this.studentEnrollmentsRepository.createStudentEnrollment({
-        schoolId: new Types.ObjectId(schoolId),
-        studentId: membership.userId,
-        schoolMembershipId: membership._id,
-        classId: new Types.ObjectId(createDto.classId),
-        academicSessionId: new Types.ObjectId(academicSessionId),
-        status: StudentEnrollmentStatus.ACTIVE,
-        enrolledAt: new Date(),
-        endedAt: null,
-      });
+    const studentPayload = {
+      studentId: membership.userId,
+      schoolMembershipId: membership._id,
+      subjectsOffered: createDto.subjectsOffered.map(
+        (subjectId) => new Types.ObjectId(subjectId),
+      ),
+      status: ClassStudentEnrollmentStatus.ACTIVE,
+      enrolledAt: new Date(),
+      endedAt: null,
+    };
 
-    return enrollment;
+    const existingClassEnrollment =
+      await this.studentEnrollmentsRepository.findClassEnrollmentByClassAndSession(
+        new Types.ObjectId(schoolId),
+        schoolClass._id,
+        session._id,
+      );
+
+    if (existingClassEnrollment) {
+      const updatedEnrollment =
+        await this.studentEnrollmentsRepository.addStudentToClassEnrollment(
+          schoolId,
+          createDto.classId,
+          academicSessionId,
+          studentPayload,
+        );
+
+      if (!updatedEnrollment) {
+        throw new ConflictException({
+          message:
+            'This student already has an enrollment record in this class and academic session.',
+          success: false,
+          status: 409,
+        });
+      }
+
+      return updatedEnrollment;
+    }
+
+    try {
+      const response =
+        await this.studentEnrollmentsRepository.createClassEnrollment({
+          schoolId: schoolClass.schoolId,
+          classId: schoolClass._id,
+          academicSessionId: session._id,
+          students: [studentPayload],
+        });
+
+      return response;
+    } catch (error) {
+      if (error instanceof MongoServerError && error.code === 11000) {
+        const updatedEnrollment =
+          await this.studentEnrollmentsRepository.addStudentToClassEnrollment(
+            schoolId,
+            createDto.classId,
+            academicSessionId,
+            studentPayload,
+          );
+
+        if (updatedEnrollment) {
+          return updatedEnrollment;
+        }
+
+        throw new ConflictException({
+          message:
+            'This student already has an enrollment record in this class and academic session.',
+          success: false,
+          status: 409,
+        });
+      }
+
+      throw error;
+    }
   }
 
-  async findAllStudentEnrollments(
+  async findAllEnrollmentsOfASchoolInASession(
     schoolId: string,
     academicSessionId: string,
     queryDto: QueryWithPaginationDto,
@@ -104,60 +184,69 @@ export class StudentEnrollmentsService {
     await this.findSessionOrThrow(schoolId, academicSessionId);
 
     const result =
-      await this.studentEnrollmentsRepository.findAllStudentEnrollments(
+      await this.studentEnrollmentsRepository.findAllClassEnrollmentsOfASchoolInASession(
         schoolId,
         academicSessionId,
         queryDto,
       );
 
-    if (
-      !result.studentEnrolmentObj ||
-      result.studentEnrolmentObj.length === 0
-    ) {
-      throw new NotFoundException({
-        message: 'Student enrollments not found.',
-        success: false,
-        status: 404,
-      });
-    }
-
     return result;
   }
 
-  async findStudentEnrollmentById(
+  async findActiveStudentEnrollment(
+    schoolId: string,
+    academicSessionId: string,
+    schoolMembershipId: string,
+  ) {
+    this.validateObjectId(schoolId, 'school ID');
+    this.validateObjectId(academicSessionId, 'academic session ID');
+    this.validateObjectId(schoolMembershipId, 'membership ID');
+
+    await this.findSessionOrThrow(schoolId, academicSessionId);
+
+    return await this.studentEnrollmentsRepository.findActiveStudentEnrollment(
+      schoolId,
+      schoolMembershipId,
+      academicSessionId,
+    );
+  }
+  async findClassEnrollmentById(
     schoolId: string,
     academicSessionId: string,
     enrollmentId: string,
   ) {
     this.validateObjectId(schoolId, 'school ID');
     this.validateObjectId(academicSessionId, 'academic session ID');
-    this.validateObjectId(enrollmentId, 'enrolment ID');
+    this.validateObjectId(enrollmentId, 'class enrollment ID');
 
     await this.findSessionOrThrow(schoolId, academicSessionId);
 
-    const enrollment = await this.findEnrollmentOrThrow(
+    return await this.findEnrollmentOrThrow(
       schoolId,
       academicSessionId,
       enrollmentId,
     );
-
-    return enrollment;
   }
 
   async transferStudentEnrollment(
     schoolId: string,
     academicSessionId: string,
     enrollmentId: string,
+    schoolMembershipId: string,
     updateDto: UpdateStudentEnrollmentDto,
   ) {
     this.validateObjectId(schoolId, 'school ID');
     this.validateObjectId(academicSessionId, 'academic session ID');
-    this.validateObjectId(enrollmentId, 'enrolment ID');
-    this.validateObjectId(updateDto.classId, 'class ID');
+    this.validateObjectId(enrollmentId, 'class enrollment ID');
+    this.validateObjectId(schoolMembershipId, 'school membership ID');
+    this.validateObjectId(updateDto.classId, 'destination class ID');
 
-    const session = await this.findSessionOrThrow(schoolId, academicSessionId);
+    const academicSession = await this.findSessionOrThrow(
+      schoolId,
+      academicSessionId,
+    );
 
-    if (session.status === AcademicSessionStatus.COMPLETED) {
+    if (academicSession.status === AcademicSessionStatus.COMPLETED) {
       throw new BadRequestException({
         message:
           'Students cannot be transferred within a completed academic session.',
@@ -166,13 +255,25 @@ export class StudentEnrollmentsService {
       });
     }
 
-    const existingEnrollment = await this.findEnrollmentOrThrow(
+    const currentEnrollment = await this.findEnrollmentOrThrow(
       schoolId,
       academicSessionId,
       enrollmentId,
     );
 
-    if (existingEnrollment.status !== StudentEnrollmentStatus.ACTIVE) {
+    const enrolledStudent = currentEnrollment.students.find(
+      (student) => student.schoolMembershipId.toString() === schoolMembershipId,
+    );
+
+    if (!enrolledStudent) {
+      throw new NotFoundException({
+        message: 'The student was not found in this class enrollment.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (enrolledStudent.status !== ClassStudentEnrollmentStatus.ACTIVE) {
       throw new BadRequestException({
         message: 'Only active student enrolments can be transferred.',
         success: false,
@@ -180,7 +281,7 @@ export class StudentEnrollmentsService {
       });
     }
 
-    if (existingEnrollment.classId.toString() === updateDto.classId) {
+    if (currentEnrollment.classId.toString() === updateDto.classId) {
       throw new BadRequestException({
         message: 'The student is already enrolled in this class.',
         success: false,
@@ -188,20 +289,29 @@ export class StudentEnrollmentsService {
       });
     }
 
-    await this.findClassOrThrow(schoolId, updateDto.classId);
+    const destinationClass = await this.findClassOrThrow(
+      schoolId,
+      updateDto.classId,
+    );
+
+    const existingSubjects = enrolledStudent.subjectsOffered.map((subjectId) =>
+      subjectId.toString(),
+    );
+
+    this.validateStudentSubjects(existingSubjects, destinationClass.subjects);
 
     const newEnrollment =
       await this.studentEnrollmentsRepository.transferStudentEnrollment(
         schoolId,
         academicSessionId,
         enrollmentId,
+        schoolMembershipId,
+        updateDto.classId,
         {
-          schoolId: new Types.ObjectId(schoolId),
-          studentId: existingEnrollment.studentId,
-          schoolMembershipId: existingEnrollment.schoolMembershipId,
-          classId: new Types.ObjectId(updateDto.classId),
-          academicSessionId: new Types.ObjectId(academicSessionId),
-          status: StudentEnrollmentStatus.ACTIVE,
+          studentId: enrolledStudent.studentId,
+          schoolMembershipId: enrolledStudent.schoolMembershipId,
+          subjectsOffered: enrolledStudent.subjectsOffered,
+          status: ClassStudentEnrollmentStatus.ACTIVE,
           enrolledAt: new Date(),
           endedAt: null,
         },
@@ -214,21 +324,23 @@ export class StudentEnrollmentsService {
     schoolId: string,
     academicSessionId: string,
     enrollmentId: string,
+    schoolMembershipId: string,
     updateDto: UpdateStudentEnrollmentStatusDto,
   ) {
     this.validateObjectId(schoolId, 'school ID');
     this.validateObjectId(academicSessionId, 'academic session ID');
-    this.validateObjectId(enrollmentId, 'enrolment ID');
+    this.validateObjectId(enrollmentId, 'class enrollment ID');
+    this.validateObjectId(schoolMembershipId, 'school membership ID');
 
     if (
       ![
-        StudentEnrollmentStatus.COMPLETED,
-        StudentEnrollmentStatus.WITHDRAWN,
+        ClassStudentEnrollmentStatus.COMPLETED,
+        ClassStudentEnrollmentStatus.WITHDRAWN,
       ].includes(updateDto.status)
     ) {
       throw new BadRequestException({
         message:
-          'You can only complete or withdraw an active enrolment using this operation.',
+          'You can only complete or withdraw an active student enrolment using this operation.',
         success: false,
         status: 400,
       });
@@ -241,13 +353,14 @@ export class StudentEnrollmentsService {
         schoolId,
         academicSessionId,
         enrollmentId,
+        schoolMembershipId,
         updateDto.status,
       );
 
     if (!enrollment) {
       throw new ConflictException({
         message:
-          'This enrolment is no longer active. Please refresh and try again.',
+          'This student enrolment is no longer active. Please refresh and try again.',
         success: false,
         status: 409,
       });
@@ -256,30 +369,41 @@ export class StudentEnrollmentsService {
     return enrollment;
   }
 
-  async countStudentEnrollments(
-    schoolId: string,
-    academicSessionId?: string,
-    classId?: string,
-    status?: StudentEnrollmentStatus,
-  ) {
+  async countStudentEnrollments(schoolId: string, academicSessionId: string) {
     this.validateObjectId(schoolId, 'school ID');
 
-    if (academicSessionId) {
-      this.validateObjectId(academicSessionId, 'academic session ID');
-      await this.findSessionOrThrow(schoolId, academicSessionId);
-    }
-
-    if (classId) {
-      this.validateObjectId(classId, 'class ID');
-      await this.findClassOrThrow(schoolId, classId);
-    }
+    this.validateObjectId(academicSessionId, 'academic session ID');
+    await this.findSessionOrThrow(schoolId, academicSessionId);
 
     const total =
       await this.studentEnrollmentsRepository.countStudentEnrollments(
         schoolId,
         academicSessionId,
+      );
+
+    return {
+      success: true,
+      data: { total },
+    };
+  }
+  async countStudentEnrollmentsInAClass(
+    schoolId: string,
+    academicSessionId: string,
+    classId: string,
+  ) {
+    this.validateObjectId(schoolId, 'school ID');
+
+    this.validateObjectId(academicSessionId, 'academic session ID');
+    await this.findSessionOrThrow(schoolId, academicSessionId);
+
+    this.validateObjectId(classId, 'class ID');
+    await this.findClassOrThrow(schoolId, classId);
+
+    const total =
+      await this.studentEnrollmentsRepository.countStudentEnrollmentsInAClass(
+        schoolId,
+        academicSessionId,
         classId,
-        status,
       );
 
     return {
@@ -292,6 +416,51 @@ export class StudentEnrollmentsService {
     if (!isValidObjectId(id)) {
       throw new BadRequestException({
         message: `Invalid ${fieldName}.`,
+        success: false,
+        status: 400,
+      });
+    }
+  }
+
+  private validateSubjectsOffered(subjectsOffered?: string[]): void {
+    if (!Array.isArray(subjectsOffered) || subjectsOffered.length === 0) {
+      throw new BadRequestException({
+        message: 'Please select at least one subject for the student.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    for (const subjectId of subjectsOffered) {
+      this.validateObjectId(subjectId, 'subject ID');
+    }
+
+    const uniqueSubjects = new Set(subjectsOffered);
+
+    if (uniqueSubjects.size !== subjectsOffered.length) {
+      throw new BadRequestException({
+        message: 'Duplicate subjects are not allowed.',
+        success: false,
+        status: 400,
+      });
+    }
+  }
+
+  private validateStudentSubjects(
+    selectedSubjectIds: string[],
+    classSubjects: Types.ObjectId[],
+  ): void {
+    const classSubjectIds = new Set(
+      classSubjects.map((subjectId) => subjectId.toString()),
+    );
+
+    const invalidSubjects = selectedSubjectIds.filter(
+      (subjectId) => !classSubjectIds.has(subjectId),
+    );
+
+    if (invalidSubjects.length > 0) {
+      throw new BadRequestException({
+        message: 'One or more selected subjects are not offered by this class.',
         success: false,
         status: 400,
       });
@@ -335,7 +504,7 @@ export class StudentEnrollmentsService {
       throw new NotFoundException({
         message: 'Active student membership not found in this school.',
         success: false,
-        stauts: 404,
+        status: 404,
       });
     }
 
@@ -347,6 +516,14 @@ export class StudentEnrollmentsService {
       schoolId,
       classId,
     );
+
+    if (!schoolClass) {
+      throw new NotFoundException({
+        message: 'Class not found.',
+        success: false,
+        status: 404,
+      });
+    }
 
     if (!schoolClass.isActive) {
       throw new BadRequestException({
@@ -365,7 +542,7 @@ export class StudentEnrollmentsService {
     enrollmentId: string,
   ) {
     const enrollment =
-      await this.studentEnrollmentsRepository.findStudentEnrollmentById(
+      await this.studentEnrollmentsRepository.findClassEnrollmentById(
         schoolId,
         academicSessionId,
         enrollmentId,
@@ -373,7 +550,7 @@ export class StudentEnrollmentsService {
 
     if (!enrollment) {
       throw new NotFoundException({
-        message: 'Student enrolment not found.',
+        message: 'Class enrollment not found.',
         success: false,
         status: 404,
       });
