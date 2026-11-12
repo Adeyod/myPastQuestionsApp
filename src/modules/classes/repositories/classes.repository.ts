@@ -102,7 +102,7 @@ export class ClassesRepository {
         isActive: true,
       })
       .populate(
-        'teacherSubjectAssignments.subject teacherSubjectAssignments.teacher',
+        'subjects teacherSubjectAssignments.subject teacherSubjectAssignments.teacher',
       )
       .exec();
 
