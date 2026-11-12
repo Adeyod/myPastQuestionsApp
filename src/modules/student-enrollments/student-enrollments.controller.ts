@@ -166,6 +166,68 @@ export class StudentEnrollmentsController {
     return response;
   }
 
+  @Get('get-student-enrollments-in-academic-session-for-a-school')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Students enrolled for the session fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Get school enrolments in an academic session. All students enrolled for the academic session in the school.',
+    description:
+      'This is the endpoint that owner or school admin is going to use to Get students that are enrolled in a session.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Students enrolled for the session fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to Get students that are enrolled.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async findAllEnrollmentsOfASchoolInASession(
+    @CurrentSchool() school: SchoolDocument,
+    @Param('academicSessionId') academicSessionId: string,
+    @Query() queryDto: QueryWithPaginationDto,
+  ) {
+    const response =
+      await this.studentEnrollmentsService.findAllEnrollmentsOfASchoolInASession(
+        school._id.toString(),
+        academicSessionId,
+        queryDto,
+      );
+    return response;
+  }
+
   @Get('count-total-enrollments-in-a-session')
   @UseGuards(
     JwtAuthGuard,

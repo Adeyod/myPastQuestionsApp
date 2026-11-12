@@ -75,3 +75,9 @@ export function checkExpiration(startDate: Date): boolean {
 
   return now.getTime() > expirationTime;
 }
+
+export function capitalizeFirstLetter(payload: string): string {
+  const value = payload.charAt(0).toUpperCase() + payload.slice(1);
+
+  return value;
+}

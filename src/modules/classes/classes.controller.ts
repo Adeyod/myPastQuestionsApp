@@ -40,6 +40,8 @@ import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
 import type { SchoolDocument } from '../schools/schemas/schools.schema';
 import { Role } from '../users/schemas/user.schema';
+import { AddSubjectsToClassDto } from './dtos/add-subject-to-class.dto';
+import { RemoveSubjectsFromClassDto } from './dtos/remove-subjects-from-class.dto';
 
 @Controller('classes')
 export class ClassesController {
@@ -327,5 +329,125 @@ export class ClassesController {
       classId,
       updateClassStatusDto.isActive,
     );
+  }
+  @Patch('add-subjects-to-class/:classId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Subjects added to class successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Add new subjects to an existing class',
+    description:
+      'This endpoint is used to add new subjects or subjects that was not offered in a class before to the class.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Subjects added to class successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to add subject to class.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async addSubjectsToClass(
+    @Param('classId') classId: string,
+    @Body() addSubjectsToClassDto: AddSubjectsToClassDto,
+    @CurrentSchool() school: SchoolDocument,
+  ) {
+    const response = await this.classesService.addSubjectsToClass(
+      school._id.toString(),
+      classId,
+      addSubjectsToClassDto.subjects,
+    );
+
+    return response;
+  }
+  @Patch('remove-subjects-from-class/:classId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Subjects removed from class successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Remove subjects from an existing class',
+    description:
+      'This endpoint is used to remove subjects from an existing class.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Subjects removed from class successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to remove subjects from class.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async removeSubjectFromClass(
+    @Param('classId') classId: string,
+    @Body() removeSubjectsFromClassDto: RemoveSubjectsFromClassDto,
+    @CurrentSchool() school: SchoolDocument,
+  ) {
+    const response = await this.classesService.removeSubjectFromClass(
+      school._id.toString(),
+      classId,
+      removeSubjectsFromClassDto.subjects,
+    );
+
+    return response;
   }
 }

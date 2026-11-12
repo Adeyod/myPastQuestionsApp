@@ -395,6 +395,28 @@ export class SchoolMembershipsService {
     return result;
   }
 
+  async findSchoolMembersByRoleAndSchoolID(
+    schoolId: string,
+    role: SchoolRole,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    if (!Types.ObjectId.isValid(schoolId)) {
+      throw new BadRequestException({
+        message: 'Invalid school ID',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const response =
+      await this.schoolMembershipRepository.findSchoolMembersByRoleAndSchoolID(
+        schoolId,
+        role,
+        queryDto,
+      );
+    return response;
+  }
+
   async findByUser(userId: string) {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException({

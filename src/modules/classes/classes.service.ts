@@ -7,6 +7,7 @@ import {
 import { ClientSession, Types } from 'mongoose';
 
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { capitalizeFirstLetter } from '../../common/utils/helper';
 import { SchoolSubjectsService } from '../school-subjects/school-subjects.service';
 import { CreateClassDto } from './dtos/create-class.dto';
 import { UpdateClassDto } from './dtos/update-class.dto';
@@ -229,6 +230,124 @@ export class ClassesService {
       message: `Class ${isActive ? 'activated' : 'deactivated'} successfully.`,
       data: updatedClass,
     };
+  }
+
+  async addSubjectsToClass(
+    schoolId: string,
+    classId: string,
+    subjectIds: string[],
+  ) {
+    const classExist = await this.classesRepository.findClassById(
+      schoolId,
+      classId,
+    );
+
+    if (!classExist) {
+      throw new NotFoundException({
+        message: 'Class not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const duplicateIds = new Set();
+    const uniqueIds = new Set();
+
+    subjectIds.forEach((s) => {
+      if (uniqueIds.has(s)) {
+        duplicateIds.add(s);
+      } else {
+        uniqueIds.add(s);
+      }
+    });
+
+    if (duplicateIds.size > 0) {
+      throw new ConflictException({
+        message: 'You can not save a subject twice in a class.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    const findManySubjects = await this.subjectsService.getSchoolSubjectsByIds(
+      schoolId,
+      subjectIds,
+    );
+
+    const subjectObjectIds = findManySubjects.map((sub) => {
+      const id = sub._id;
+      const name = sub.subjectName;
+
+      return {
+        id,
+        name,
+      };
+    });
+
+    const alreadyOfferedSubjects = subjectObjectIds.filter((subject) =>
+      classExist.subjects.some((id) => id.equals(subject.id)),
+    );
+
+    if (alreadyOfferedSubjects.length > 0) {
+      const subjectName = alreadyOfferedSubjects.map((sub) =>
+        capitalizeFirstLetter(sub.name),
+      );
+      throw new ConflictException({
+        message: `The following subjects: (${subjectName.join(', ')}), are already been offered in the class.`,
+        success: false,
+        status: 409,
+      });
+    }
+
+    subjectObjectIds.forEach((subject) => {
+      classExist.subjects.push(subject.id);
+    });
+
+    await classExist.save();
+    return classExist;
+  }
+  async removeSubjectFromClass(
+    schoolId: string,
+    classId: string,
+    subjectIds: string[],
+  ) {
+    const classExist = await this.classesRepository.findClassById(
+      schoolId,
+      classId,
+    );
+
+    if (!classExist) {
+      throw new NotFoundException({
+        message: 'Class not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const existingSubjectIdsSet = new Set(
+      classExist.subjects.map((subId) => subId.toString()),
+    );
+
+    const missingSubjects = subjectIds.filter(
+      (subId) => !existingSubjectIdsSet.has(subId),
+    );
+
+    if (missingSubjects.length > 0) {
+      throw new NotFoundException({
+        message: `The following subjects are not found in this class: ${missingSubjects.join(', ')}.`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    const subjectIdsSet = new Set(subjectIds);
+
+    classExist.subjects = classExist.subjects.filter(
+      (id) => !subjectIdsSet.has(id.toString()),
+    );
+
+    await classExist.save();
+    return classExist;
   }
 
   private validateObjectId(id: string, fieldName: string): void {

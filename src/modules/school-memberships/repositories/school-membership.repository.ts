@@ -125,6 +125,65 @@ export class SchoolMembershipRepository {
 
     return response;
   }
+  async findSchoolMembersByRoleAndSchoolID(
+    schoolId: string,
+    role: SchoolRole,
+    queryDto: QueryWithPaginationDto,
+  ): Promise<{
+    schoolMembershipObj: SchoolMembershipDocument[];
+    totalPages: number;
+    totalCount: number;
+  }> {
+    const id = new Types.ObjectId(schoolId);
+
+    const { page, limit, searchParams } = queryDto;
+
+    let query = this.schoolMembershipModel.find({ schoolId: id, role });
+
+    if (searchParams) {
+      const regex = new RegExp(searchParams, 'i');
+      query = query.where({
+        $or: [{ schoolName: { $regex: regex } }],
+      });
+    }
+    const count = await query.clone().countDocuments();
+    let pages = 0;
+
+    if (page !== undefined && limit !== undefined && count !== 0) {
+      const offset = (page - 1) * limit;
+
+      query = query.skip(offset);
+      pages = Math.ceil(count / limit);
+
+      if (page > pages) {
+        throw new NotFoundException({
+          message: 'Page not found.',
+          success: false,
+          status: 404,
+        });
+      }
+    }
+
+    const schoolMemberships = await query
+      .sort({ createdAt: -1 })
+      .populate('userId');
+
+    if (schoolMemberships.length === 0) {
+      throw new NotFoundException({
+        message: 'Memberships not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const response = {
+      schoolMembershipObj: schoolMemberships,
+      totalPages: pages,
+      totalCount: count,
+    };
+
+    return response;
+  }
 
   async findByUser(userId: string): Promise<SchoolMembershipDocument[]> {
     const response = await this.schoolMembershipModel
