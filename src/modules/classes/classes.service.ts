@@ -325,7 +325,10 @@ export class ClassesService {
     }
 
     const existingSubjectIdsSet = new Set(
-      classExist.subjects.map((subId) => subId.toString()),
+      classExist.subjects.map((sub) => {
+        const id = (sub as any)?._id || sub;
+        return id.toString();
+      }),
     );
 
     const missingSubjects = subjectIds.filter(
@@ -342,9 +345,10 @@ export class ClassesService {
 
     const subjectIdsSet = new Set(subjectIds);
 
-    classExist.subjects = classExist.subjects.filter(
-      (id) => !subjectIdsSet.has(id.toString()),
-    );
+    classExist.subjects = classExist.subjects.filter((sub) => {
+      const id = (sub as any)?._id || sub;
+      return !subjectIdsSet.has(id.toString());
+    });
 
     await classExist.save();
     return classExist;
