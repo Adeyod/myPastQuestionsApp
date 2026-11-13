@@ -443,10 +443,13 @@ export class StudentEnrollmentsService {
 
   private validateStudentSubjects(
     selectedSubjectIds: string[],
-    classSubjects: Types.ObjectId[],
+    classSubjects: any[],
   ): void {
     const classSubjectIds = new Set(
-      classSubjects.map((subjectId) => subjectId.toString()),
+      classSubjects.map((subject) => {
+        const id = subject?._id || subject;
+        return id.toString();
+      }),
     );
 
     const invalidSubjects = selectedSubjectIds.filter(
