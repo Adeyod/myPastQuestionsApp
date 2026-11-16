@@ -251,8 +251,7 @@ export class SchoolsService {
         throw new ForbiddenException({
           success: false,
           message: 'You are not authorized to access this dashboard.',
-          error: 'Forbidden',
-          statusCode: 403,
+          status: 403,
         });
     }
 

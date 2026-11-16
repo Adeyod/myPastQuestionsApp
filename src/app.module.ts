@@ -47,6 +47,8 @@ import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
 import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
 import { AcademicPeriodsModule } from './modules/academic-periods/academic-periods.module';
 import { TeachingAssignmentsModule } from './modules/teaching-assignments/teaching-assignments.module';
+import { SchoolAssessmentMarkingsModule } from './modules/school-assessment-markings/school-assessment-markings.module';
+import { SchoolPracticesModule } from './modules/school-practices/school-practices.module';
 
 @Module({
   imports: [
@@ -155,6 +157,8 @@ import { TeachingAssignmentsModule } from './modules/teaching-assignments/teachi
     AcademicSessionsModule,
     AcademicPeriodsModule,
     TeachingAssignmentsModule,
+    SchoolAssessmentMarkingsModule,
+    SchoolPracticesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

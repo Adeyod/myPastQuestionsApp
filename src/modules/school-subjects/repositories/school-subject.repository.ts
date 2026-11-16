@@ -155,6 +155,7 @@ export class SchoolSubjectsRepository {
       .findOne({
         _id: new Types.ObjectId(subjectId),
         schoolId: new Types.ObjectId(schoolId),
+        isActive: true,
       })
       .exec();
 

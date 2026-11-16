@@ -150,4 +150,26 @@ export class TeachingAssignmentsRepository {
 
     return response;
   }
+
+  async findActiveTeachingAssignmentsForClasses(
+    schoolId: Types.ObjectId,
+    teacherMembershipId: Types.ObjectId,
+    subjectId: Types.ObjectId,
+    classIds: Types.ObjectId[],
+    academicSessionId: Types.ObjectId,
+  ): Promise<TeachingAssignmentDocument[]> {
+    const response = await this.teachingAssignmentModel
+      .find({
+        schoolId,
+        teacherMembershipId,
+        subjectId,
+        classId: { $in: classIds },
+        academicSessionId,
+        isActive: true,
+      })
+      .select('classId')
+      .exec();
+
+    return response;
+  }
 }

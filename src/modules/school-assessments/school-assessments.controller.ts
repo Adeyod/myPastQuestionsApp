@@ -1,0 +1,387 @@
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
+
+import { SchoolAssessmentsService } from './school-assessments.service';
+
+import { DeviceSessionGuard } from '../../common/guards/device-session.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
+import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
+
+import { CurrentSchoolMembership } from '../../common/decorators/current-school-membership.decorator';
+import { CurrentSchool } from '../../common/decorators/current-school.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { SchoolRoles } from '../../common/decorators/school-roles.decorator';
+
+import { SuccessMessage } from '../../common/decorators/success-message.decorator';
+import { ApiResponseDto } from '../../common/dto/api-response.dto';
+import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import {
+  type SchoolMembershipDocument,
+  SchoolRole,
+} from '../school-memberships/schemas/school-membership.schema';
+import { type SchoolDocument } from '../schools/schemas/schools.schema';
+import { Role } from '../users/schemas/user.schema';
+import { CreateAssessmentDto } from './dtos/create-assessment.dto';
+import { QueryAssessmentsDto } from './dtos/query-assessments.dto';
+import { UpdateAssessmentStatusDto } from './dtos/update-assessment-status.dto';
+
+@Controller('school/assessments')
+export class SchoolAssessmentsController {
+  constructor(
+    private readonly schoolAssessmentsService: SchoolAssessmentsService,
+  ) {}
+
+  @Post('create-assessment')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Assessment created successfully.')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create an assessment with multiple questions.',
+    description:
+      'This is the endpoint that class subject teacher is going to use to Create an assessment with multiple questions.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assessment created successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to create assessment.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async createAssessment(
+    @CurrentSchool() school: SchoolDocument,
+    @CurrentSchoolMembership()
+    membership: SchoolMembershipDocument,
+    @Body() dto: CreateAssessmentDto,
+  ) {
+    const response = await this.schoolAssessmentsService.createAssessment(
+      school._id.toString(),
+      membership._id.toString(),
+      dto,
+    );
+
+    return response;
+  }
+
+  @Get('get-all-assessments-of-a-school-in-a-session/:academicSessionId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Assessments fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get school assessments in a session',
+    description:
+      'This is the endpoint that owner and admin can use to get all the assessment of a school in a session.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assessments fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch assessments.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllSchoolAssessmentsPerSession(
+    @Param('academicSessionId') academicSessionId: string,
+    @CurrentSchool() school: SchoolDocument,
+    @CurrentSchoolMembership()
+    membership: SchoolMembershipDocument,
+    @Query() query: QueryAssessmentsDto,
+  ) {
+    const response =
+      await this.schoolAssessmentsService.getAllSchoolAssessmentsPerSession(
+        academicSessionId,
+        school._id.toString(),
+        query,
+      );
+
+    return response;
+  }
+  @Get(
+    'get-all-assessments-of-class-subject-in-a-session/:academicSessionId/:classId/:subjectId',
+  )
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(
+    SchoolRole.OWNER,
+    SchoolRole.ADMIN,
+    SchoolRole.STUDENT,
+    SchoolRole.TEACHER,
+  )
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Subject Assessments fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get school assessments in a session',
+    description:
+      'This is the endpoint that student, subject teacher, owner and admin can use to get all the class subject assessment of a school in a session.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Subject Assessments fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch assessments.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllClassSubjectAssessmentsPerSession(
+    @Param('academicSessionId') academicSessionId: string,
+    @Param('subjectId') subjectId: string,
+    @Param('classId') classId: string,
+    @CurrentSchool() school: SchoolDocument,
+    @CurrentSchoolMembership()
+    membership: SchoolMembershipDocument,
+    @Query() query: QueryWithPaginationDto,
+  ) {
+    const response =
+      await this.schoolAssessmentsService.getAllClassSubjectAssessmentsPerSession(
+        academicSessionId,
+        subjectId,
+        classId,
+        school._id.toString(),
+        query,
+        membership,
+      );
+
+    return response;
+  }
+
+  @Get(
+    'get-assessment-by-assessmentId-classId-academicSessionId/:academicSessionId/:classId/:assessmentId',
+  )
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(
+    SchoolRole.OWNER,
+    SchoolRole.ADMIN,
+    SchoolRole.STUDENT,
+    SchoolRole.TEACHER,
+  )
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Subject Assessment fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get an assessment by ID in a session',
+    description:
+      'This is the endpoint that student, subject teacher, owner and admin can use to Get an assessment by ID in a session.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Subject Assessment fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch assessment.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAssessmentByAssessmentId(
+    @CurrentSchool() school: SchoolDocument,
+    @Param('academicSessionId') academicSessionId: string,
+    @Param('assessmentId') assessmentId: string,
+    @Param('classId') classId: string,
+    @CurrentSchoolMembership()
+    membership: SchoolMembershipDocument,
+  ) {
+    const response =
+      await this.schoolAssessmentsService.getAssessmentByAssessmentId(
+        school._id.toString(),
+        assessmentId,
+        membership,
+        academicSessionId,
+        classId,
+      );
+
+    return response;
+  }
+
+  @Patch('update-assessment-status/:assessmentId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Assessment archived successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Archive an assessment',
+    description:
+      'This is the endpoint that owner and admin can use to Archive an assessment.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assessment archived successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to archive assessment.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async updateAssessmentStatus(
+    @CurrentSchool() school: SchoolDocument,
+    @Param('assessmentId') assessmentId: string,
+    @Body() dto: UpdateAssessmentStatusDto,
+  ) {
+    const response = await this.schoolAssessmentsService.updateAssessmentStatus(
+      school._id.toString(),
+      assessmentId,
+      dto,
+    );
+
+    return response;
+  }
+}

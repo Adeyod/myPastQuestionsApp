@@ -60,8 +60,7 @@ export class SchoolSubjectsService {
         throw new ConflictException({
           success: false,
           message: 'A subject with this code already exists in this school.',
-          error: 'Conflict',
-          statusCode: 409,
+          status: 409,
         });
       }
 
@@ -106,8 +105,7 @@ export class SchoolSubjectsService {
       throw new NotFoundException({
         success: false,
         message: 'Subject not found.',
-        error: 'Not Found',
-        statusCode: 404,
+        status: 404,
       });
     }
 
@@ -125,8 +123,7 @@ export class SchoolSubjectsService {
       throw new NotFoundException({
         success: false,
         message: 'Subjects not found.',
-        error: 'Not Found',
-        statusCode: 404,
+        status: 404,
       });
     }
 
@@ -156,8 +153,7 @@ export class SchoolSubjectsService {
       throw new NotFoundException({
         success: false,
         message: 'Subject not found.',
-        error: 'Not Found',
-        statusCode: 404,
+        status: 404,
       });
     }
 
@@ -175,8 +171,7 @@ export class SchoolSubjectsService {
       throw new BadRequestException({
         success: false,
         message: 'Provide at least one field to update.',
-        error: 'Bad Request',
-        statusCode: 400,
+        status: 400,
       });
     }
 
@@ -203,8 +198,7 @@ export class SchoolSubjectsService {
         throw new NotFoundException({
           success: false,
           message: 'Subject not found.',
-          error: 'Not Found',
-          statusCode: 404,
+          status: 404,
         });
       }
 
@@ -218,8 +212,7 @@ export class SchoolSubjectsService {
         throw new ConflictException({
           success: false,
           message: 'A subject with this code already exists in this school.',
-          error: 'Conflict',
-          statusCode: 409,
+          status: 409,
         });
       }
 
@@ -244,8 +237,7 @@ export class SchoolSubjectsService {
       throw new NotFoundException({
         success: false,
         message: 'Subject not found.',
-        error: 'Not Found',
-        statusCode: 404,
+        status: 404,
       });
     }
 
@@ -261,7 +253,7 @@ export class SchoolSubjectsService {
         success: false,
         message: `Invalid ${fieldName}.`,
         error: 'Bad Request',
-        statusCode: 400,
+        status: 400,
       });
     }
   }

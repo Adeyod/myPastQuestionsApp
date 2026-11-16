@@ -114,12 +114,36 @@ export class ClassesService {
       throw new NotFoundException({
         success: false,
         message: 'Class not found.',
-        error: 'Not Found',
-        statusCode: 404,
+        status: 404,
       });
     }
 
     return schoolClass;
+  }
+  async getSchoolActiveClassesByIds(
+    schoolId: Types.ObjectId,
+    classIds: Types.ObjectId[],
+    session: ClientSession,
+  ) {
+    classIds.map((s) => {
+      this.validateObjectId(s.toString(), 'class ID');
+    });
+
+    const schoolClasses = await this.classesRepository.findActiveClassesByIds(
+      schoolId,
+      classIds,
+      session,
+    );
+
+    if (!schoolClasses || schoolClasses.length === 0) {
+      throw new NotFoundException({
+        success: false,
+        message: 'Classes not found.',
+        status: 404,
+      });
+    }
+
+    return schoolClasses;
   }
   async getSchoolClassById(schoolId: string, classId: string) {
     this.validateObjectId(classId, 'class ID');
@@ -133,8 +157,7 @@ export class ClassesService {
       throw new NotFoundException({
         success: false,
         message: 'Class not found.',
-        error: 'Not Found',
-        statusCode: 404,
+        status: 404,
       });
     }
 
@@ -152,8 +175,7 @@ export class ClassesService {
       throw new BadRequestException({
         success: false,
         message: 'Provide at least one field to update.',
-        error: 'Bad Request',
-        statusCode: 400,
+        status: 400,
       });
     }
 
@@ -180,8 +202,7 @@ export class ClassesService {
         throw new NotFoundException({
           success: false,
           message: 'Class not found.',
-          error: 'Not Found',
-          statusCode: 404,
+          status: 404,
         });
       }
 
@@ -195,8 +216,7 @@ export class ClassesService {
         throw new ConflictException({
           success: false,
           message: 'A class with this code already exists in this school.',
-          error: 'Conflict',
-          statusCode: 409,
+          status: 409,
         });
       }
 
@@ -221,8 +241,7 @@ export class ClassesService {
       throw new NotFoundException({
         success: false,
         message: 'Class not found.',
-        error: 'Not Found',
-        statusCode: 404,
+        status: 404,
       });
     }
 
@@ -359,8 +378,7 @@ export class ClassesService {
       throw new BadRequestException({
         success: false,
         message: `Invalid ${fieldName}.`,
-        error: 'Bad Request',
-        statusCode: 400,
+        status: 400,
       });
     }
   }

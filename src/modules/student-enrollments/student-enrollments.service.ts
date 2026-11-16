@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -188,6 +189,71 @@ export class StudentEnrollmentsService {
     return result;
   }
 
+  async validateStudentSubjectEnrollment(
+    schoolId: string,
+    schoolMembershipId: string,
+    classId: string,
+    subjectId: string,
+    academicSessionId: string,
+  ): Promise<void> {
+    this.validateObjectId(schoolId, 'school ID');
+    this.validateObjectId(schoolMembershipId, 'school membership ID');
+    this.validateObjectId(classId, 'class ID');
+    this.validateObjectId(subjectId, 'subject ID');
+    this.validateObjectId(academicSessionId, 'academic session ID');
+
+    const enrollment =
+      await this.studentEnrollmentsRepository.findActiveStudentEnrollment(
+        schoolId,
+        schoolMembershipId,
+        academicSessionId,
+      );
+
+    if (!enrollment) {
+      throw new NotFoundException({
+        message:
+          'You are not actively enrolled in a class for this academic session.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const studentEnrollment = enrollment.students.find(
+      (student) =>
+        student.schoolMembershipId.toString() === schoolMembershipId &&
+        student.status === ClassStudentEnrollmentStatus.ACTIVE,
+    );
+
+    if (!studentEnrollment) {
+      throw new NotFoundException({
+        message:
+          'Your active student enrollment could not be found for this academic session.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (enrollment.classId.toString() !== classId) {
+      throw new ForbiddenException({
+        message: 'You are not enrolled in the class for this assessment.',
+        success: false,
+        status: 403,
+      });
+    }
+
+    const isTakingSubject = studentEnrollment.subjectsOffered.some(
+      (enrolledSubjectId) => enrolledSubjectId.toString() === subjectId,
+    );
+
+    if (!isTakingSubject) {
+      throw new ForbiddenException({
+        message: 'You are not enrolled to take this subject in this class.',
+        success: false,
+        status: 403,
+      });
+    }
+  }
+
   async findActiveStudentEnrollment(
     schoolId: string,
     academicSessionId: string,
@@ -199,11 +265,22 @@ export class StudentEnrollmentsService {
 
     await this.findSessionOrThrow(schoolId, academicSessionId);
 
-    return await this.studentEnrollmentsRepository.findActiveStudentEnrollment(
-      schoolId,
-      schoolMembershipId,
-      academicSessionId,
-    );
+    const response =
+      await this.studentEnrollmentsRepository.findActiveStudentEnrollment(
+        schoolId,
+        schoolMembershipId,
+        academicSessionId,
+      );
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Student enrollment not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
   }
   async findClassEnrollmentById(
     schoolId: string,

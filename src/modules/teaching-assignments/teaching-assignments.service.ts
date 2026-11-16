@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -207,6 +208,63 @@ export class TeachingAssignmentsService {
     }
 
     return deactivatedAssignment;
+  }
+
+  async validateTeacherAssignments(
+    schoolId: string,
+    teacherMembershipId: string,
+    subjectId: string,
+    classIds: string[],
+    academicSessionId: string,
+  ): Promise<void> {
+    this.validateObjectId(schoolId, 'School ID');
+
+    this.validateObjectId(teacherMembershipId, 'Teacher membership ID');
+
+    this.validateObjectId(subjectId, 'Subject ID');
+
+    this.validateObjectId(academicSessionId, 'Academic session ID');
+
+    if (!classIds.length) {
+      throw new BadRequestException({
+        message: 'At least one class must be selected.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    classIds.forEach((classId) => {
+      this.validateObjectId(classId, 'Class ID');
+    });
+
+    const uniqueClassIds = [...new Set(classIds.map((id) => id.toString()))];
+
+    const assignments =
+      await this.teachingAssignmentsRepository.findActiveTeachingAssignmentsForClasses(
+        new Types.ObjectId(schoolId),
+        new Types.ObjectId(teacherMembershipId),
+        new Types.ObjectId(subjectId),
+        uniqueClassIds.map((id) => new Types.ObjectId(id)),
+        new Types.ObjectId(academicSessionId),
+      );
+
+    const assignedClassIds = new Set(
+      assignments.map((assignment) => assignment.classId.toString()),
+    );
+
+    const unassignedClassIds = uniqueClassIds.filter(
+      (classId) => !assignedClassIds.has(classId),
+    );
+
+    if (unassignedClassIds.length > 0) {
+      throw new ForbiddenException({
+        message:
+          'You are not assigned to teach this subject in one or more of the selected classes.',
+        unassignedClassIds,
+        success: false,
+        status: 403,
+      });
+    }
   }
 
   private validateObjectIds(data: {

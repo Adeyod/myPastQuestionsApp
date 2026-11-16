@@ -128,6 +128,22 @@ export class ClassesRepository {
     return response;
   }
 
+  async findActiveClassesByIds(
+    schoolId: Types.ObjectId,
+    classIds: Types.ObjectId[],
+    session: ClientSession,
+  ): Promise<SchoolClassDocument[] | null> {
+    const response = await this.schoolClassModel
+      .find({
+        _id: { $in: classIds },
+        schoolId,
+        isActive: true,
+      })
+      .session(session);
+
+    return response;
+  }
+
   async findClassByClassCode(
     schoolId: Types.ObjectId,
     classCode: string,
