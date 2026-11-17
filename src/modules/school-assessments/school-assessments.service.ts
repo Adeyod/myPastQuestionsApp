@@ -59,10 +59,6 @@ export class SchoolAssessmentsService {
       'Academic session ID',
     );
 
-    if (dto.academicPeriodId) {
-      this.validateObjectId(dto.academicPeriodId, 'Academic period ID');
-    }
-
     const classIds = this.normalizeClassIds(dto.classIds);
 
     this.validateSchedule(dto);
@@ -156,7 +152,6 @@ export class SchoolAssessmentsService {
   }
 
   async getAllSchoolAssessmentsPerSession(
-    academicSessionId: string,
     schoolId: string,
     query: QueryAssessmentsDto,
   ) {
@@ -170,14 +165,15 @@ export class SchoolAssessmentsService {
       this.validateObjectId(query.classId, 'Class ID');
     }
 
-    if (query.academicSessionId) {
-      this.validateObjectId(query.academicSessionId, 'Academic session ID');
-    }
+    const academicSessionId = this.validateObjectId(
+      query.academicSessionId,
+      'Academic session ID',
+    );
 
     const sessionExist =
       await this.academicSessionService.getAcademicSessionById(
         schoolId,
-        academicSessionId,
+        academicSessionId.toString(),
       );
 
     const response =
@@ -217,7 +213,7 @@ export class SchoolAssessmentsService {
       );
     }
 
-    if ((membership.role = SchoolRole.STUDENT)) {
+    if (membership.role === SchoolRole.STUDENT) {
       await this.studentEnrollmentsService.validateStudentSubjectEnrollment(
         schoolId,
         membership._id.toString(),
@@ -282,7 +278,7 @@ export class SchoolAssessmentsService {
       );
     }
 
-    if ((membership.role = SchoolRole.STUDENT)) {
+    if (membership.role === SchoolRole.STUDENT) {
       await this.studentEnrollmentsService.validateStudentSubjectEnrollment(
         schoolId,
         membership._id.toString(),

@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsMongoId, IsOptional } from 'class-validator';
 
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
@@ -18,10 +18,9 @@ export class QueryAssessmentsDto extends QueryWithPaginationDto {
   @IsMongoId()
   classId?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty()
   @IsMongoId()
-  academicSessionId?: string;
+  academicSessionId!: string;
 
   @ApiPropertyOptional({ enum: AssessmentType })
   @IsOptional()

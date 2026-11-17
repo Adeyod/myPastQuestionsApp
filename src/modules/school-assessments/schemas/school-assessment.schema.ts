@@ -127,12 +127,12 @@ export class SchoolAssessment {
   })
   academicSessionId!: Types.ObjectId;
 
-  @Prop({
-    type: Types.ObjectId,
-    ref: 'AcademicPeriod',
-    default: null,
-  })
-  academicPeriodId?: Types.ObjectId | null;
+  // @Prop({
+  //   type: Types.ObjectId,
+  //   ref: 'AcademicPeriod',
+  //   default: null,
+  // })
+  // academicPeriodId?: Types.ObjectId | null;
 
   @Prop({ type: String, required: true, trim: true })
   title!: string;

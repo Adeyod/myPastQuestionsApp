@@ -111,7 +111,7 @@ export class SchoolAssessmentsController {
     return response;
   }
 
-  @Get('get-all-assessments-of-a-school-in-a-session/:academicSessionId')
+  @Get('get-all-assessments-of-a-school-in-a-session')
   @UseGuards(
     JwtAuthGuard,
     DeviceSessionGuard,
@@ -159,7 +159,6 @@ export class SchoolAssessmentsController {
     description: 'Too many requests. Rate limit exceeded',
   })
   async getAllSchoolAssessmentsPerSession(
-    @Param('academicSessionId') academicSessionId: string,
     @CurrentSchool() school: SchoolDocument,
     @CurrentSchoolMembership()
     membership: SchoolMembershipDocument,
@@ -167,7 +166,6 @@ export class SchoolAssessmentsController {
   ) {
     const response =
       await this.schoolAssessmentsService.getAllSchoolAssessmentsPerSession(
-        academicSessionId,
         school._id.toString(),
         query,
       );
@@ -1131,4 +1129,9 @@ export class SchoolAssessmentsController {
 }
   classId: "6af43da9718344bf7ca92e3e"
   teacherId: "6af43ebad06e76c3a1c10053"
+  "teacher email": "gbolagade@gmail.com",
+  "owner email": "omoklazik@gmail.com",
+
+  owner: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWVjNDdlM2E5NjRkZGJiOWIwYmVlYzYiLCJlbWFpbCI6Im9tb2tsYXppa0BnbWFpbC5jb20iLCJyb2xlIjoiVVNFUiIsInBsYW5zIjpbXSwiaWF0IjoxNzk0ODkzNjQwLCJleHAiOjE3OTUxNTI4NDB9.5hF-UT0Hmf3q98U9xqmuDVyFKUpmzNwd8ZPu9SSl7ss"
+
   */

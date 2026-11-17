@@ -30,9 +30,9 @@ export class SchoolAssessmentsRepository {
       subjectId: new Types.ObjectId(payload.subjectId),
       classIds: payload.classIds.map((id) => new Types.ObjectId(id)),
       academicSessionId: new Types.ObjectId(payload.academicSessionId),
-      academicPeriodId: payload.academicPeriodId
-        ? new Types.ObjectId(payload.academicPeriodId)
-        : null,
+      // academicPeriodId: payload.academicPeriodId
+      //   ? new Types.ObjectId(payload.academicPeriodId)
+      //   : null,
       title: payload.title.trim(),
       description: payload.description?.trim() ?? '',
       instructions: payload.instructions?.trim() ?? '',
