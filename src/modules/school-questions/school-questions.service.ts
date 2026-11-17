@@ -182,7 +182,7 @@ export class SchoolQuestionsService {
     classId: string,
     quantity: number,
   ) {
-    if (quantity > 0) {
+    if (quantity <= 0) {
       throw new BadRequestException({
         message: 'Quantity is supposed to be greater than 0',
         success: false,
@@ -224,7 +224,10 @@ export class SchoolQuestionsService {
         quantity,
       );
 
-    return response;
+    return {
+      questions: response,
+      totalNoOfQuestionsFetched: response.length,
+    };
   }
 
   async getQuestionById(
@@ -244,6 +247,16 @@ export class SchoolQuestionsService {
         membership._id.toString(),
         classId,
         subjectId,
+        academicSessionId,
+      );
+    }
+
+    if (membership.role === SchoolRole.TEACHER) {
+      await this.teachingAssignmentsService.validateTeacherAssignments(
+        schoolId,
+        membership._id.toString(),
+        subjectId,
+        [classId],
         academicSessionId,
       );
     }
@@ -372,6 +385,127 @@ export class SchoolQuestionsService {
     return response;
   }
 
+  // private validateQuestions(questions: CreateSchoolQuestionItemDto[]) {
+  //   if (!Array.isArray(questions) || questions.length === 0) {
+  //     throw new BadRequestException({
+  //       message: 'At least one question must be supplied.',
+  //       success: false,
+  //       status: 400,
+  //     });
+  //   }
+
+  //   for (const [index, question] of questions.entries()) {
+  //     const label = `Question ${index + 1}`;
+
+  //     if (!question.questionText?.trim()) {
+  //       throw new BadRequestException({
+  //         message: `${label}: question text is required.`,
+  //         success: false,
+  //         status: 400,
+  //       });
+  //     }
+
+  //     const options = question.options ?? [];
+  //     const optionKeys = options.map((option) => option.key);
+
+  //     if (new Set(optionKeys).size !== optionKeys.length) {
+  //       throw new BadRequestException({
+  //         message: `${label}: option keys must be unique.`,
+  //         success: false,
+  //         status: 400,
+  //       });
+  //     }
+
+  //     if (
+  //       [
+  //         SchoolQuestionType.SINGLE_CHOICE,
+  //         SchoolQuestionType.MULTIPLE_CHOICE,
+  //       ].includes(question.questionType)
+  //     ) {
+  //       if (options.length < 2) {
+  //         throw new BadRequestException({
+  //           message: `${label}: at least two options are required.`,
+  //           success: false,
+  //           status: 400,
+  //         });
+  //       }
+
+  //       if (
+  //         options.some((option) => !option.key?.trim() || !option.text?.trim())
+  //       ) {
+  //         throw new BadRequestException({
+  //           message: `${label}: every option must have a key and text.`,
+  //           success: false,
+  //           status: 400,
+  //         });
+  //       }
+  //     } else if (options.length > 0) {
+  //       throw new BadRequestException({
+  //         message: `${label}: options are not supported for this question type.`,
+  //         success: false,
+  //         status: 400,
+  //       });
+  //     }
+
+  //     const answerKey = question.answerKey;
+
+  //     if (!answerKey) {
+  //       continue;
+  //     }
+
+  //     if (question.questionType === SchoolQuestionType.SINGLE_CHOICE) {
+  //       if (
+  //         !answerKey.correctOptionKey ||
+  //         !optionKeys.includes(answerKey.correctOptionKey)
+  //       ) {
+  //         throw new BadRequestException({
+  //           message: `${label}: the correct option must match one of the supplied options.`,
+  //           success: false,
+  //           status: 400,
+  //         });
+  //       }
+  //     }
+
+  //     if (question.questionType === SchoolQuestionType.MULTIPLE_CHOICE) {
+  //       const correctKeys = answerKey.correctOptionKeys ?? [];
+
+  //       if (
+  //         correctKeys.length === 0 ||
+  //         new Set(correctKeys).size !== correctKeys.length ||
+  //         correctKeys.some((key) => !optionKeys.includes(key))
+  //       ) {
+  //         throw new BadRequestException({
+  //           message: `${label}: provide valid, unique correct option keys.`,
+  //           success: false,
+  //           status: 400,
+  //         });
+  //       }
+  //     }
+
+  //     if (
+  //       question.questionType === SchoolQuestionType.TRUE_FALSE &&
+  //       typeof answerKey.correctBoolean !== 'boolean'
+  //     ) {
+  //       throw new BadRequestException({
+  //         message: `${label}: a true/false answer key is required.`,
+  //         success: false,
+  //         status: 400,
+  //       });
+  //     }
+
+  //     if (
+  //       question.questionType === SchoolQuestionType.SHORT_ANSWER &&
+  //       (!answerKey.acceptedAnswers || answerKey.acceptedAnswers.length === 0)
+  //     ) {
+  //       throw new BadRequestException({
+  //         message: `${label}: provide at least one accepted answer.`,
+  //         success: false,
+  //         status: 400,
+  //       });
+  //     }
+  //   }
+  // }
+
   private validateQuestions(questions: CreateSchoolQuestionItemDto[]) {
     if (!Array.isArray(questions) || questions.length === 0) {
       throw new BadRequestException({
@@ -403,39 +537,86 @@ export class SchoolQuestionsService {
         });
       }
 
-      if (
-        [
-          SchoolQuestionType.SINGLE_CHOICE,
-          SchoolQuestionType.MULTIPLE_CHOICE,
-        ].includes(question.questionType)
-      ) {
-        if (options.length < 2) {
-          throw new BadRequestException({
-            message: `${label}: at least two options are required.`,
-            success: false,
-            status: 400,
-          });
+      // Validate options according to question type.
+      switch (question.questionType) {
+        case SchoolQuestionType.SINGLE_CHOICE:
+        case SchoolQuestionType.MULTIPLE_CHOICE: {
+          if (options.length < 2) {
+            throw new BadRequestException({
+              message: `${label}: at least two options are required.`,
+              success: false,
+              status: 400,
+            });
+          }
+
+          if (
+            options.some(
+              (option) => !option.key?.trim() || !option.text?.trim(),
+            )
+          ) {
+            throw new BadRequestException({
+              message: `${label}: every option must have a key and text.`,
+              success: false,
+              status: 400,
+            });
+          }
+
+          break;
         }
 
-        if (
-          options.some((option) => !option.key?.trim() || !option.text?.trim())
-        ) {
+        case SchoolQuestionType.TRUE_FALSE: {
+          if (options.length !== 2) {
+            throw new BadRequestException({
+              message: `${label}: exactly two options are required for true/false questions.`,
+              success: false,
+              status: 400,
+            });
+          }
+
+          const optionTexts = options.map((option) =>
+            option.text?.trim().toLowerCase(),
+          );
+
+          if (
+            options.some(
+              (option) => !option.key?.trim() || !option.text?.trim(),
+            ) ||
+            !optionTexts.includes('true') ||
+            !optionTexts.includes('false')
+          ) {
+            throw new BadRequestException({
+              message: `${label}: true/false questions must have one True option and one False option.`,
+              success: false,
+              status: 400,
+            });
+          }
+
+          break;
+        }
+
+        case SchoolQuestionType.SHORT_ANSWER: {
+          if (options.length > 0) {
+            throw new BadRequestException({
+              message: `${label}: options are not supported for short-answer questions.`,
+              success: false,
+              status: 400,
+            });
+          }
+
+          break;
+        }
+
+        default:
           throw new BadRequestException({
-            message: `${label}: every option must have a key and text.`,
+            message: `${label}: unsupported question type.`,
             success: false,
             status: 400,
           });
-        }
-      } else if (options.length > 0) {
-        throw new BadRequestException({
-          message: `${label}: options are not supported for this question type.`,
-          success: false,
-          status: 400,
-        });
       }
 
       const answerKey = question.answerKey;
 
+      // Allow questions to be saved without an answer key.
       if (!answerKey) {
         continue;
       }

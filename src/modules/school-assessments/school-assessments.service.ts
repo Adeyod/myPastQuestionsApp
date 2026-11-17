@@ -183,6 +183,14 @@ export class SchoolAssessmentsService {
         sessionExist._id,
       );
 
+    if (response.assessmentsObj.length === 0) {
+      throw new NotFoundException({
+        message: 'Assessment not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
     return response;
   }
   async getAllClassSubjectAssessmentsPerSession(

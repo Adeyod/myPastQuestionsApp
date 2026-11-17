@@ -190,7 +190,12 @@ export class SchoolQuestionsController {
     SchoolRolesGuard,
   )
   @Roles(Role.USER)
-  @SchoolRoles(SchoolRole.STUDENT, SchoolRole.ADMIN, SchoolRole.ADMIN)
+  @SchoolRoles(
+    SchoolRole.STUDENT,
+    SchoolRole.ADMIN,
+    SchoolRole.OWNER,
+    SchoolRole.TEACHER,
+  )
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
     name: 'x-school-subdomain',

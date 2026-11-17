@@ -1131,7 +1131,10 @@ export class SchoolAssessmentsController {
   teacherId: "6af43ebad06e76c3a1c10053"
   "teacher email": "gbolagade@gmail.com",
   "owner email": "omoklazik@gmail.com",
+  "student email": "omotolaade@gmail.com",
 
   owner: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWVjNDdlM2E5NjRkZGJiOWIwYmVlYzYiLCJlbWFpbCI6Im9tb2tsYXppa0BnbWFpbC5jb20iLCJyb2xlIjoiVVNFUiIsInBsYW5zIjpbXSwiaWF0IjoxNzk0ODkzNjQwLCJleHAiOjE3OTUxNTI4NDB9.5hF-UT0Hmf3q98U9xqmuDVyFKUpmzNwd8ZPu9SSl7ss"
+  teacher: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWY0M2ViOWQwNmU3NmMzYTFjMTAwNTAiLCJlbWFpbCI6Imdib2xhZ2FkZUBnbWFpbC5jb20iLCJyb2xlIjoiVVNFUiIsInBsYW5zIjpbXSwiaWF0IjoxNzk0OTAyMzQ3LCJleHAiOjE3OTUxNjE1NDd9.5ZKI-so_aAEC7ENGgzcGt9EI4BV4QZe9anDYPFE1_Qw
+  student: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWYyOTVkM2M3NThjYjFlODZhN2U2NWIiLCJlbWFpbCI6Im9tb3RvbGFhZGVAZ21haWwuY29tIiwicm9sZSI6IlVTRVIiLCJwbGFucyI6W10sImlhdCI6MTc5NDkwNDg1NCwiZXhwIjoxNzk1MTY0MDU0fQ.HzwOO-GIobszSY0oirbSb4LVHVcwEMTq8mU0FXJEwuc
 
   */

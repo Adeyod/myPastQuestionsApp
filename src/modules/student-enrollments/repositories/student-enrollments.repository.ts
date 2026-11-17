@@ -266,6 +266,7 @@ export class StudentEnrollmentsRepository {
           },
         },
         {
+          classId: 1,
           students: {
             $elemMatch: {
               schoolMembershipId: new Types.ObjectId(schoolMembershipId),

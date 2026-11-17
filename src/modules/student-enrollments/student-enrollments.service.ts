@@ -242,7 +242,9 @@ export class StudentEnrollmentsService {
     }
 
     const isTakingSubject = studentEnrollment.subjectsOffered.some(
-      (enrolledSubjectId) => enrolledSubjectId.toString() === subjectId,
+      (enrolledSubjectId) => {
+        return enrolledSubjectId.toString() === subjectId;
+      },
     );
 
     if (!isTakingSubject) {
