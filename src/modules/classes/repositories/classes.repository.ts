@@ -131,7 +131,7 @@ export class ClassesRepository {
   async findActiveClassesByIds(
     schoolId: Types.ObjectId,
     classIds: Types.ObjectId[],
-    session: ClientSession,
+    session?: ClientSession,
   ): Promise<SchoolClassDocument[] | null> {
     const response = await this.schoolClassModel
       .find({
@@ -139,7 +139,7 @@ export class ClassesRepository {
         schoolId,
         isActive: true,
       })
-      .session(session);
+      .session(session ?? null);
 
     return response;
   }

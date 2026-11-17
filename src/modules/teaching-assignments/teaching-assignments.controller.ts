@@ -19,7 +19,10 @@ import {
 import { CreateTeachingAssignmentDto } from './dtos/create-teaching-assignment.dto';
 import { TeachingAssignmentsService } from './teaching-assignments.service';
 
-import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
+import {
+  type SchoolMembershipDocument,
+  SchoolRole,
+} from '../school-memberships/schemas/school-membership.schema';
 
 import { CurrentSchool } from '../../common/decorators/current-school.decorator';
 import { SchoolRoles } from '../../common/decorators/school-roles.decorator';
@@ -30,6 +33,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
 
+import { CurrentSchoolMembership } from '../../common/decorators/current-school-membership.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SuccessMessage } from '../../common/decorators/success-message.decorator';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
@@ -166,6 +170,70 @@ export class TeachingAssignmentsController {
       await this.teachingAssignmentsService.getTeachingAssignment(
         school._id.toString(),
         assignmentId,
+      );
+
+    return response;
+  }
+
+  @Get('get-all-my-teaching-assignments/:academicSessionId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Teacher classes fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Get all the classes that logged in teacher is assigned to teach in a session',
+    description:
+      'This is the endpoint to Get all the classes that logged in teacher is assigned to teach in a session.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Teacher classes fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request. Unable to fetch classes that teacher is assigned to teach.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllMyActiveTeachingAssignments(
+    @CurrentSchool() school: { _id: string },
+    @Param('academicSessionId') academicSessionId: string,
+    @CurrentSchoolMembership() membership: SchoolMembershipDocument,
+  ) {
+    const response =
+      await this.teachingAssignmentsService.getAllMyActiveTeachingAssignments(
+        school._id.toString(),
+        membership,
+        academicSessionId,
       );
 
     return response;

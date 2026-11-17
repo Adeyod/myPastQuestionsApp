@@ -126,6 +126,23 @@ export class TeachingAssignmentsRepository {
     return response;
   }
 
+  async getAllMyActiveTeachingAssignments(
+    schoolId: Types.ObjectId,
+    teacherMembershipId: Types.ObjectId,
+    academicSessionId: Types.ObjectId,
+  ): Promise<TeachingAssignmentDocument[]> {
+    const response = await this.teachingAssignmentModel
+      .find({
+        schoolId,
+        academicSessionId,
+        teacherMembershipId,
+        isActive: true,
+      })
+
+      .exec();
+    return response;
+  }
+
   async deactivateTeachingAssignment(
     schoolId: Types.ObjectId,
     assignmentId: Types.ObjectId,

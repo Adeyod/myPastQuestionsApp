@@ -9,7 +9,10 @@ import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
 import { AcademicSessionsService } from '../academic-sessions/academic-sessions.service';
 import { ClassesService } from '../classes/classes.service';
-import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
+import {
+  SchoolMembershipDocument,
+  SchoolRole,
+} from '../school-memberships/schemas/school-membership.schema';
 import { SchoolMembershipsService } from '../school-memberships/school-memberships.service';
 import { SchoolSubjectsService } from '../school-subjects/school-subjects.service';
 import {
@@ -178,6 +181,116 @@ export class TeachingAssignmentsService {
     }
 
     return assignment;
+  }
+
+  async getAllMyActiveTeachingAssignments(
+    schoolId: string,
+    membership: SchoolMembershipDocument,
+    academicSessionId: string,
+  ) {
+    const sessionExist =
+      await this.academicSessionService.getAcademicSessionById(
+        schoolId,
+        academicSessionId,
+      );
+    const myTeachingAssignments =
+      await this.teachingAssignmentsRepository.getAllMyActiveTeachingAssignments(
+        new Types.ObjectId(schoolId),
+        membership._id,
+        sessionExist._id,
+      );
+
+    if (myTeachingAssignments.length === 0) {
+      return [];
+    }
+
+    const classIds = [
+      ...new Map(
+        myTeachingAssignments.map((assignment) => [
+          assignment.classId.toString(),
+          assignment.classId,
+        ]),
+      ).values(),
+    ];
+
+    const subjectIds = [
+      ...new Set(
+        myTeachingAssignments.map((assignment) =>
+          assignment.subjectId.toString(),
+        ),
+      ),
+    ];
+
+    const [classes, subjects] = await Promise.all([
+      this.classesService.getSchoolActiveClassesByIds(
+        new Types.ObjectId(schoolId),
+        classIds,
+      ),
+      this.schoolSubjectsService.getSchoolSubjectsByIds(schoolId, subjectIds),
+    ]);
+
+    const classMap = new Map(
+      classes.map((schoolClass) => [schoolClass._id.toString(), schoolClass]),
+    );
+
+    const subjectMap = new Map(
+      subjects.map((subject) => [subject._id.toString(), subject]),
+    );
+
+    const groupedClasses = new Map<
+      string,
+      {
+        _id: Types.ObjectId;
+        className: string;
+        classCode: string;
+        subjects: Map<
+          string,
+          {
+            _id: Types.ObjectId;
+            subjectName: string;
+            subjectCode: string;
+          }
+        >;
+      }
+    >();
+
+    for (const assignment of myTeachingAssignments) {
+      const classId = assignment.classId.toString();
+      const subjectId = assignment.subjectId.toString();
+
+      const schoolClass = classMap.get(classId);
+      const subject = subjectMap.get(subjectId);
+
+      if (!schoolClass || !subject) {
+        continue;
+      }
+
+      if (!groupedClasses.has(classId)) {
+        groupedClasses.set(classId, {
+          _id: schoolClass._id,
+          className: schoolClass.className,
+          classCode: schoolClass.classCode,
+          subjects: new Map(),
+        });
+      }
+
+      const classGroup = groupedClasses.get(classId)!;
+
+      if (!classGroup.subjects.has(subjectId)) {
+        classGroup.subjects.set(subjectId, {
+          _id: subject._id,
+          subjectName: subject.subjectName,
+          subjectCode: subject.subjectCode,
+        });
+      }
+    }
+
+    return Array.from(groupedClasses.values()).map((classGroup) => ({
+      _id: classGroup._id,
+      className: classGroup.className,
+      classCode: classGroup.classCode,
+      subjects: Array.from(classGroup.subjects.values()),
+    }));
   }
 
   async deactivateTeachingAssignment(

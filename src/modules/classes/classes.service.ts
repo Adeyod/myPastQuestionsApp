@@ -123,7 +123,7 @@ export class ClassesService {
   async getSchoolActiveClassesByIds(
     schoolId: Types.ObjectId,
     classIds: Types.ObjectId[],
-    session: ClientSession,
+    session?: ClientSession,
   ) {
     classIds.map((s) => {
       this.validateObjectId(s.toString(), 'class ID');

@@ -142,6 +142,7 @@ export class SchoolSubjectsRepository {
       .find({
         _id: { $in: ids },
         schoolId: new Types.ObjectId(schoolId),
+        isActive: true,
       })
       .exec();
 
