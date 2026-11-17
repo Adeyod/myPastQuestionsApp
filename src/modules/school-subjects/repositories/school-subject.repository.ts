@@ -120,7 +120,7 @@ export class SchoolSubjectsRepository {
   async findActiveSubjectById(
     schoolId: string,
     subjectId: string,
-    session: ClientSession,
+    session?: ClientSession,
   ): Promise<SchoolSubjectDocument | null> {
     const response = await this.schoolSubjectModel
       .findOne({
@@ -128,7 +128,7 @@ export class SchoolSubjectsRepository {
         schoolId: new Types.ObjectId(schoolId),
         isActive: true,
       })
-      .session(session)
+      .session(session ?? null)
       .exec();
 
     return response;

@@ -15,6 +15,7 @@ import {
 } from '../school-memberships/schemas/school-membership.schema';
 import { SchoolMembershipsService } from '../school-memberships/school-memberships.service';
 import { SchoolSubjectsService } from '../school-subjects/school-subjects.service';
+import { StudentEnrollmentsService } from '../student-enrollments/student-enrollments.service';
 import {
   CreateTeachingAssignmentInput,
   TeachingAssignmentsRepository,
@@ -30,6 +31,7 @@ export class TeachingAssignmentsService {
 
     private readonly schoolMembershipService: SchoolMembershipsService,
     private readonly classesService: ClassesService,
+    private readonly studentEnrollmentsService: StudentEnrollmentsService,
     private readonly academicSessionService: AcademicSessionsService,
     private readonly schoolSubjectsService: SchoolSubjectsService,
   ) {}
@@ -291,6 +293,75 @@ export class TeachingAssignmentsService {
       classCode: classGroup.classCode,
       subjects: Array.from(classGroup.subjects.values()),
     }));
+  }
+
+  async getAllOfferSubjectLoggedInTeacherTeachesInAClass(
+    schoolId: string,
+    membership: SchoolMembershipDocument,
+    subjectId: string,
+    classId: string,
+    academicSessionId: string,
+  ) {
+    this.validateObjectId(schoolId, 'School ID');
+    this.validateObjectId(subjectId, 'Subject ID');
+    this.validateObjectId(classId, 'Class ID');
+    this.validateObjectId(academicSessionId, 'Academic session ID');
+
+    const academicSession =
+      await this.academicSessionService.getAcademicSessionById(
+        schoolId,
+        academicSessionId,
+      );
+
+    const schoolClass = await this.classesService.getSchoolActiveClassById(
+      schoolId,
+      classId,
+    );
+
+    const subject = await this.schoolSubjectsService.getSchoolActiveSubjectById(
+      schoolId,
+      subjectId,
+    );
+
+    const isSubjectPartOfClass = schoolClass.subjects.some(
+      (classSubjectId) => classSubjectId.toString() === subject._id.toString(),
+    );
+
+    if (!isSubjectPartOfClass) {
+      throw new BadRequestException({
+        message: 'This subject is not offered in the selected class.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const teachingAssignment =
+      await this.teachingAssignmentsRepository.findActiveTeachingAssignment(
+        new Types.ObjectId(schoolId),
+        membership._id,
+        schoolClass._id,
+        subject._id,
+        academicSession._id,
+      );
+
+    if (!teachingAssignment) {
+      throw new ForbiddenException({
+        message:
+          'You are not assigned to teach this subject in the selected class for this academic session.',
+        success: false,
+        status: 403,
+      });
+    }
+
+    const students =
+      await this.studentEnrollmentsService.findActiveStudentsOfferingSubject(
+        schoolId,
+        classId,
+        subjectId,
+        academicSessionId,
+      );
+
+    return students;
   }
 
   async deactivateTeachingAssignment(

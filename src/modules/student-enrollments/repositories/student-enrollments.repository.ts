@@ -59,53 +59,19 @@ export class StudentEnrollmentsRepository {
   ): Promise<ClassEnrollmentDocument | null> {
     const response = await this.classEnrollmentModel
       .findOne({
-        schoolId: new Types.ObjectId(schoolId),
-        classId: new Types.ObjectId(classId),
-        academicSessionId: new Types.ObjectId(academicSessionId),
+        schoolId,
+        classId,
+        academicSessionId,
       })
       .session(session ?? null)
+      .populate({
+        path: 'students.studentId',
+        select: 'firstName lastName',
+      })
       .exec();
 
     return response;
   }
-
-  // async addStudentToClassEnrollment(
-  //   schoolId: string,
-  //   classId: string,
-  //   academicSessionId: string,
-  //   student: EnrolledStudentPayload,
-  //   session?: ClientSession,
-  // ): Promise<ClassEnrollmentDocument | null> {
-  //   const response = await this.classEnrollmentModel
-  //     .findOneAndUpdate(
-  //       {
-  //         schoolId: new Types.ObjectId(schoolId),
-  //         classId: new Types.ObjectId(classId),
-  //         academicSessionId: new Types.ObjectId(academicSessionId),
-  //         'students.schoolMembershipId': {
-  //           $ne: student.schoolMembershipId,
-  //         },
-  //       },
-  //       {
-  //         $push: {
-  //           students: {
-  //             ...student,
-  //             status: student.status ?? ClassStudentEnrollmentStatus.ACTIVE,
-  //             enrolledAt: student.enrolledAt ?? new Date(),
-  //             endedAt: student.endedAt ?? null,
-  //           },
-  //         },
-  //       },
-  //       {
-  //         returnDocument: 'after',
-  //         runValidators: true,
-  //         session,
-  //       },
-  //     )
-  //     .exec();
-
-  //   return response;
-  // }
 
   async addStudentToClassEnrollment(
     schoolId: string,

@@ -302,6 +302,56 @@ export class StudentEnrollmentsService {
     );
   }
 
+  async findActiveStudentsOfferingSubject(
+    schoolId: string,
+    classId: string,
+    subjectId: string,
+    academicSessionId: string,
+  ) {
+    this.validateObjectId(schoolId, 'school ID');
+    this.validateObjectId(classId, 'class ID');
+    this.validateObjectId(subjectId, 'subject ID');
+    this.validateObjectId(academicSessionId, 'academic session ID');
+
+    const classEnrollment =
+      await this.studentEnrollmentsRepository.findClassEnrollmentByClassAndSession(
+        new Types.ObjectId(schoolId),
+        new Types.ObjectId(classId),
+        new Types.ObjectId(academicSessionId),
+      );
+
+    if (!classEnrollment) {
+      return [];
+    }
+
+    const students = classEnrollment.students.filter((student) => {
+      const isActive = student.status === ClassStudentEnrollmentStatus.ACTIVE;
+
+      const offersSubject = student.subjectsOffered.some(
+        (enrolledSubjectId) => enrolledSubjectId.toString() === subjectId,
+      );
+
+      return isActive && offersSubject;
+    });
+
+    return students.map((student) => {
+      const populatedUser = student.studentId as unknown as {
+        _id: Types.ObjectId;
+        firstName: string;
+        lastName: string;
+      };
+
+      return {
+        studentId: populatedUser._id.toString(),
+        firstName: populatedUser.firstName,
+        lastName: populatedUser.lastName,
+        fullName: `${populatedUser.firstName} ${populatedUser.lastName}`,
+        schoolMembershipId: student.schoolMembershipId.toString(),
+        enrolledAt: student.enrolledAt,
+      };
+    });
+  }
+
   async transferStudentEnrollment(
     schoolId: string,
     academicSessionId: string,

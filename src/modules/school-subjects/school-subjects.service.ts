@@ -91,7 +91,7 @@ export class SchoolSubjectsService {
   async getSchoolActiveSubjectById(
     schoolId: string,
     subjectId: string,
-    session: ClientSession,
+    session?: ClientSession,
   ) {
     this.validateObjectId(subjectId, 'subject ID');
 

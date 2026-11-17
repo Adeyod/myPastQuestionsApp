@@ -239,6 +239,76 @@ export class TeachingAssignmentsController {
     return response;
   }
 
+  @Get(
+    'get-all-students-in-class-that-offer-teacher-subject/:academicSessionId/:classId/:subjectId',
+  )
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Students offering subject fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Get all the students that offer the subject(In a class) that a teacher teaches in a session',
+    description:
+      'This is the endpoint to Get all the students that offer the subject(In a class) that a teacher teaches in a session.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Students offering subject fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request. Unable to fetch students that offer subject in a class.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  async getAllOfferSubjectLoggedInTeacherTeachesInAClass(
+    @CurrentSchool() school: { _id: string },
+    @Param('academicSessionId') academicSessionId: string,
+    @Param('subjectId') subjectId: string,
+    @Param('classId') classId: string,
+    @CurrentSchoolMembership() membership: SchoolMembershipDocument,
+  ) {
+    const response =
+      await this.teachingAssignmentsService.getAllOfferSubjectLoggedInTeacherTeachesInAClass(
+        school._id.toString(),
+        membership,
+        subjectId,
+        classId,
+        academicSessionId,
+      );
+
+    return response;
+  }
+
   @Patch('deactivate-teaching-assignment/:assignmentId/deactivate')
   @UseGuards(
     JwtAuthGuard,

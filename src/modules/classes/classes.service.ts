@@ -100,7 +100,7 @@ export class ClassesService {
   async getSchoolActiveClassById(
     schoolId: string,
     classId: string,
-    session: ClientSession,
+    session?: ClientSession,
   ) {
     this.validateObjectId(classId, 'class ID');
 

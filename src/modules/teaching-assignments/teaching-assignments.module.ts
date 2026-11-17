@@ -7,6 +7,7 @@ import { ClassesModule } from '../classes/classes.module';
 import { SchoolMembershipsModule } from '../school-memberships/school-memberships.module';
 import { SchoolSecurityModule } from '../school-security/school-security.module';
 import { SchoolSubjectsModule } from '../school-subjects/school-subjects.module';
+import { StudentEnrollmentsModule } from '../student-enrollments/student-enrollments.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import { TeachingAssignmentsRepository } from './repositories/teaching-assignments.repository';
 import {
@@ -27,6 +28,7 @@ import { TeachingAssignmentsService } from './teaching-assignments.service';
     AcademicSessionsModule,
     SchoolSubjectsModule,
     UserSessionModule,
+    StudentEnrollmentsModule,
   ],
   controllers: [TeachingAssignmentsController],
   providers: [

@@ -111,7 +111,7 @@ export class ClassesRepository {
   async findActiveClassById(
     schoolId: string,
     classId: string,
-    session: ClientSession,
+    session?: ClientSession,
   ): Promise<SchoolClassDocument | null> {
     const response = await this.schoolClassModel
       .findOne({
@@ -119,7 +119,7 @@ export class ClassesRepository {
         schoolId: new Types.ObjectId(schoolId),
         isActive: true,
       })
-      .session(session)
+      .session(session ?? null)
       .populate(
         'teacherSubjectAssignments.subject teacherSubjectAssignments.teacher',
       )
