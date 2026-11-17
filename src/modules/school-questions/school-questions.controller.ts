@@ -39,36 +39,59 @@ import { CreateSchoolQuestionsDto } from './dtos/create-question.dto';
 import { UpdateSchoolQuestionStatusDto } from './dtos/update-question-status.dto';
 import { SchoolQuestionsService } from './school-questions.service';
 
-@ApiTags('School Question Bank')
-@ApiBearerAuth()
-@ApiHeader({
-  name: 'x-school-subdomain',
-  required: true,
-  description: 'School subdomain',
-})
-@ApiHeader({
-  name: 'x-device-id',
-  required: true,
-  description: 'Device identifier',
-})
+@ApiTags('School Questions Bank')
 @Controller('school/question-bank')
-@UseGuards(
-  JwtAuthGuard,
-  DeviceSessionGuard,
-  RolesGuard,
-  SchoolMembershipGuard,
-  SchoolRolesGuard,
-)
-@Roles(Role.USER)
-@SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN, SchoolRole.TEACHER)
 export class SchoolQuestionsController {
   constructor(
     private readonly schoolQuestionsService: SchoolQuestionsService,
   ) {}
 
   @Post('create-questions/:academicSessionId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Questions stored successfully.')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Store multiple questions in the school question bank',
+    description:
+      'Store multiple questions in the school question bank. For subject teacher.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Questions stored successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to store questions.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
   })
   async createQuestions(
     @CurrentSchool() school: SchoolDocument,
