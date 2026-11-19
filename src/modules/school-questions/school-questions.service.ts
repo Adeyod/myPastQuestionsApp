@@ -208,6 +208,8 @@ export class SchoolQuestionsService {
       'Academic Session ID',
     );
 
+    console.log('membership:', membership);
+
     if (membership.role === SchoolRole.STUDENT) {
       await this.studentEnrollmentsService.validateStudentSubjectEnrollment(
         schoolId,

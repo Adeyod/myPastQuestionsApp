@@ -209,6 +209,8 @@ export class StudentEnrollmentsService {
         academicSessionId,
       );
 
+    console.log('enrollment:', enrollment);
+
     if (!enrollment) {
       throw new NotFoundException({
         message:

@@ -62,8 +62,10 @@ export class AssessmentAnswerKey {
 export const AssessmentAnswerKeySchema =
   SchemaFactory.createForClass(AssessmentAnswerKey);
 
-@Schema({ _id: false })
+@Schema({})
 export class AssessmentQuestion {
+  _id!: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'SchoolQuestion', default: null })
   sourceQuestionId?: Types.ObjectId | null;
 

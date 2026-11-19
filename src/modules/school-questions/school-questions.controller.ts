@@ -171,7 +171,7 @@ export class SchoolQuestionsController {
     const response =
       await this.schoolQuestionsService.getSpecificNoOfSubjectQuestions(
         school._id.toString(),
-        membership._id.toString(),
+        membership,
         academicSessionId,
         subjectId,
         classId,

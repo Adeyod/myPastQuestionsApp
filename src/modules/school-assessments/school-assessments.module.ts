@@ -17,6 +17,7 @@ import { DeviceSessionGuard } from '../../common/guards/device-session.guard';
 import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
 import { AcademicSessionsModule } from '../academic-sessions/academic-sessions.module';
+import { SchoolAssessmentAttemptsModule } from '../school-assessment-attempts/school-assessment-attempts.module';
 import { SchoolQuestionsModule } from '../school-questions/school-questions.module';
 import { StudentEnrollmentsModule } from '../student-enrollments/student-enrollments.module';
 import { TeachingAssignmentsModule } from '../teaching-assignments/teaching-assignments.module';
@@ -32,6 +33,7 @@ import { TeachingAssignmentsModule } from '../teaching-assignments/teaching-assi
     AcademicSessionsModule,
     TeachingAssignmentsModule,
     StudentEnrollmentsModule,
+    SchoolAssessmentAttemptsModule,
     SchoolQuestionsModule,
     SchoolSecurityModule,
     UserSessionModule,

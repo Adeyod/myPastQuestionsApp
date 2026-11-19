@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,6 +9,7 @@ import { Connection, Types } from 'mongoose';
 
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { AcademicSessionsService } from '../academic-sessions/academic-sessions.service';
+import { SchoolAssessmentAttemptsService } from '../school-assessment-attempts/school-assessment-attempts.service';
 import {
   SchoolMembershipDocument,
   SchoolRole,
@@ -35,6 +37,7 @@ export class SchoolAssessmentsService {
     private readonly studentEnrollmentsService: StudentEnrollmentsService,
     private readonly academicSessionService: AcademicSessionsService,
     private readonly teachingAssignmentsService: TeachingAssignmentsService,
+    private readonly assessmentAttemptsService: SchoolAssessmentAttemptsService,
 
     @InjectConnection()
     private readonly connection: Connection,
@@ -125,6 +128,7 @@ export class SchoolAssessmentsService {
 
         const snapshots: AssessmentQuestion[] = questionBankQuestions.map(
           (question, index) => ({
+            _id: new Types.ObjectId(),
             sourceQuestionId: question._id,
             order: index + 1,
             questionType: question.questionType,
@@ -241,6 +245,75 @@ export class SchoolAssessmentsService {
       );
 
     return response;
+  }
+
+  async startAssessmentByAssessmentId(
+    schoolId: string,
+    assessmentId: string,
+    membership: SchoolMembershipDocument,
+    academicSessionId: string,
+    classId: string,
+  ) {
+    const schoolObjectId = this.validateObjectId(schoolId, 'School ID');
+
+    const assessmentObjectId = this.validateObjectId(
+      assessmentId,
+      'Assessment ID',
+    );
+
+    const sessionExist =
+      await this.academicSessionService.getAcademicSessionById(
+        schoolId,
+        academicSessionId,
+      );
+
+    const assessment = await this.assessmentsRepository.findAssessmentById(
+      schoolObjectId,
+      assessmentObjectId,
+    );
+
+    if (!assessment) {
+      throw new NotFoundException({
+        message: 'Assessment not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const now = Date.now();
+
+    if (assessment.endsAt.getTime() <= now) {
+      throw new ForbiddenException({
+        message: `This assessment has ended at ${assessment.endsAt.toLocaleDateString()}.`,
+        success: false,
+        status: 403,
+      });
+    }
+
+    const createAssessmentAttemptDoc =
+      await this.assessmentAttemptsService.createAssessmentAttempt({
+        schoolId,
+        assessmentId: assessment._id.toString(),
+        studentId: membership.userId.toString(),
+        studentMembershipId: membership._id.toString(),
+        academicSessionId: assessment.academicSessionId.toString(),
+        durationMinutes: assessment.durationMinutes,
+        markingMode: assessment.markingMode,
+        questions: assessment.questions.map((question) => ({
+          questionId: question._id,
+          sourceQuestionId: question.sourceQuestionId ?? null,
+          order: question.order,
+          questionType: question.questionType,
+          questionText: question.questionText,
+          questionImages: question.questionImages ?? [],
+          options: question.options ?? [],
+          answerKey: question.answerKey ?? null,
+          explanation: question.explanation ?? '',
+          marks: question.marks,
+        })),
+      });
+
+    return createAssessmentAttemptDoc;
   }
 
   async getAssessmentByAssessmentId(
