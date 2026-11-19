@@ -383,9 +383,7 @@ export class SchoolAssessmentsController {
     return response;
   }
 
-  @Get(
-    'get-assessment-by-assessmentId-classId-academicSessionId/:academicSessionId/:classId/:assessmentId',
-  )
+  @Get('start-assessment/:academicSessionId/:classId/:assessmentId')
   @UseGuards(
     JwtAuthGuard,
     DeviceSessionGuard,
@@ -411,7 +409,7 @@ export class SchoolAssessmentsController {
   @SuccessMessage('Assessment started successfully.')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get an assessment by ID in a session',
+    summary: 'Start assessment in a session',
     description:
       'This is the endpoint that student is going to use to start an assessment.',
   })
@@ -454,6 +452,35 @@ export class SchoolAssessmentsController {
 }
 
 /*
+{
+        "questionId": "6afefb3ae8c342fe6222b13d",
+        "questionType": "SINGLE_CHOICE",
+        "questionText": "Choose the word nearest in meaning to 'abundant'.",
+        "questionImages": [],
+        "options": [
+          {
+            "key": "A",
+            "text": "Scarce"
+          },
+          {
+            "key": "B",
+            "text": "Plentiful"
+          },
+          {
+            "key": "C",
+            "text": "Limited"
+          },
+          {
+            "key": "D",
+            "text": "Insufficient"
+          }
+        ],
+        "marks": 5
+      },
+
+
+
+
   classId: "6af43da9718344bf7ca92e3e"
   teacherId: "6af43ebad06e76c3a1c10053"
   "teacher email": "gbolagade@gmail.com",
