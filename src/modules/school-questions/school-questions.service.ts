@@ -176,7 +176,7 @@ export class SchoolQuestionsService {
 
   async getSpecificNoOfSubjectQuestions(
     schoolId: string,
-    membershipId: string,
+    membership: SchoolMembershipDocument,
     academicSessionId: string,
     subjectId: string,
     classId: string,
@@ -208,13 +208,25 @@ export class SchoolQuestionsService {
       'Academic Session ID',
     );
 
-    await this.studentEnrollmentsService.validateStudentSubjectEnrollment(
-      schoolId,
-      membershipId,
-      classId,
-      subjectId,
-      academicSessionId,
-    );
+    if (membership.role === SchoolRole.STUDENT) {
+      await this.studentEnrollmentsService.validateStudentSubjectEnrollment(
+        schoolId,
+        membership._id.toString(),
+        classId,
+        subjectId,
+        academicSessionId,
+      );
+    }
+
+    if (membership.role === SchoolRole.TEACHER) {
+      await this.teachingAssignmentsService.validateTeacherAssignments(
+        schoolId,
+        membership._id.toString(),
+        subjectId,
+        [classId],
+        academicSessionId,
+      );
+    }
 
     const response =
       await this.questionBankRepository.getSpecificNoOfSubjectQuestions(
