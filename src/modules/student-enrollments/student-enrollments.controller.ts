@@ -19,6 +19,7 @@ import {
 
 import { StudentEnrollmentsService } from './student-enrollments.service';
 
+import { CurrentSchoolMembership } from '../../common/decorators/current-school-membership.decorator';
 import { CurrentSchool } from '../../common/decorators/current-school.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SchoolRoles } from '../../common/decorators/school-roles.decorator';
@@ -30,7 +31,10 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
-import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
+import {
+  type SchoolMembershipDocument,
+  SchoolRole,
+} from '../school-memberships/schemas/school-membership.schema';
 import { type SchoolDocument } from '../schools/schemas/schools.schema';
 import { Role } from '../users/schemas/user.schema';
 import { CreateStudentEnrollmentDto } from './dtos/create-student-enrollment.dto';
@@ -551,7 +555,12 @@ export class StudentEnrollmentsController {
     SchoolRolesGuard,
   )
   @Roles(Role.USER)
-  @SchoolRoles(SchoolRole.OWNER, SchoolRole.ADMIN, SchoolRole.TEACHER)
+  @SchoolRoles(
+    SchoolRole.OWNER,
+    SchoolRole.ADMIN,
+    SchoolRole.TEACHER,
+    SchoolRole.STUDENT,
+  )
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({
     name: 'x-school-subdomain',
@@ -593,13 +602,14 @@ export class StudentEnrollmentsController {
     @CurrentSchool() school: SchoolDocument,
     @Param('academicSessionId') academicSessionId: string,
     @Param('schoolMembershipId') schoolMembershipId: string,
+    @CurrentSchoolMembership() membership: SchoolMembershipDocument,
   ) {
-    console.log('schoolMembershipId:', schoolMembershipId);
     const response =
       await this.studentEnrollmentsService.findActiveStudentEnrollment(
         school._id.toString(),
         academicSessionId,
         schoolMembershipId,
+        membership,
       );
 
     return response;

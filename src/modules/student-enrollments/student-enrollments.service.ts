@@ -16,7 +16,10 @@ import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { AcademicSessionsService } from '../academic-sessions/academic-sessions.service';
 import { AcademicSessionStatus } from '../academic-sessions/schemas/academic-session.schema';
 import { ClassesService } from '../classes/classes.service';
-import { SchoolRole } from '../school-memberships/schemas/school-membership.schema';
+import {
+  SchoolMembershipDocument,
+  SchoolRole,
+} from '../school-memberships/schemas/school-membership.schema';
 
 import { ClassStudentEnrollmentStatus } from './schemas/student-enrollment.schema';
 
@@ -262,12 +265,23 @@ export class StudentEnrollmentsService {
     schoolId: string,
     academicSessionId: string,
     schoolMembershipId: string,
+    membership: SchoolMembershipDocument,
   ) {
     this.validateObjectId(schoolId, 'school ID');
     this.validateObjectId(academicSessionId, 'academic session ID');
     this.validateObjectId(schoolMembershipId, 'membership ID');
 
     await this.findSessionOrThrow(schoolId, academicSessionId);
+
+    if (membership.role === SchoolRole.STUDENT) {
+      if (membership._id.toString() !== schoolMembershipId) {
+        throw new ForbiddenException({
+          message: 'You can only view your own enrollment.',
+          success: false,
+          status: 403,
+        });
+      }
+    }
 
     const response =
       await this.studentEnrollmentsRepository.findActiveStudentEnrollment(
