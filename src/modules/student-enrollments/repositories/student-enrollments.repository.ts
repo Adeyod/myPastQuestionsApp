@@ -241,6 +241,39 @@ export class StudentEnrollmentsRepository {
           },
         },
       )
+      .session(session ?? null)
+      .exec();
+
+    return response;
+  }
+  async getStudentEnrollment(
+    schoolId: string,
+    schoolMembershipId: string,
+    academicSessionId: string,
+    session?: ClientSession,
+  ): Promise<ClassEnrollmentDocument | null> {
+    const response = await this.classEnrollmentModel
+      .findOne(
+        {
+          schoolId: new Types.ObjectId(schoolId),
+          academicSessionId: new Types.ObjectId(academicSessionId),
+          students: {
+            $elemMatch: {
+              schoolMembershipId: new Types.ObjectId(schoolMembershipId),
+              status: ClassStudentEnrollmentStatus.ACTIVE,
+            },
+          },
+        },
+        {
+          classId: 1,
+          students: {
+            $elemMatch: {
+              schoolMembershipId: new Types.ObjectId(schoolMembershipId),
+              status: ClassStudentEnrollmentStatus.ACTIVE,
+            },
+          },
+        },
+      )
       .populate('students.subjectsOffered students.studentId')
       .session(session ?? null)
       .exec();

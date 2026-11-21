@@ -300,6 +300,45 @@ export class StudentEnrollmentsService {
 
     return response;
   }
+  async getStudentEnrollment(
+    schoolId: string,
+    academicSessionId: string,
+    schoolMembershipId: string,
+    membership: SchoolMembershipDocument,
+  ) {
+    this.validateObjectId(schoolId, 'school ID');
+    this.validateObjectId(academicSessionId, 'academic session ID');
+    this.validateObjectId(schoolMembershipId, 'membership ID');
+
+    await this.findSessionOrThrow(schoolId, academicSessionId);
+
+    if (membership.role === SchoolRole.STUDENT) {
+      if (membership._id.toString() !== schoolMembershipId) {
+        throw new ForbiddenException({
+          message: 'You can only view your own enrollment.',
+          success: false,
+          status: 403,
+        });
+      }
+    }
+
+    const response =
+      await this.studentEnrollmentsRepository.getStudentEnrollment(
+        schoolId,
+        schoolMembershipId,
+        academicSessionId,
+      );
+
+    if (!response) {
+      throw new NotFoundException({
+        message: 'Student enrollment not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return response;
+  }
   async findClassEnrollmentById(
     schoolId: string,
     academicSessionId: string,

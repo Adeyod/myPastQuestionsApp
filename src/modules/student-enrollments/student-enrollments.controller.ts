@@ -604,13 +604,12 @@ export class StudentEnrollmentsController {
     @Param('schoolMembershipId') schoolMembershipId: string,
     @CurrentSchoolMembership() membership: SchoolMembershipDocument,
   ) {
-    const response =
-      await this.studentEnrollmentsService.findActiveStudentEnrollment(
-        school._id.toString(),
-        academicSessionId,
-        schoolMembershipId,
-        membership,
-      );
+    const response = await this.studentEnrollmentsService.getStudentEnrollment(
+      school._id.toString(),
+      academicSessionId,
+      schoolMembershipId,
+      membership,
+    );
 
     return response;
   }
