@@ -14,6 +14,16 @@ export enum AssessmentAttemptStatus {
   EXPIRED = 'EXPIRED',
 }
 
+export enum AssessmentAnswerMarkingStatus {
+  PENDING = 'PENDING',
+  MARKED = 'MARKED',
+}
+
+export enum AssessmentAttemptFinalizationReason {
+  STUDENT_SUBMISSION = 'STUDENT_SUBMISSION',
+  TIME_EXPIRED = 'TIME_EXPIRED',
+}
+
 @Schema({ _id: false })
 export class AssessmentAttemptOption {
   @Prop({ required: true })
@@ -76,8 +86,21 @@ export class AssessmentAttemptAnswer {
   @Prop()
   textAnswer?: string;
 
-  @Prop()
+  @Prop({ required: true })
   answeredAt!: Date;
+
+  @Prop({ type: Boolean, default: null })
+  isCorrect!: boolean | null;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  marksAwarded!: number;
+
+  @Prop({
+    type: String,
+    enum: AssessmentAnswerMarkingStatus,
+    default: AssessmentAnswerMarkingStatus.PENDING,
+  })
+  markingStatus!: AssessmentAnswerMarkingStatus;
 }
 
 export const AssessmentAttemptAnswerSchema = SchemaFactory.createForClass(
@@ -158,6 +181,13 @@ export class SchoolAssessmentAttempt {
 
   @Prop({ type: Number, default: null })
   score?: number | null;
+
+  @Prop({
+    type: String,
+    enum: AssessmentAttemptFinalizationReason,
+    default: null,
+  })
+  finalizationReason?: AssessmentAttemptFinalizationReason | null;
 
   @Prop()
   markedAt?: Date;

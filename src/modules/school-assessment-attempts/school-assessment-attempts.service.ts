@@ -12,9 +12,16 @@ import {
   AssessmentQuestionOption,
 } from '../school-assessments/schemas/school-assessment.schema';
 import { SchoolQuestionType } from '../school-questions/schemas/school-question.schema';
-import { UpdateAssessmentAnswersDto } from './dtos/update-assessment-answers.dto';
+import { SubmitAssessmentAttemptDto } from './dtos/submit-assessment-attempt.dto';
+import {
+  AssessmentAnswerDto,
+  UpdateAssessmentAnswersDto,
+} from './dtos/update-assessment-answers.dto';
 import { SchoolAssessmentAttemptsRepository } from './repositories/school-assessment-attempts.repository';
 import {
+  AssessmentAnswerMarkingStatus,
+  AssessmentAttemptAnswer,
+  AssessmentAttemptFinalizationReason,
   AssessmentAttemptStatus,
   SchoolAssessmentAttempt,
   SchoolAssessmentAttemptDocument,
@@ -231,9 +238,337 @@ export class SchoolAssessmentAttemptsService {
 
     this.ensureAttemptCanBeUpdated(attempt);
 
+    const validatedAnswers = this.buildValidatedAnswers(attempt, dto.answers);
+
     const updatedAnswers = [...attempt.answers];
 
-    for (const submittedAnswer of dto.answers) {
+    for (const answer of validatedAnswers) {
+      const answerIndex = updatedAnswers.findIndex(
+        (existingAnswer) =>
+          existingAnswer.questionId.toString() === answer.questionId.toString(),
+      );
+
+      if (answerIndex >= 0) {
+        updatedAnswers[answerIndex] = answer;
+      } else {
+        updatedAnswers.push(answer);
+      }
+    }
+
+    const updatedAttempt = await this.attemptsRepository.updateAttemptAnswers(
+      schoolObjectId,
+      attemptObjectId,
+      membershipObjectId,
+      updatedAnswers,
+    );
+
+    if (!updatedAttempt) {
+      throw new ConflictException({
+        message: 'The assessment attempt is no longer available for updating.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    return this.toStudentResponse(updatedAttempt);
+  }
+
+  async submitAssessmentAttempt(
+    schoolId: string,
+    attemptId: string,
+    studentMembershipId: string,
+    dto: SubmitAssessmentAttemptDto,
+  ) {
+    this.validateObjectId(schoolId, 'school ID');
+    this.validateObjectId(attemptId, 'attempt ID');
+    this.validateObjectId(studentMembershipId, 'student membership ID');
+
+    const schoolObjectId = new Types.ObjectId(schoolId);
+    const attemptObjectId = new Types.ObjectId(attemptId);
+    const membershipObjectId = new Types.ObjectId(studentMembershipId);
+
+    const attempt = await this.attemptsRepository.findAttemptById(
+      schoolObjectId,
+      attemptObjectId,
+      membershipObjectId,
+    );
+
+    if (!attempt) {
+      throw new NotFoundException({
+        message: 'Assessment attempt not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    if (attempt.status !== AssessmentAttemptStatus.IN_PROGRESS) {
+      throw new ConflictException({
+        message:
+          'This assessment attempt has already been submitted or closed.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    const now = new Date();
+
+    if (attempt.expiresAt.getTime() <= now.getTime()) {
+      return this.finalizeAssessmentAttempt(
+        schoolObjectId,
+        attemptObjectId,
+        membershipObjectId,
+        attempt,
+        AssessmentAttemptFinalizationReason.TIME_EXPIRED,
+      );
+    }
+
+    let finalAnswers: AssessmentAttemptAnswer[] | undefined;
+
+    if (dto.answers !== undefined) {
+      finalAnswers = this.buildValidatedAnswers(attempt, dto.answers);
+    }
+
+    return this.finalizeAssessmentAttempt(
+      schoolObjectId,
+      attemptObjectId,
+      membershipObjectId,
+      attempt,
+      AssessmentAttemptFinalizationReason.STUDENT_SUBMISSION,
+      finalAnswers,
+    );
+  }
+
+  async getAssessmentAttemptById(
+    schoolId: string,
+    attemptId: string,
+    studentMembershipId: string,
+  ) {
+    this.validateObjectId(schoolId, 'school ID');
+    this.validateObjectId(attemptId, 'attempt ID');
+    this.validateObjectId(studentMembershipId, 'student membership ID');
+
+    const attempt = await this.attemptsRepository.findAttemptById(
+      new Types.ObjectId(schoolId),
+      new Types.ObjectId(attemptId),
+      new Types.ObjectId(studentMembershipId),
+    );
+
+    if (!attempt) {
+      throw new NotFoundException({
+        message: 'Assessment attempt not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return this.toStudentResponse(attempt);
+  }
+
+  private ensureAttemptCanBeUpdated(
+    attempt: SchoolAssessmentAttemptDocument,
+  ): void {
+    if (attempt.status !== AssessmentAttemptStatus.IN_PROGRESS) {
+      throw new ConflictException({
+        message: 'This assessment attempt is no longer accepting answers.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    if (attempt.expiresAt.getTime() <= Date.now()) {
+      throw new ConflictException({
+        message: 'Your assessment time has expired.',
+        success: false,
+        status: 409,
+      });
+    }
+  }
+
+  private async finalizeAssessmentAttempt(
+    schoolId: Types.ObjectId,
+    attemptId: Types.ObjectId,
+    studentMembershipId: Types.ObjectId,
+    attempt: SchoolAssessmentAttemptDocument,
+    finalizationReason: AssessmentAttemptFinalizationReason,
+    finalAnswers?: AssessmentAttemptAnswer[],
+  ) {
+    const now = new Date();
+
+    const answers = finalAnswers ?? attempt.answers;
+
+    const attemptForMarking = {
+      ...attempt.toObject(),
+      answers,
+    } as SchoolAssessmentAttemptDocument;
+
+    const update: Partial<SchoolAssessmentAttempt> = {
+      answers: attemptForMarking.answers,
+      submittedAt: now,
+      finalizationReason,
+    };
+
+    if (attempt.markingMode === AssessmentMarkingMode.AUTOMATIC) {
+      const marksAwarded = this.calculateAutomaticScore(attemptForMarking);
+
+      update.status = AssessmentAttemptStatus.SUBMITTED;
+
+      update.answers = attemptForMarking.answers;
+
+      update.marksAwarded = marksAwarded;
+
+      update.score =
+        attempt.totalMarks > 0
+          ? Number(((marksAwarded / attempt.totalMarks) * 100).toFixed(2))
+          : 0;
+    } else {
+      update.status = AssessmentAttemptStatus.AWAITING_MARKING;
+    }
+
+    const finalizedAttempt = await this.attemptsRepository.updateAttempt(
+      schoolId,
+      attemptId,
+      studentMembershipId,
+      update,
+    );
+
+    if (!finalizedAttempt) {
+      throw new ConflictException({
+        message: 'The assessment attempt could not be finalized.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    return this.toStudentResponse(finalizedAttempt);
+  }
+
+  private calculateAutomaticScore(
+    attempt: SchoolAssessmentAttemptDocument,
+  ): number {
+    let totalMarksAwarded = 0;
+
+    for (const question of attempt.questions) {
+      const answer = attempt.answers.find(
+        (item) => item.questionId.toString() === question.questionId.toString(),
+      );
+
+      if (!answer || !question.answerKey) {
+        continue;
+      }
+
+      const answerKey = question.answerKey;
+      let isCorrect = false;
+
+      switch (question.questionType) {
+        case SchoolQuestionType.SINGLE_CHOICE: {
+          isCorrect =
+            answer.selectedOptionKeys.length === 1 &&
+            answer.selectedOptionKeys[0] === answerKey.correctOptionKey;
+          break;
+        }
+
+        case SchoolQuestionType.MULTIPLE_CHOICE: {
+          const expected = [...(answerKey.correctOptionKeys ?? [])].sort();
+          const selected = [...answer.selectedOptionKeys].sort();
+
+          isCorrect =
+            expected.length > 0 &&
+            expected.length === selected.length &&
+            expected.every((key, index) => key === selected[index]);
+
+          break;
+        }
+
+        case SchoolQuestionType.TRUE_FALSE: {
+          const selectedOptionKey = answer.selectedOptionKeys[0];
+
+          const selectedOption = question.options.find(
+            (option) => option.key === selectedOptionKey,
+          );
+
+          isCorrect =
+            !!selectedOption &&
+            typeof answerKey.correctBoolean === 'boolean' &&
+            selectedOption.text.trim().toLowerCase() ===
+              String(answerKey.correctBoolean);
+
+          break;
+        }
+
+        case SchoolQuestionType.SHORT_ANSWER: {
+          const acceptedAnswers: string[] = answerKey.acceptedAnswers ?? [];
+
+          const submittedText = answer.textAnswer?.trim().toLowerCase();
+
+          isCorrect =
+            !!submittedText &&
+            acceptedAnswers.some(
+              (accepted) => accepted.trim().toLowerCase() === submittedText,
+            );
+
+          break;
+        }
+      }
+
+      answer.isCorrect = isCorrect;
+      answer.marksAwarded = isCorrect ? question.marks : 0;
+      answer.markingStatus = AssessmentAnswerMarkingStatus.MARKED;
+
+      totalMarksAwarded += answer.marksAwarded;
+    }
+
+    return totalMarksAwarded;
+  }
+
+  private toStudentResponse(attempt: SchoolAssessmentAttemptDocument) {
+    const showExplanations =
+      attempt.status === AssessmentAttemptStatus.SUBMITTED ||
+      attempt.status === AssessmentAttemptStatus.MARKED;
+
+    return {
+      _id: attempt._id,
+      assessmentId: attempt.assessmentId,
+      status: attempt.status,
+      markingMode: attempt.markingMode,
+      questions: attempt.questions.map((question) => ({
+        questionId: question.questionId,
+        questionType: question.questionType,
+        questionText: question.questionText,
+        questionImages: question.questionImages,
+        options: question.options,
+        marks: question.marks,
+        ...(showExplanations ? { explanation: question.explanation } : {}),
+      })),
+      answers: attempt.answers,
+      startedAt: attempt.startedAt,
+      expiresAt: attempt.expiresAt,
+      submittedAt: attempt.submittedAt,
+      totalMarks: attempt.totalMarks,
+      marksAwarded: attempt.marksAwarded,
+      score: attempt.score,
+    };
+  }
+
+  private buildValidatedAnswers(
+    attempt: SchoolAssessmentAttemptDocument,
+    submittedAnswers: AssessmentAnswerDto[],
+  ): AssessmentAttemptAnswer[] {
+    const validatedAnswers: AssessmentAttemptAnswer[] = [];
+    const processedQuestionIds = new Set<string>();
+
+    for (const submittedAnswer of submittedAnswers) {
+      const questionId = submittedAnswer.questionId.toLowerCase();
+
+      if (processedQuestionIds.has(questionId)) {
+        throw new BadRequestException({
+          message: `Question ${submittedAnswer.questionId} was submitted more than once.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      processedQuestionIds.add(questionId);
+
       const question = attempt.questions.find(
         (item) => item.questionId.toString() === submittedAnswer.questionId,
       );
@@ -308,293 +643,18 @@ export class SchoolAssessmentAttemptsService {
         });
       }
 
-      const answerIndex = updatedAnswers.findIndex(
-        (answer) => answer.questionId.toString() === submittedAnswer.questionId,
-      );
-
-      const answer = {
+      validatedAnswers.push({
         questionId: new Types.ObjectId(submittedAnswer.questionId),
         selectedOptionKeys,
         textAnswer: submittedAnswer.textAnswer?.trim(),
         answeredAt: new Date(),
-      };
 
-      if (answerIndex >= 0) {
-        updatedAnswers[answerIndex] = answer;
-      } else {
-        updatedAnswers.push(answer);
-      }
-    }
-
-    const updatedAttempt = await this.attemptsRepository.updateAttemptAnswers(
-      schoolObjectId,
-      attemptObjectId,
-      membershipObjectId,
-      updatedAnswers,
-    );
-
-    if (!updatedAttempt) {
-      throw new ConflictException({
-        message: 'The assessment attempt is no longer available for updating.',
-        success: false,
-        status: 409,
+        isCorrect: null,
+        marksAwarded: 0,
+        markingStatus: AssessmentAnswerMarkingStatus.PENDING,
       });
     }
 
-    return this.toStudentResponse(updatedAttempt);
-  }
-
-  /**
-   * Submit the student's assessment.
-   */
-  async submitAssessmentAttempt(
-    schoolId: string,
-    attemptId: string,
-    studentMembershipId: string,
-  ) {
-    this.validateObjectId(schoolId, 'school ID');
-    this.validateObjectId(attemptId, 'attempt ID');
-    this.validateObjectId(studentMembershipId, 'student membership ID');
-
-    const schoolObjectId = new Types.ObjectId(schoolId);
-    const attemptObjectId = new Types.ObjectId(attemptId);
-    const membershipObjectId = new Types.ObjectId(studentMembershipId);
-
-    const attempt = await this.attemptsRepository.findAttemptById(
-      schoolObjectId,
-      attemptObjectId,
-      membershipObjectId,
-    );
-
-    if (!attempt) {
-      throw new NotFoundException({
-        message: 'Assessment attempt not found.',
-        success: false,
-        status: 404,
-      });
-    }
-
-    if (attempt.status !== AssessmentAttemptStatus.IN_PROGRESS) {
-      throw new ConflictException({
-        message:
-          'This assessment attempt has already been submitted or closed.',
-        success: false,
-        status: 409,
-      });
-    }
-
-    const now = new Date();
-
-    if (attempt.expiresAt.getTime() <= now.getTime()) {
-      // The attempt is expired. Do not silently discard saved answers.
-      const expiredAttempt = await this.attemptsRepository.updateAttempt(
-        schoolObjectId,
-        attemptObjectId,
-        membershipObjectId,
-        {
-          status: AssessmentAttemptStatus.EXPIRED,
-        },
-      );
-
-      if (!expiredAttempt) {
-        throw new ConflictException({
-          message: 'The assessment attempt could not be finalized.',
-          success: false,
-          status: 409,
-        });
-      }
-
-      throw new ConflictException({
-        message: 'Your assessment time has expired.',
-        success: false,
-        status: 409,
-      });
-    }
-
-    const update: Partial<SchoolAssessmentAttempt> = {
-      submittedAt: now,
-    };
-
-    if (attempt.markingMode === AssessmentMarkingMode.AUTOMATIC) {
-      const marksAwarded = this.calculateAutomaticScore(attempt);
-
-      update.status = AssessmentAttemptStatus.SUBMITTED;
-      update.marksAwarded = marksAwarded;
-      update.score =
-        attempt.totalMarks > 0
-          ? Number(((marksAwarded / attempt.totalMarks) * 100).toFixed(2))
-          : 0;
-    } else {
-      update.status = AssessmentAttemptStatus.AWAITING_MARKING;
-    }
-
-    const submittedAttempt = await this.attemptsRepository.updateAttempt(
-      schoolObjectId,
-      attemptObjectId,
-      membershipObjectId,
-      update,
-    );
-
-    if (!submittedAttempt) {
-      throw new ConflictException({
-        message: 'The assessment attempt could not be submitted.',
-        success: false,
-        status: 409,
-      });
-    }
-
-    return this.toStudentResponse(submittedAttempt);
-  }
-
-  /**
-   * Retrieve a student's own attempt.
-   */
-  async getAssessmentAttemptById(
-    schoolId: string,
-    attemptId: string,
-    studentMembershipId: string,
-  ) {
-    this.validateObjectId(schoolId, 'school ID');
-    this.validateObjectId(attemptId, 'attempt ID');
-    this.validateObjectId(studentMembershipId, 'student membership ID');
-
-    const attempt = await this.attemptsRepository.findAttemptById(
-      new Types.ObjectId(schoolId),
-      new Types.ObjectId(attemptId),
-      new Types.ObjectId(studentMembershipId),
-    );
-
-    if (!attempt) {
-      throw new NotFoundException({
-        message: 'Assessment attempt not found.',
-        success: false,
-        status: 404,
-      });
-    }
-
-    return this.toStudentResponse(attempt);
-  }
-
-  private ensureAttemptCanBeUpdated(
-    attempt: SchoolAssessmentAttemptDocument,
-  ): void {
-    if (attempt.status !== AssessmentAttemptStatus.IN_PROGRESS) {
-      throw new ConflictException({
-        message: 'This assessment attempt is no longer accepting answers.',
-        success: false,
-        status: 409,
-      });
-    }
-
-    if (attempt.expiresAt.getTime() <= Date.now()) {
-      throw new ConflictException({
-        message: 'Your assessment time has expired.',
-        success: false,
-        status: 409,
-      });
-    }
-  }
-
-  /**
-   * Automatic marking for supported question types.
-   */
-  private calculateAutomaticScore(
-    attempt: SchoolAssessmentAttemptDocument,
-  ): number {
-    let marksAwarded = 0;
-
-    for (const question of attempt.questions) {
-      const answer = attempt.answers.find(
-        (item) => item.questionId.toString() === question.questionId.toString(),
-      );
-
-      if (!answer || !question.answerKey) {
-        continue;
-      }
-
-      const answerKey = question.answerKey;
-
-      if (question.questionType === SchoolQuestionType.SINGLE_CHOICE) {
-        if (
-          answer.selectedOptionKeys.length === 1 &&
-          answer.selectedOptionKeys[0] === answerKey.correctOptionKey
-        ) {
-          marksAwarded += question.marks;
-        }
-      } else if (question.questionType === SchoolQuestionType.MULTIPLE_CHOICE) {
-        const expected = [...(answerKey.correctOptionKeys ?? [])].sort();
-        const selected = [...answer.selectedOptionKeys].sort();
-
-        if (
-          expected.length > 0 &&
-          expected.length === selected.length &&
-          expected.every((key, index) => key === selected[index])
-        ) {
-          marksAwarded += question.marks;
-        }
-      } else if (question.questionType === SchoolQuestionType.TRUE_FALSE) {
-        const selectedOptionKey = answer.selectedOptionKeys[0];
-
-        const selectedOption = question.options.find(
-          (option) => option.key === selectedOptionKey,
-        );
-
-        if (
-          selectedOption &&
-          typeof answerKey.correctBoolean === 'boolean' &&
-          selectedOption.text.trim().toLowerCase() ===
-            String(answerKey.correctBoolean)
-        ) {
-          marksAwarded += question.marks;
-        }
-      } else if (question.questionType === SchoolQuestionType.SHORT_ANSWER) {
-        const acceptedAnswers: string[] = answerKey.acceptedAnswers ?? [];
-
-        const submittedText = answer.textAnswer?.trim().toLowerCase();
-
-        if (
-          submittedText &&
-          acceptedAnswers.some(
-            (accepted) => accepted.trim().toLowerCase() === submittedText,
-          )
-        ) {
-          marksAwarded += question.marks;
-        }
-      }
-    }
-
-    return marksAwarded;
-  }
-
-  /**
-   * Never expose answer keys or explanations to students.
-   */
-  private toStudentResponse(attempt: SchoolAssessmentAttemptDocument) {
-    const showExplanations =
-      attempt.status === AssessmentAttemptStatus.SUBMITTED ||
-      attempt.status === AssessmentAttemptStatus.MARKED;
-
-    return {
-      _id: attempt._id,
-      assessmentId: attempt.assessmentId,
-      status: attempt.status,
-      markingMode: attempt.markingMode,
-      questions: attempt.questions.map((question) => ({
-        questionId: question.questionId,
-        questionType: question.questionType,
-        questionText: question.questionText,
-        questionImages: question.questionImages,
-        options: question.options,
-        marks: question.marks,
-        ...(showExplanations ? { explanation: question.explanation } : {}),
-      })),
-      answers: attempt.answers,
-      startedAt: attempt.startedAt,
-      expiresAt: attempt.expiresAt,
-      submittedAt: attempt.submittedAt,
-      totalMarks: attempt.totalMarks,
-      marksAwarded: attempt.marksAwarded,
-      score: attempt.score,
-    };
+    return validatedAnswers;
   }
 }

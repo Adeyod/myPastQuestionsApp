@@ -36,6 +36,7 @@ import { SchoolRole } from '../school-memberships/schemas/school-membership.sche
 import type { SchoolDocument } from '../schools/schemas/schools.schema';
 import { Role } from '../users/schemas/user.schema';
 
+import { SubmitAssessmentAttemptDto } from './dtos/submit-assessment-attempt.dto';
 import { UpdateAssessmentAnswersDto } from './dtos/update-assessment-answers.dto';
 import { SchoolAssessmentAttemptsService } from './school-assessment-attempts.service';
 
@@ -134,6 +135,7 @@ export class SchoolAssessmentAttemptsController {
   })
   async submitAssessmentAttempt(
     @Param('attemptId') attemptId: string,
+    @Body() dto: SubmitAssessmentAttemptDto,
     @CurrentSchool() school: SchoolDocument,
     @CurrentSchoolMembership()
     membership: SchoolMembershipDocument,
@@ -142,6 +144,7 @@ export class SchoolAssessmentAttemptsController {
       school._id.toString(),
       attemptId,
       membership._id.toString(),
+      dto,
     );
 
     return response;

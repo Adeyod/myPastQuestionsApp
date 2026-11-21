@@ -48,9 +48,11 @@ export class UpdateAssessmentAnswersDto {
       {
         questionId: '671234567890123456789012',
         selectedOptionKeys: ['A'],
+        textAnswer: 'Lagos',
       },
       {
         questionId: '671234567890123456789013',
+        selectedOptionKeys: ['A', 'C'],
         textAnswer: 'Abuja',
       },
     ],
