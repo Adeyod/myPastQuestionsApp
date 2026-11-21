@@ -241,7 +241,7 @@ export class StudentEnrollmentsRepository {
           },
         },
       )
-      // .populate('students.subjectsOffered students.studentId')
+      .populate('students.subjectsOffered students.studentId')
       .session(session ?? null)
       .exec();
 
