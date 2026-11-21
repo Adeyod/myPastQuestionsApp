@@ -65,6 +65,149 @@ export class SchoolAssessmentAttemptsService {
     }
   }
 
+  // async createAssessmentAttempt(input: CreateAssessmentAttemptInput) {
+  //   const {
+  //     schoolId,
+  //     assessmentId,
+  //     studentId,
+  //     studentMembershipId,
+  //     academicSessionId,
+  //     durationMinutes,
+  //   } = input;
+  //   this.validateObjectId(schoolId, 'school ID');
+  //   this.validateObjectId(assessmentId, 'assessment ID');
+  //   this.validateObjectId(studentId, 'student ID');
+  //   this.validateObjectId(studentMembershipId, 'student membership ID');
+  //   this.validateObjectId(academicSessionId, 'academic session ID');
+
+  //   if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+  //     throw new BadRequestException({
+  //       message: 'Invalid assessment duration.',
+  //       success: false,
+  //       status: 400,
+  //     });
+  //   }
+
+  //   const school = new Types.ObjectId(schoolId);
+  //   const assessment = new Types.ObjectId(assessmentId);
+  //   const studentMembership = new Types.ObjectId(studentMembershipId);
+  //   const academicSession = new Types.ObjectId(academicSessionId);
+
+  //   const existingAttempt =
+  //     await this.attemptsRepository.findAttemptByAssessmentAndStudent(
+  //       school,
+  //       assessment,
+  //       studentMembership,
+  //     );
+
+  //   if (existingAttempt) {
+  //     if (
+  //       existingAttempt.status === AssessmentAttemptStatus.IN_PROGRESS &&
+  //       existingAttempt.expiresAt.getTime() <= Date.now()
+  //     ) {
+  //       await this.attemptsRepository.updateAttempt(
+  //         school,
+  //         existingAttempt._id,
+  //         studentMembership,
+  //         {
+  //           status: AssessmentAttemptStatus.EXPIRED,
+  //         },
+  //       );
+
+  //       throw new ConflictException({
+  //         message: 'Your assessment attempt has expired.',
+  //         success: false,
+  //         status: 409,
+  //       });
+  //     }
+
+  //     if (existingAttempt.status === AssessmentAttemptStatus.IN_PROGRESS) {
+  //       return this.toStudentResponse(existingAttempt);
+  //     }
+
+  //     throw new ConflictException({
+  //       message: 'You have already attempted this assessment.',
+  //       success: false,
+  //       status: 409,
+  //     });
+  //   }
+
+  //   const totalMarks = input.questions.reduce(
+  //     (total, question) => total + question.marks,
+  //     0,
+  //   );
+
+  //   const startedAt = new Date();
+  //   const expiresAt = new Date(
+  //     startedAt.getTime() + input.durationMinutes * 60 * 1000,
+  //   );
+
+  //   try {
+  //     const attempt = await this.attemptsRepository.createAssessmentAttempt({
+  //       schoolId: school,
+  //       assessmentId: assessment,
+  //       studentId: new Types.ObjectId(input.studentId),
+  //       studentMembershipId: studentMembership,
+  //       academicSessionId: academicSession,
+  //       status: AssessmentAttemptStatus.IN_PROGRESS,
+  //       markingMode: input.markingMode,
+  //       questions: input.questions.map((question) => ({
+  //         questionId: new Types.ObjectId(question.questionId),
+  //         sourceQuestionId: question.sourceQuestionId ?? null,
+  //         order: question.order,
+  //         questionType: question.questionType,
+  //         questionText: question.questionText,
+  //         questionImages: question.questionImages ?? [],
+  //         options: (question.options ?? []).map((option) => ({
+  //           key: option.key,
+  //           text: option.text,
+  //           ...(option.imageUrl != null ? { imageUrl: option.imageUrl } : {}),
+  //         })),
+  //         answerKey:
+  //           question.answerKey == null
+  //             ? undefined
+  //             : {
+  //                 ...question.answerKey,
+  //               },
+  //         explanation: question.explanation ?? '',
+  //         marks: question.marks,
+  //       })),
+  //       answers: [],
+  //       startedAt,
+  //       expiresAt,
+  //       totalMarks,
+  //       marksAwarded: 0,
+  //       score: null,
+  //     });
+
+  //     return this.toStudentResponse(attempt);
+  //   } catch (error) {
+  //     const mongoError = error as { code?: number };
+  //     if (mongoError?.code === 11000) {
+  //       const attempt =
+  //         await this.attemptsRepository.findAttemptByAssessmentAndStudent(
+  //           school,
+  //           assessment,
+  //           studentMembership,
+  //         );
+
+  //       if (attempt) {
+  //         if (attempt.status === AssessmentAttemptStatus.IN_PROGRESS) {
+  //           return this.toStudentResponse(attempt);
+  //         }
+
+  //         throw new ConflictException({
+  //           message: 'You have already attempted this assessment.',
+  //           success: false,
+  //           status: 409,
+  //         });
+  //       }
+  //     }
+
+  //     throw error;
+  //   }
+  // }
+
   async createAssessmentAttempt(input: CreateAssessmentAttemptInput) {
     const {
       schoolId,
@@ -74,6 +217,7 @@ export class SchoolAssessmentAttemptsService {
       academicSessionId,
       durationMinutes,
     } = input;
+
     this.validateObjectId(schoolId, 'school ID');
     this.validateObjectId(assessmentId, 'assessment ID');
     this.validateObjectId(studentId, 'student ID');
@@ -90,9 +234,11 @@ export class SchoolAssessmentAttemptsService {
 
     const school = new Types.ObjectId(schoolId);
     const assessment = new Types.ObjectId(assessmentId);
+    const student = new Types.ObjectId(studentId);
     const studentMembership = new Types.ObjectId(studentMembershipId);
     const academicSession = new Types.ObjectId(academicSessionId);
 
+    // Check whether the student already has an attempt.
     const existingAttempt =
       await this.attemptsRepository.findAttemptByAssessmentAndStudent(
         school,
@@ -101,35 +247,11 @@ export class SchoolAssessmentAttemptsService {
       );
 
     if (existingAttempt) {
-      if (
-        existingAttempt.status === AssessmentAttemptStatus.IN_PROGRESS &&
-        existingAttempt.expiresAt.getTime() <= Date.now()
-      ) {
-        await this.attemptsRepository.updateAttempt(
-          school,
-          existingAttempt._id,
-          studentMembership,
-          {
-            status: AssessmentAttemptStatus.EXPIRED,
-          },
-        );
-
-        throw new ConflictException({
-          message: 'Your assessment attempt has expired.',
-          success: false,
-          status: 409,
-        });
-      }
-
-      if (existingAttempt.status === AssessmentAttemptStatus.IN_PROGRESS) {
-        return this.toStudentResponse(existingAttempt);
-      }
-
-      throw new ConflictException({
-        message: 'You have already attempted this assessment.',
-        success: false,
-        status: 409,
-      });
+      return this.resumeOrFinalizeAttempt(
+        school,
+        studentMembership,
+        existingAttempt,
+      );
     }
 
     const totalMarks = input.questions.reduce(
@@ -138,15 +260,16 @@ export class SchoolAssessmentAttemptsService {
     );
 
     const startedAt = new Date();
+
     const expiresAt = new Date(
-      startedAt.getTime() + input.durationMinutes * 60 * 1000,
+      startedAt.getTime() + durationMinutes * 60 * 1000,
     );
 
     try {
       const attempt = await this.attemptsRepository.createAssessmentAttempt({
         schoolId: school,
         assessmentId: assessment,
-        studentId: new Types.ObjectId(input.studentId),
+        studentId: student,
         studentMembershipId: studentMembership,
         academicSessionId: academicSession,
         status: AssessmentAttemptStatus.IN_PROGRESS,
@@ -183,7 +306,9 @@ export class SchoolAssessmentAttemptsService {
       return this.toStudentResponse(attempt);
     } catch (error) {
       const mongoError = error as { code?: number };
+
       if (mongoError?.code === 11000) {
+        // Another request may have created the attempt simultaneously.
         const attempt =
           await this.attemptsRepository.findAttemptByAssessmentAndStudent(
             school,
@@ -192,15 +317,11 @@ export class SchoolAssessmentAttemptsService {
           );
 
         if (attempt) {
-          if (attempt.status === AssessmentAttemptStatus.IN_PROGRESS) {
-            return this.toStudentResponse(attempt);
-          }
-
-          throw new ConflictException({
-            message: 'You have already attempted this assessment.',
-            success: false,
-            status: 409,
-          });
+          return this.resumeOrFinalizeAttempt(
+            school,
+            studentMembership,
+            attempt,
+          );
         }
       }
 
@@ -440,6 +561,32 @@ export class SchoolAssessmentAttemptsService {
     }
 
     return this.toStudentResponse(finalizedAttempt);
+  }
+
+  private async resumeOrFinalizeAttempt(
+    schoolId: Types.ObjectId,
+    studentMembershipId: Types.ObjectId,
+    attempt: SchoolAssessmentAttemptDocument,
+  ) {
+    if (attempt.status !== AssessmentAttemptStatus.IN_PROGRESS) {
+      throw new ConflictException({
+        message: 'You have already attempted this assessment.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    if (attempt.expiresAt.getTime() <= Date.now()) {
+      return await this.finalizeAssessmentAttempt(
+        schoolId,
+        attempt._id,
+        studentMembershipId,
+        attempt,
+        AssessmentAttemptFinalizationReason.TIME_EXPIRED,
+      );
+    }
+
+    return this.toStudentResponse(attempt);
   }
 
   private calculateAutomaticScore(
