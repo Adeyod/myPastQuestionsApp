@@ -139,6 +139,13 @@ export class SchoolAssessmentAttempt {
 
   @Prop({
     type: SchemaTypes.ObjectId,
+    ref: 'SchoolClass',
+    required: true,
+  })
+  classId!: Types.ObjectId;
+
+  @Prop({
+    type: SchemaTypes.ObjectId,
     ref: 'AcademicSession',
     required: true,
   })

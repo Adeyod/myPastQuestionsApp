@@ -295,6 +295,7 @@ export class SchoolAssessmentsService {
         schoolId,
         assessmentId: assessment._id.toString(),
         studentId: membership.userId.toString(),
+        classId,
         studentMembershipId: membership._id.toString(),
         academicSessionId: assessment.academicSessionId.toString(),
         durationMinutes: assessment.durationMinutes,

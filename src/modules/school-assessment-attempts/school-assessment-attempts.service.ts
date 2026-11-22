@@ -32,6 +32,7 @@ interface CreateAssessmentAttemptInput {
   assessmentId: string;
   studentId: string;
   studentMembershipId: string;
+  classId: string;
   academicSessionId: string;
   durationMinutes: number;
   markingMode: AssessmentMarkingMode;
@@ -213,12 +214,14 @@ export class SchoolAssessmentAttemptsService {
       schoolId,
       assessmentId,
       studentId,
+      classId,
       studentMembershipId,
       academicSessionId,
       durationMinutes,
     } = input;
 
     this.validateObjectId(schoolId, 'school ID');
+    this.validateObjectId(classId, 'class ID');
     this.validateObjectId(assessmentId, 'assessment ID');
     this.validateObjectId(studentId, 'student ID');
     this.validateObjectId(studentMembershipId, 'student membership ID');
@@ -235,6 +238,7 @@ export class SchoolAssessmentAttemptsService {
     const school = new Types.ObjectId(schoolId);
     const assessment = new Types.ObjectId(assessmentId);
     const student = new Types.ObjectId(studentId);
+    const classID = new Types.ObjectId(classId);
     const studentMembership = new Types.ObjectId(studentMembershipId);
     const academicSession = new Types.ObjectId(academicSessionId);
 
@@ -247,7 +251,8 @@ export class SchoolAssessmentAttemptsService {
       );
 
     if (existingAttempt) {
-      return this.resumeOrFinalizeAttempt(
+      console.log('Returning existing document...');
+      return await this.resumeOrFinalizeAttempt(
         school,
         studentMembership,
         existingAttempt,
@@ -270,6 +275,7 @@ export class SchoolAssessmentAttemptsService {
         schoolId: school,
         assessmentId: assessment,
         studentId: student,
+        classId: classID,
         studentMembershipId: studentMembership,
         academicSessionId: academicSession,
         status: AssessmentAttemptStatus.IN_PROGRESS,
@@ -317,7 +323,7 @@ export class SchoolAssessmentAttemptsService {
           );
 
         if (attempt) {
-          return this.resumeOrFinalizeAttempt(
+          return await this.resumeOrFinalizeAttempt(
             school,
             studentMembership,
             attempt,
@@ -676,6 +682,7 @@ export class SchoolAssessmentAttemptsService {
       _id: attempt._id,
       assessmentId: attempt.assessmentId,
       status: attempt.status,
+      classId: attempt.classId,
       markingMode: attempt.markingMode,
       questions: attempt.questions.map((question) => ({
         questionId: question.questionId,
