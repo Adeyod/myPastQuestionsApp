@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -36,6 +37,7 @@ import { SchoolRole } from '../school-memberships/schemas/school-membership.sche
 import type { SchoolDocument } from '../schools/schemas/schools.schema';
 import { Role } from '../users/schemas/user.schema';
 
+import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { SubmitAssessmentAttemptDto } from './dtos/submit-assessment-attempt.dto';
 import { UpdateAssessmentAnswersDto } from './dtos/update-assessment-answers.dto';
 import { SchoolAssessmentAttemptsService } from './school-assessment-attempts.service';
@@ -195,6 +197,59 @@ export class SchoolAssessmentAttemptsController {
       attemptId,
       membership._id.toString(),
     );
+
+    return response;
+  }
+
+  @Get('get-my-session-assessment-attempts/:academicSessionId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.STUDENT)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session.',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Assessment attempts fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get session assessment attempts',
+    description:
+      'Retrieves the authenticated student’s assessment attempts in a session.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assessment attempts fetched successfully.',
+    type: ApiResponseDto,
+  })
+  async getMySessionAssessmentAttemptByAcademicSessionId(
+    @Param('academicSessionId') academicSessionId: string,
+    @CurrentSchool() school: SchoolDocument,
+    @CurrentSchoolMembership()
+    membership: SchoolMembershipDocument,
+    @Query() query: QueryWithPaginationDto,
+  ) {
+    const response =
+      await this.attemptsService.getMySessionAssessmentAttemptByAcademicSessionId(
+        school._id.toString(),
+        academicSessionId,
+        membership,
+        query,
+      );
 
     return response;
   }

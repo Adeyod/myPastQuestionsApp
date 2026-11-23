@@ -8,6 +8,7 @@ import { SchoolAssessmentAttemptsService } from './school-assessment-attempts.se
 import { DeviceSessionGuard } from '../../common/guards/device-session.guard';
 import { SchoolMembershipGuard } from '../../common/guards/school-membership.guard';
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
+import { AcademicSessionsModule } from '../academic-sessions/academic-sessions.module';
 import { SchoolSecurityModule } from '../school-security/school-security.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import {
@@ -25,6 +26,7 @@ import {
     ]),
     UserSessionModule,
     SchoolSecurityModule,
+    AcademicSessionsModule,
   ],
   controllers: [SchoolAssessmentAttemptsController],
   providers: [

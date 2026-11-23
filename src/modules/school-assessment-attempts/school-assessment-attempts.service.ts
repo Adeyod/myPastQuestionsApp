@@ -6,11 +6,14 @@ import {
 } from '@nestjs/common';
 import { isValidObjectId, Types } from 'mongoose';
 
+import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { AcademicSessionsService } from '../academic-sessions/academic-sessions.service';
 import {
   AssessmentAnswerKey,
   AssessmentMarkingMode,
   AssessmentQuestionOption,
 } from '../school-assessments/schemas/school-assessment.schema';
+import { SchoolMembershipDocument } from '../school-memberships/schemas/school-membership.schema';
 import { SchoolQuestionType } from '../school-questions/schemas/school-question.schema';
 import { SubmitAssessmentAttemptDto } from './dtos/submit-assessment-attempt.dto';
 import {
@@ -54,6 +57,8 @@ interface CreateAssessmentAttemptInput {
 export class SchoolAssessmentAttemptsService {
   constructor(
     private readonly attemptsRepository: SchoolAssessmentAttemptsRepository,
+
+    private readonly academicSessionsService: AcademicSessionsService,
   ) {}
 
   private validateObjectId(value: string, fieldName: string): void {
@@ -242,7 +247,6 @@ export class SchoolAssessmentAttemptsService {
     const studentMembership = new Types.ObjectId(studentMembershipId);
     const academicSession = new Types.ObjectId(academicSessionId);
 
-    // Check whether the student already has an attempt.
     const existingAttempt =
       await this.attemptsRepository.findAttemptByAssessmentAndStudent(
         school,
@@ -489,6 +493,40 @@ export class SchoolAssessmentAttemptsService {
     }
 
     return this.toStudentResponse(attempt);
+  }
+
+  async getMySessionAssessmentAttemptByAcademicSessionId(
+    schoolId: string,
+    academicSessionId: string,
+    membership: SchoolMembershipDocument,
+    queryDto: QueryWithPaginationDto,
+  ) {
+    this.validateObjectId(schoolId, 'school ID');
+    this.validateObjectId(academicSessionId, 'academic session ID');
+
+    await this.academicSessionsService.getAcademicSessionById(
+      schoolId,
+      academicSessionId,
+    );
+
+    const assessmentAttempts =
+      await this.attemptsRepository.findMyAttemptsInASession(
+        membership._id,
+        new Types.ObjectId(academicSessionId),
+        new Types.ObjectId(schoolId),
+        queryDto,
+      );
+
+    if (assessmentAttempts.assessmentAttemptObj.length === 0) {
+      throw new NotFoundException({
+        message:
+          'Assessment not found for the student in this academic session.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    return assessmentAttempts;
   }
 
   private ensureAttemptCanBeUpdated(
