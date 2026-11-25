@@ -449,6 +449,71 @@ export class SchoolAssessmentsController {
 
     return response;
   }
+
+  @Get('get-class-assessment-attempts-by-assessmentId/:assessmentId/:classId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    RolesGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Subject Assessment attempts fetched successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get an assessment by ID in a session',
+    description:
+      'This is the endpoint that subject teacher can use to Get student attempts for any assessment in a class.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Subject Assessment attempts fetched successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Unable to fetch assessment attempts.',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests. Rate limit exceeded',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async getAssessmentAttemptsInAClassByAssessmentId(
+    @CurrentSchool() school: SchoolDocument,
+    @Param('assessmentId') assessmentId: string,
+    @Param('classId') classId: string,
+    @CurrentSchoolMembership()
+    membership: SchoolMembershipDocument,
+  ) {
+    const response =
+      await this.schoolAssessmentsService.getAssessmentAttemptsInAClassByAssessmentId(
+        school._id.toString(),
+        assessmentId,
+        membership,
+        classId,
+      );
+
+    return response;
+  }
 }
 
 /*

@@ -15,6 +15,7 @@ import {
 } from '../school-assessments/schemas/school-assessment.schema';
 import { SchoolMembershipDocument } from '../school-memberships/schemas/school-membership.schema';
 import { SchoolQuestionType } from '../school-questions/schemas/school-question.schema';
+import { TeachingAssignmentsService } from '../teaching-assignments/teaching-assignments.service';
 import { SubmitAssessmentAttemptDto } from './dtos/submit-assessment-attempt.dto';
 import {
   AssessmentAnswerDto,
@@ -32,6 +33,7 @@ import {
 
 interface CreateAssessmentAttemptInput {
   schoolId: string;
+  subjectId: string;
   assessmentId: string;
   studentId: string;
   studentMembershipId: string;
@@ -59,6 +61,7 @@ export class SchoolAssessmentAttemptsService {
     private readonly attemptsRepository: SchoolAssessmentAttemptsRepository,
 
     private readonly academicSessionsService: AcademicSessionsService,
+    private readonly teachingAssignmentsService: TeachingAssignmentsService,
   ) {}
 
   private validateObjectId(value: string, fieldName: string): void {
@@ -219,6 +222,7 @@ export class SchoolAssessmentAttemptsService {
       schoolId,
       assessmentId,
       studentId,
+      subjectId,
       classId,
       studentMembershipId,
       academicSessionId,
@@ -227,6 +231,7 @@ export class SchoolAssessmentAttemptsService {
 
     this.validateObjectId(schoolId, 'school ID');
     this.validateObjectId(classId, 'class ID');
+    this.validateObjectId(subjectId, 'subject ID');
     this.validateObjectId(assessmentId, 'assessment ID');
     this.validateObjectId(studentId, 'student ID');
     this.validateObjectId(studentMembershipId, 'student membership ID');
@@ -241,6 +246,7 @@ export class SchoolAssessmentAttemptsService {
     }
 
     const school = new Types.ObjectId(schoolId);
+    const subject = new Types.ObjectId(subjectId);
     const assessment = new Types.ObjectId(assessmentId);
     const student = new Types.ObjectId(studentId);
     const classID = new Types.ObjectId(classId);
@@ -278,8 +284,9 @@ export class SchoolAssessmentAttemptsService {
       const attempt = await this.attemptsRepository.createAssessmentAttempt({
         schoolId: school,
         assessmentId: assessment,
-        studentId: student,
         classId: classID,
+        studentId: student,
+        subjectId: subject,
         studentMembershipId: studentMembership,
         academicSessionId: academicSession,
         status: AssessmentAttemptStatus.IN_PROGRESS,
@@ -527,6 +534,185 @@ export class SchoolAssessmentAttemptsService {
     }
 
     return assessmentAttempts;
+  }
+
+  async getAssessmentAttemptsByAssessmentAndClass(
+    schoolId: Types.ObjectId,
+    assessmentId: Types.ObjectId,
+    classId: Types.ObjectId,
+  ) {
+    const response =
+      await this.attemptsRepository.findAttemptsByAssessmentAndClass(
+        schoolId,
+        assessmentId,
+        classId,
+      );
+
+    return response;
+  }
+
+  async markAssessmentAttempt(
+    membership: SchoolMembershipDocument,
+    schoolId: string,
+    attemptId: string,
+    answers: {
+      questionId: string;
+      marksAwarded: number;
+    }[],
+  ): Promise<SchoolAssessmentAttemptDocument> {
+    this.validateObjectId(schoolId, 'School ID');
+
+    this.validateObjectId(attemptId, 'Assessment attempt ID');
+
+    const schoolObjectId = new Types.ObjectId(schoolId);
+    const attemptObjectId = new Types.ObjectId(attemptId);
+
+    const sessionExist =
+      await this.academicSessionsService.getSchoolActiveAcademicSession(
+        schoolId,
+      );
+
+    const attempt = await this.attemptsRepository.findAttemptByAttemptId(
+      schoolObjectId,
+      attemptObjectId,
+    );
+
+    if (!attempt) {
+      throw new NotFoundException({
+        message: 'Assessment attempt not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    await this.teachingAssignmentsService.validateTeacherAssignments(
+      schoolId,
+      membership._id.toString(),
+      attempt.subjectId.toString(),
+      [attempt.classId.toString()],
+      sessionExist._id.toString(),
+    );
+
+    if (attempt.status !== AssessmentAttemptStatus.AWAITING_MARKING) {
+      throw new ConflictException({
+        message: 'This assessment attempt is not awaiting marking.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    if (attempt.markingMode !== AssessmentMarkingMode.MANUAL) {
+      throw new BadRequestException({
+        message: 'This assessment uses automatic marking.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (!Array.isArray(answers)) {
+      throw new BadRequestException({
+        message: 'Answers must be an array.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (answers.length !== attempt.answers.length) {
+      throw new BadRequestException({
+        message:
+          'You must provide marks for every answer submitted by the student.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    const submittedQuestionIds = new Set<string>();
+
+    const updatedAnswers = attempt.answers.map((studentAnswer) => {
+      const questionId = studentAnswer.questionId.toString();
+
+      const submittedMark = answers.find(
+        (answer) => answer.questionId === questionId,
+      );
+
+      if (!submittedMark) {
+        throw new BadRequestException({
+          message: `Marks were not provided for question ${questionId}.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      if (submittedQuestionIds.has(submittedMark.questionId)) {
+        throw new BadRequestException({
+          message: 'Duplicate question IDs were provided.',
+          success: false,
+          status: 400,
+        });
+      }
+
+      submittedQuestionIds.add(submittedMark.questionId);
+
+      const question = attempt.questions.find(
+        (item) => item.questionId.toString() === questionId,
+      );
+
+      if (!question) {
+        throw new BadRequestException({
+          message: 'The answer does not belong to this assessment attempt.',
+          success: false,
+          status: 400,
+        });
+      }
+
+      if (
+        !Number.isFinite(submittedMark.marksAwarded) ||
+        submittedMark.marksAwarded < 0 ||
+        submittedMark.marksAwarded > question.marks
+      ) {
+        throw new BadRequestException({
+          message: `Marks awarded for question ${questionId} must be between 0 and ${question.marks}.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      return {
+        ...studentAnswer,
+        marksAwarded: submittedMark.marksAwarded,
+        markingStatus: AssessmentAnswerMarkingStatus.MARKED,
+        isCorrect: null,
+      };
+    });
+
+    const totalMarksAwarded = updatedAnswers.reduce(
+      (total, answer) => total + answer.marksAwarded,
+      0,
+    );
+
+    const score =
+      attempt.totalMarks > 0
+        ? Number(((totalMarksAwarded / attempt.totalMarks) * 100).toFixed(2))
+        : 0;
+
+    const markedAttempt = await this.attemptsRepository.markAssessmentAttempt(
+      schoolObjectId,
+      attemptObjectId,
+      updatedAnswers,
+      totalMarksAwarded,
+      score,
+    );
+
+    if (!markedAttempt) {
+      throw new ConflictException({
+        message:
+          'This assessment attempt has already been marked or is no longer awaiting marking.',
+        success: false,
+        status: 409,
+      });
+    }
+
+    return markedAttempt;
   }
 
   private ensureAttemptCanBeUpdated(

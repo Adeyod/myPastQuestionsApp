@@ -10,6 +10,7 @@ import { SchoolMembershipGuard } from '../../common/guards/school-membership.gua
 import { SchoolRolesGuard } from '../../common/guards/school-roles.guard';
 import { AcademicSessionsModule } from '../academic-sessions/academic-sessions.module';
 import { SchoolSecurityModule } from '../school-security/school-security.module';
+import { TeachingAssignmentsModule } from '../teaching-assignments/teaching-assignments.module';
 import { UserSessionModule } from '../user-session/user-session.module';
 import {
   SchoolAssessmentAttempt,
@@ -27,6 +28,7 @@ import {
     UserSessionModule,
     SchoolSecurityModule,
     AcademicSessionsModule,
+    TeachingAssignmentsModule,
   ],
   controllers: [SchoolAssessmentAttemptsController],
   providers: [

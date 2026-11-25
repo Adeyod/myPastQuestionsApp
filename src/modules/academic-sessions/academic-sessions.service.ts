@@ -120,6 +120,22 @@ export class AcademicSessionsService {
 
     return academicSession;
   }
+  async getSchoolActiveAcademicSession(schoolId: string) {
+    const academicSession =
+      await this.academicSessionsRepository.getSchoolActiveAcademicSession(
+        schoolId,
+      );
+
+    if (!academicSession) {
+      throw new NotFoundException({
+        success: false,
+        status: 404,
+        message: 'There is no active academic session found for this school.',
+      });
+    }
+
+    return academicSession;
+  }
   async getAcademicSessionById(schoolId: string, sessionId: string) {
     this.validateObjectId(schoolId, 'school ID');
     this.validateObjectId(sessionId, 'academic session ID');

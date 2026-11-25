@@ -294,6 +294,7 @@ export class SchoolAssessmentsService {
       await this.assessmentAttemptsService.createAssessmentAttempt({
         schoolId,
         assessmentId: assessment._id.toString(),
+        subjectId: assessment.subjectId.toString(),
         studentId: membership.userId.toString(),
         classId,
         studentMembershipId: membership._id.toString(),
@@ -371,6 +372,78 @@ export class SchoolAssessmentsService {
     }
 
     return assessment;
+  }
+
+  async getAssessmentAttemptsInAClassByAssessmentId(
+    schoolId: string,
+    assessmentId: string,
+    membership: SchoolMembershipDocument,
+    classId: string,
+  ) {
+    const schoolObjectId = this.validateObjectId(schoolId, 'School ID');
+
+    const assessmentObjectId = this.validateObjectId(
+      assessmentId,
+      'Assessment ID',
+    );
+
+    const classObjectId = this.validateObjectId(classId, 'Class ID');
+
+    const sessionExist =
+      await this.academicSessionService.getSchoolActiveAcademicSession(
+        schoolId,
+      );
+
+    const assessment = await this.assessmentsRepository.findAssessmentById(
+      schoolObjectId,
+      assessmentObjectId,
+    );
+
+    if (!assessment) {
+      throw new NotFoundException({
+        message: 'Assessment not found.',
+        success: false,
+        status: 404,
+      });
+    }
+
+    const classBelongsToAssessment = assessment.classIds.some(
+      (id) => id.toString() === classObjectId.toString(),
+    );
+
+    if (!classBelongsToAssessment) {
+      throw new BadRequestException({
+        message: 'This assignment is not assigned to the selected class.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    if (assessment.markingMode !== AssessmentMarkingMode.MANUAL) {
+      throw new BadRequestException({
+        message:
+          'This assessment is created to be marked automatically by the system.',
+        success: false,
+        status: 400,
+      });
+    }
+
+    await this.teachingAssignmentsService.validateTeacherAssignments(
+      schoolId,
+      membership._id.toString(),
+      assessment.subjectId.toString(),
+      [classObjectId.toString()],
+      sessionExist._id.toString(),
+    );
+
+    const assessmentAttempts =
+      await this.assessmentAttemptsService.getAssessmentAttemptsByAssessmentAndClass(
+        schoolObjectId,
+        assessmentObjectId,
+        classObjectId,
+      );
+
+    return assessmentAttempts;
   }
 
   async updateAssessmentStatus(

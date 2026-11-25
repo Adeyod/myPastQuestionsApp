@@ -42,7 +42,7 @@ export const AssessmentAttemptOptionSchema = SchemaFactory.createForClass(
 
 @Schema({ _id: false })
 export class AssessmentAttemptQuestion {
-  @Prop({ type: SchemaTypes.ObjectId, required: true })
+  @Prop({ type: Types.ObjectId, required: true })
   questionId!: Types.ObjectId;
 
   @Prop({
@@ -77,7 +77,7 @@ export const AssessmentAttemptQuestionSchema = SchemaFactory.createForClass(
 
 @Schema({ _id: false })
 export class AssessmentAttemptAnswer {
-  @Prop({ type: SchemaTypes.ObjectId, required: true })
+  @Prop({ type: Types.ObjectId, required: true })
   questionId!: Types.ObjectId;
 
   @Prop({ type: [String], default: [] })
@@ -110,42 +110,45 @@ export const AssessmentAttemptAnswerSchema = SchemaFactory.createForClass(
 @Schema({ timestamps: true })
 export class SchoolAssessmentAttempt {
   @Prop({
-    type: SchemaTypes.ObjectId,
+    type: Types.ObjectId,
     ref: 'School',
     required: true,
   })
   schoolId!: Types.ObjectId;
 
   @Prop({
-    type: SchemaTypes.ObjectId,
+    type: Types.ObjectId,
     ref: 'SchoolAssessment',
     required: true,
   })
   assessmentId!: Types.ObjectId;
 
   @Prop({
-    type: SchemaTypes.ObjectId,
+    type: Types.ObjectId,
     ref: 'User',
     required: true,
   })
   studentId!: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'SchoolSubject', required: true })
+  subjectId!: Types.ObjectId;
+
   @Prop({
-    type: SchemaTypes.ObjectId,
+    type: Types.ObjectId,
     ref: 'SchoolMembership',
     required: true,
   })
   studentMembershipId!: Types.ObjectId;
 
   @Prop({
-    type: SchemaTypes.ObjectId,
+    type: Types.ObjectId,
     ref: 'SchoolClass',
     required: true,
   })
   classId!: Types.ObjectId;
 
   @Prop({
-    type: SchemaTypes.ObjectId,
+    type: Types.ObjectId,
     ref: 'AcademicSession',
     required: true,
   })
@@ -220,4 +223,10 @@ SchoolAssessmentAttemptSchema.index({
   schoolId: 1,
   studentMembershipId: 1,
   status: 1,
+});
+
+SchoolAssessmentAttemptSchema.index({
+  schoolId: 1,
+  assessmentId: 1,
+  classId: 1,
 });

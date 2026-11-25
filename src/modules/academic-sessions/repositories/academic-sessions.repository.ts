@@ -5,6 +5,7 @@ import { QueryWithPaginationDto } from '../../../common/dto/query-with-paginatio
 import {
   AcademicSession,
   AcademicSessionDocument,
+  AcademicSessionStatus,
 } from '../schemas/academic-session.schema';
 
 @Injectable()
@@ -100,6 +101,18 @@ export class AcademicSessionsRepository {
         schoolId: new Types.ObjectId(schoolId),
       })
       .session(session)
+      .exec();
+
+    return response;
+  }
+  async getSchoolActiveAcademicSession(
+    schoolId: string,
+  ): Promise<AcademicSessionDocument | null> {
+    const response = await this.academicSessionModel
+      .findOne({
+        schoolId: new Types.ObjectId(schoolId),
+        status: AcademicSessionStatus.ACTIVE,
+      })
       .exec();
 
     return response;

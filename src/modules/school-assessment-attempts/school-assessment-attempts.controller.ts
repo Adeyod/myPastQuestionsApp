@@ -38,6 +38,7 @@ import type { SchoolDocument } from '../schools/schemas/schools.schema';
 import { Role } from '../users/schemas/user.schema';
 
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
+import { MarkAssessmentAttemptDto } from './dtos/mark-assessment.dto';
 import { SubmitAssessmentAttemptDto } from './dtos/submit-assessment-attempt.dto';
 import { UpdateAssessmentAnswersDto } from './dtos/update-assessment-answers.dto';
 import { SchoolAssessmentAttemptsService } from './school-assessment-attempts.service';
@@ -250,6 +251,71 @@ export class SchoolAssessmentAttemptsController {
         membership,
         query,
       );
+
+    return response;
+  }
+
+  @Patch('/mark-assessment-attempt/:attemptId')
+  @UseGuards(
+    JwtAuthGuard,
+    DeviceSessionGuard,
+    SchoolMembershipGuard,
+    SchoolRolesGuard,
+  )
+  @Roles(Role.USER)
+  @SchoolRoles(SchoolRole.TEACHER)
+  @ApiBearerAuth('JWT-auth')
+  @ApiHeader({
+    name: 'x-school-subdomain',
+    description: 'Subdomain identifying the school being accessed.',
+    required: true,
+    example: 'csae',
+  })
+  @ApiHeader({
+    name: 'x-device-id',
+    description: 'Unique device identifier for the user session',
+    required: true,
+    example: '394ir-84736e5362-yw7qy3i38',
+  })
+  @SuccessMessage('Assessment marked successfully.')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Mark a student's assessment attempt",
+    description: "Mark a student's assessment attempt",
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assessment attempt marked successfully.',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid marking data.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Assessment attempt not found.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Assessment attempt has already been marked.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async markAssessmentAttempt(
+    @CurrentSchool() school: SchoolDocument,
+    @CurrentSchoolMembership() membership: SchoolMembershipDocument,
+    @Param('attemptId') attemptId: string,
+    @Body() dto: MarkAssessmentAttemptDto,
+  ) {
+    const response = await this.attemptsService.markAssessmentAttempt(
+      membership,
+      school._id.toString(),
+      attemptId,
+      dto.answers,
+    );
 
     return response;
   }

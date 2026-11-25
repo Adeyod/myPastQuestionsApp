@@ -3,7 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { QueryWithPaginationDto } from '../../../common/dto/query-with-pagination';
+import { AssessmentMarkingMode } from '../../school-assessments/schemas/school-assessment.schema';
 import {
+  AssessmentAttemptAnswer,
   AssessmentAttemptStatus,
   SchoolAssessmentAttempt,
   SchoolAssessmentAttemptDocument,
@@ -99,6 +101,23 @@ export class SchoolAssessmentAttemptsRepository {
     return response;
   }
 
+  async findAttemptsByAssessmentAndClass(
+    schoolId: Types.ObjectId,
+    assessmentId: Types.ObjectId,
+    classId: Types.ObjectId,
+  ): Promise<SchoolAssessmentAttemptDocument[]> {
+    const response = await this.attemptModel
+      .find({
+        schoolId,
+        assessmentId,
+        classId,
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    return response;
+  }
+
   async findAttemptByAssessmentAndStudent(
     schoolId: Types.ObjectId,
     assessmentId: Types.ObjectId,
@@ -115,6 +134,18 @@ export class SchoolAssessmentAttemptsRepository {
     return response;
   }
 
+  async findAttemptByAttemptId(
+    schoolId: Types.ObjectId,
+    attemptId: Types.ObjectId,
+  ): Promise<SchoolAssessmentAttemptDocument | null> {
+    const response = await this.attemptModel
+      .findOne({
+        _id: attemptId,
+        schoolId,
+      })
+      .exec();
+    return response;
+  }
   async findAttemptById(
     schoolId: Types.ObjectId,
     attemptId: Types.ObjectId,
@@ -170,6 +201,40 @@ export class SchoolAssessmentAttemptsRepository {
         },
         { $set: update },
         { returnDocument: 'after' },
+      )
+      .exec();
+
+    return response;
+  }
+
+  async markAssessmentAttempt(
+    schoolId: Types.ObjectId,
+    attemptId: Types.ObjectId,
+    answers: AssessmentAttemptAnswer[],
+    marksAwarded: number,
+    score: number,
+  ): Promise<SchoolAssessmentAttemptDocument | null> {
+    const response = await this.attemptModel
+      .findOneAndUpdate(
+        {
+          _id: attemptId,
+          schoolId,
+          status: AssessmentAttemptStatus.AWAITING_MARKING,
+          markingMode: AssessmentMarkingMode.MANUAL,
+        },
+        {
+          $set: {
+            answers,
+            marksAwarded,
+            score,
+            status: AssessmentAttemptStatus.MARKED,
+            markedAt: new Date(),
+          },
+        },
+        {
+          new: true,
+          runValidators: true,
+        },
       )
       .exec();
 
