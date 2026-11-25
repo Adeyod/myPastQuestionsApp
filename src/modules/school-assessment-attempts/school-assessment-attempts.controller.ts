@@ -255,7 +255,7 @@ export class SchoolAssessmentAttemptsController {
     return response;
   }
 
-  @Patch('/mark-assessment-attempt/:attemptId')
+  @Patch('mark-assessment-attempt/:attemptId')
   @UseGuards(
     JwtAuthGuard,
     DeviceSessionGuard,
