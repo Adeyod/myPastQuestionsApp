@@ -37,11 +37,6 @@ export class CreateAssessmentDto {
   @IsMongoId()
   academicSessionId!: string;
 
-  // @ApiPropertyOptional()
-  // @IsOptional()
-  // @IsMongoId()
-  // academicPeriodId?: string;
-
   @ApiProperty({
     type: [String],
     example: ['classId1', 'classId2'],

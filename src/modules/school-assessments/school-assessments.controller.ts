@@ -556,21 +556,7 @@ subjectId: "6af43a3cdb43ea8761d9f4bd"
 schoolId: "6aec47e4a964ddbb9b0beec9"
 
   owner:
-  teacher:
+  teacher: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWY0M2ViOWQwNmU3NmMzYTFjMTAwNTAiLCJlbWFpbCI6Imdib2xhZ2FkZUBnbWFpbC5jb20iLCJyb2xlIjoiVVNFUiIsInBsYW5zIjpbXSwiaWF0IjoxNzk1NjkxMzI1LCJleHAiOjE3OTU5NTA1MjV9.Fw14zjsaKXH195brAzIUCSfW7oMrIpgM3-amk_FxCsY
   student: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWYyOTVkM2M3NThjYjFlODZhN2U2NWIiLCJlbWFpbCI6Im9tb3RvbGFhZGVAZ21haWwuY29tIiwicm9sZSI6IlVTRVIiLCJwbGFucyI6W10sImlhdCI6MTc5NTQ0ODQ2MSwiZXhwIjoxNzk1NzA3NjYxfQ.etcYqiAvYl4tPr5sIwTiWwIyAobYRyXRR55E51DQXag
 
-  derock teacher: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWYwOWFiNjA5OGNlZWZhNmJkNjJmMmUiLCJlbWFpbCI6InRlYWNoZXJAZ21haWwuY29tIiwicm9sZSI6IlVTRVIiLCJwbGFucyI6W10sImlhdCI6MTc5NTE3ODgzMiwiZXhwIjoxNzk1NDM4MDMyfQ.o6CWGTYSMkXYlvlJ_iqevz5gXWs-ATMGv58rOp1AJP
-  derock academic session: "6af2f6e79771f4ae990af95d"
-{
-            "class": "6af6f9c0e62edaf99481e5f0",
-            "subject": "6af6d56c8d7f15e2a8e5a6a0"
-          },
-          {
-            "class": "6af45f5f6c7db333f2c53848",
-            "subject": "6af6d56c8d7f15e2a8e5a6a0"
-          },
-          {
-            "class": "6af45f5f6c7db333f2c53848",
-            "subject": "6af20b19965ab1a1d1601b6e"
-          }
   */

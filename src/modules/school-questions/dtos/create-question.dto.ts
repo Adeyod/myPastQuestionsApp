@@ -55,7 +55,6 @@ export class CreateSchoolQuestionAnswerKeyDto {
   @ApiPropertyOptional({ example: ['Photosynthesis'] })
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @IsString({ each: true })
   acceptedAnswers?: string[];
 

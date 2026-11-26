@@ -124,6 +124,7 @@ export class SchoolAssessmentsService {
             assessment._id.toString(),
             new Date(dto.endsAt),
             session,
+            dto.markingMode === AssessmentMarkingMode.AUTOMATIC,
           );
 
         const snapshots: AssessmentQuestion[] = questionBankQuestions.map(
@@ -524,6 +525,140 @@ export class SchoolAssessmentsService {
     }
   }
 
+  // private validateAssessmentQuestions(dto: CreateAssessmentDto) {
+  //   if (!dto.questions?.length) {
+  //     throw new BadRequestException({
+  //       message: 'At least one assessment question is required.',
+  //       success: false,
+  //       status: 400,
+  //     });
+  //   }
+
+  //   for (const [index, question] of dto.questions.entries()) {
+  //     const label = `Question ${index + 1}`;
+
+  //     if (!question.questionText?.trim()) {
+  //       throw new BadRequestException({
+  //         message: `${label}: question text is required.`,
+  //         success: false,
+  //         status: 400,
+  //       });
+  //     }
+
+  //     if (!Number.isFinite(question.marks) || question.marks < 1) {
+  //       throw new BadRequestException({
+  //         message: `${label}: marks must be at least 1.`,
+  //         success: false,
+  //         status: 400,
+  //       });
+  //     }
+
+  //     const options = question.options ?? [];
+  //     const optionKeys = options.map((option) =>
+  //       option.key.trim().toUpperCase(),
+  //     );
+
+  //     if (new Set(optionKeys).size !== optionKeys.length) {
+  //       throw new BadRequestException({
+  //         message: `${label}: option keys must be unique.`,
+  //         success: false,
+  //         status: 400,
+  //       });
+  //     }
+
+  //     const answerKey = question.answerKey;
+
+  //     if (
+  //       [
+  //         SchoolQuestionType.SINGLE_CHOICE,
+  //         SchoolQuestionType.MULTIPLE_CHOICE,
+  //       ].includes(question.questionType)
+  //     ) {
+  //       if (options.length < 2) {
+  //         throw new BadRequestException({
+  //           message: `${label}: at least two options are required.`,
+  //           success: false,
+  //           status: 400,
+  //         });
+  //       }
+  //     }
+
+  //     if (this.requiresAutomaticAnswer(dto.markingMode)) {
+  //       if (!answerKey) {
+  //         throw new BadRequestException({
+  //           message: `${label}: an answer key is required for automatic marking.`,
+  //           success: false,
+  //           status: 400,
+  //         });
+  //       }
+
+  //       switch (question.questionType) {
+  //         case SchoolQuestionType.SINGLE_CHOICE:
+  //           if (
+  //             !answerKey.correctOptionKey ||
+  //             !optionKeys.includes(
+  //               answerKey.correctOptionKey.trim().toUpperCase(),
+  //             )
+  //           ) {
+  //             throw new BadRequestException({
+  //               message: `${label}: provide a valid correct option.`,
+  //               success: false,
+  //               status: 400,
+  //             });
+  //           }
+  //           break;
+
+  //         case SchoolQuestionType.MULTIPLE_CHOICE: {
+  //           const correctKeys =
+  //             answerKey.correctOptionKeys?.map((key) =>
+  //               key.trim().toUpperCase(),
+  //             ) ?? [];
+
+  //           if (
+  //             correctKeys.length === 0 ||
+  //             new Set(correctKeys).size !== correctKeys.length ||
+  //             correctKeys.some((key) => !optionKeys.includes(key))
+  //           ) {
+  //             throw new BadRequestException({
+  //               message: `${label}: provide valid correct option keys.`,
+  //               success: false,
+  //               status: 400,
+  //             });
+  //           }
+  //           break;
+  //         }
+
+  //         case SchoolQuestionType.TRUE_FALSE:
+  //           if (typeof answerKey.correctBoolean !== 'boolean') {
+  //             throw new BadRequestException({
+  //               message: `${label}: a true/false answer is required.`,
+  //               success: false,
+  //               status: 400,
+  //             });
+  //           }
+  //           break;
+
+  //         case SchoolQuestionType.SHORT_ANSWER:
+  //           if (!answerKey.acceptedAnswers?.some((answer) => answer.trim())) {
+  //             throw new BadRequestException({
+  //               message: `${label}: at least one accepted answer is required.`,
+  //               success: false,
+  //               status: 400,
+  //             });
+  //           }
+  //           break;
+
+  //         case SchoolQuestionType.ESSAY:
+  //           throw new BadRequestException({
+  //             message: `${label}: essay questions require manual marking.`,
+  //             success: false,
+  //             status: 400,
+  //           });
+  //       }
+  //     }
+  //   }
+  // }
+
   private validateAssessmentQuestions(dto: CreateAssessmentDto) {
     if (!dto.questions?.length) {
       throw new BadRequestException({
@@ -567,93 +702,115 @@ export class SchoolAssessmentsService {
 
       const answerKey = question.answerKey;
 
-      if (
-        [
-          SchoolQuestionType.SINGLE_CHOICE,
-          SchoolQuestionType.MULTIPLE_CHOICE,
-        ].includes(question.questionType)
-      ) {
-        if (options.length < 2) {
-          throw new BadRequestException({
-            message: `${label}: at least two options are required.`,
-            success: false,
-            status: 400,
-          });
-        }
-      }
-
-      if (this.requiresAutomaticAnswer(dto.markingMode)) {
-        if (!answerKey) {
-          throw new BadRequestException({
-            message: `${label}: an answer key is required for automatic marking.`,
-            success: false,
-            status: 400,
-          });
-        }
-
-        switch (question.questionType) {
-          case SchoolQuestionType.SINGLE_CHOICE:
-            if (
-              !answerKey.correctOptionKey ||
-              !optionKeys.includes(
-                answerKey.correctOptionKey.trim().toUpperCase(),
-              )
-            ) {
-              throw new BadRequestException({
-                message: `${label}: provide a valid correct option.`,
-                success: false,
-                status: 400,
-              });
-            }
-            break;
-
-          case SchoolQuestionType.MULTIPLE_CHOICE: {
-            const correctKeys =
-              answerKey.correctOptionKeys?.map((key) =>
-                key.trim().toUpperCase(),
-              ) ?? [];
-
-            if (
-              correctKeys.length === 0 ||
-              new Set(correctKeys).size !== correctKeys.length ||
-              correctKeys.some((key) => !optionKeys.includes(key))
-            ) {
-              throw new BadRequestException({
-                message: `${label}: provide valid correct option keys.`,
-                success: false,
-                status: 400,
-              });
-            }
-            break;
-          }
-
-          case SchoolQuestionType.TRUE_FALSE:
-            if (typeof answerKey.correctBoolean !== 'boolean') {
-              throw new BadRequestException({
-                message: `${label}: a true/false answer is required.`,
-                success: false,
-                status: 400,
-              });
-            }
-            break;
-
-          case SchoolQuestionType.SHORT_ANSWER:
-            if (!answerKey.acceptedAnswers?.some((answer) => answer.trim())) {
-              throw new BadRequestException({
-                message: `${label}: at least one accepted answer is required.`,
-                success: false,
-                status: 400,
-              });
-            }
-            break;
-
-          case SchoolQuestionType.ESSAY:
+      // Validate options for choice-based questions in both marking modes.
+      switch (question.questionType) {
+        case SchoolQuestionType.SINGLE_CHOICE:
+        case SchoolQuestionType.MULTIPLE_CHOICE:
+          if (options.length < 2) {
             throw new BadRequestException({
-              message: `${label}: essay questions require manual marking.`,
+              message: `${label}: at least two options are required.`,
               success: false,
               status: 400,
             });
+          }
+          break;
+
+        case SchoolQuestionType.TRUE_FALSE: {
+          const optionTexts = options.map((option) =>
+            option.text.trim().toLowerCase(),
+          );
+
+          if (
+            optionTexts.length !== 2 ||
+            !optionTexts.includes('true') ||
+            !optionTexts.includes('false')
+          ) {
+            throw new BadRequestException({
+              message: `${label}: TRUE_FALSE questions must have exactly two options: True and False.`,
+              success: false,
+              status: 400,
+            });
+          }
+          break;
         }
+      }
+
+      // Manual marking does not require an answer key.
+      if (dto.markingMode === AssessmentMarkingMode.MANUAL) {
+        continue;
+      }
+
+      // Everything below this point applies to automatic marking.
+      if (!answerKey) {
+        throw new BadRequestException({
+          message: `${label}: an answer key is required for automatic marking.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      switch (question.questionType) {
+        case SchoolQuestionType.SINGLE_CHOICE: {
+          const correctKey = answerKey.correctOptionKey?.trim().toUpperCase();
+
+          if (!correctKey || !optionKeys.includes(correctKey)) {
+            throw new BadRequestException({
+              message: `${label}: provide a valid correct option.`,
+              success: false,
+              status: 400,
+            });
+          }
+
+          break;
+        }
+
+        case SchoolQuestionType.MULTIPLE_CHOICE: {
+          const correctKeys =
+            answerKey.correctOptionKeys?.map((key) =>
+              key.trim().toUpperCase(),
+            ) ?? [];
+
+          if (
+            correctKeys.length === 0 ||
+            new Set(correctKeys).size !== correctKeys.length ||
+            correctKeys.some((key) => !optionKeys.includes(key))
+          ) {
+            throw new BadRequestException({
+              message: `${label}: provide valid correct option keys.`,
+              success: false,
+              status: 400,
+            });
+          }
+
+          break;
+        }
+
+        case SchoolQuestionType.TRUE_FALSE:
+          if (typeof answerKey.correctBoolean !== 'boolean') {
+            throw new BadRequestException({
+              message: `${label}: a true/false answer is required.`,
+              success: false,
+              status: 400,
+            });
+          }
+          break;
+
+        case SchoolQuestionType.SHORT_ANSWER:
+          if (!answerKey.acceptedAnswers?.some((answer) => answer.trim())) {
+            throw new BadRequestException({
+              message: `${label}: at least one accepted answer is required for automatic marking.`,
+              success: false,
+              status: 400,
+            });
+          }
+          break;
+
+        case SchoolQuestionType.ESSAY:
+          throw new BadRequestException({
+            message: `${label}: essay questions require manual marking.`,
+            success: false,
+            status: 400,
+          });
       }
     }
   }
