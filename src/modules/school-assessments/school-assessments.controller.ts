@@ -557,6 +557,108 @@ schoolId: "6aec47e4a964ddbb9b0beec9"
 
   owner:
   teacher: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWY0M2ViOWQwNmU3NmMzYTFjMTAwNTAiLCJlbWFpbCI6Imdib2xhZ2FkZUBnbWFpbC5jb20iLCJyb2xlIjoiVVNFUiIsInBsYW5zIjpbXSwiaWF0IjoxNzk1NjkxMzI1LCJleHAiOjE3OTU5NTA1MjV9.Fw14zjsaKXH195brAzIUCSfW7oMrIpgM3-amk_FxCsY
-  student: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWYyOTVkM2M3NThjYjFlODZhN2U2NWIiLCJlbWFpbCI6Im9tb3RvbGFhZGVAZ21haWwuY29tIiwicm9sZSI6IlVTRVIiLCJwbGFucyI6W10sImlhdCI6MTc5NTQ0ODQ2MSwiZXhwIjoxNzk1NzA3NjYxfQ.etcYqiAvYl4tPr5sIwTiWwIyAobYRyXRR55E51DQXag
+  student: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWYyOTVkM2M3NThjYjFlODZhN2U2NWIiLCJlbWFpbCI6Im9tb3RvbGFhZGVAZ21haWwuY29tIiwicm9sZSI6IlVTRVIiLCJwbGFucyI6W10sImlhdCI6MTc5NTcwODIyMywiZXhwIjoxNzk1OTY3NDIzfQ.IdJLNGlIrJdrA3Q7WLzumXL59ru4sTOb1mP4-l72rVI
 
+  "questions": [
+    {
+      "questionType": "ESSAY",
+      "questionText": "Write an essay of about 200 words on the importance of education in society.",
+      "answerKey": {
+        "modelAnswer": "Education develops knowledge, skills and values. It helps individuals become responsible citizens, improves employment opportunities and contributes to national development.",
+        "markingGuide": "Award up to 5 marks: relevance to the topic (2 marks), organization and coherence (1 mark), grammar and vocabulary (1 mark), and spelling and punctuation (1 mark)."
+      },
+      "difficulty": "MEDIUM",
+      "topic": "Essay Writing",
+      "explanation": "A good essay should have a clear introduction, organized body paragraphs and a meaningful conclusion.",
+      "marks": 5
+    },
+    {
+      "questionType": "ESSAY",
+      "questionText": "Describe three ways students can maintain discipline in school.",
+      "answerKey": {
+        "modelAnswer": "Students can maintain discipline by obeying school rules, respecting teachers and fellow students, and attending classes regularly.",
+        "markingGuide": "Award up to 5 marks: one mark for each valid point (3 marks), clarity of explanation (1 mark), and correct grammar (1 mark)."
+      },
+      "difficulty": "EASY",
+      "topic": "Essay Writing",
+      "explanation": "Students should provide relevant points and explain how each contributes to discipline.",
+      "marks": 5
+    },
+    {
+      "questionType": "SHORT_ANSWER",
+      "questionText": "Explain what a metaphor is and provide one example.",
+      "answerKey": {
+        "modelAnswer": "A metaphor is a figure of speech that describes one thing as another to suggest a similarity. Example: Time is money.",
+        "markingGuide": "Award 2 marks for a correct definition and 3 marks for a relevant example with a clear explanation."
+      },
+      "difficulty": "MEDIUM",
+      "topic": "Figures of Speech",
+      "explanation": "A metaphor makes a direct comparison without using 'like' or 'as'.",
+      "marks": 5
+    },
+    {
+      "questionType": "SHORT_ANSWER",
+      "questionText": "Differentiate between a phrase and a clause.",
+      "answerKey": {
+        "modelAnswer": "A phrase is a group of words that does not contain a subject and a finite verb combination. A clause is a group of words that contains a subject and a verb.",
+        "markingGuide": "Award 2 marks for explaining a phrase and 2 marks for explaining a clause. Award 1 mark for a clear distinction."
+      },
+      "difficulty": "MEDIUM",
+      "topic": "Grammar",
+      "explanation": "A clause contains a subject and a verb, while a phrase does not form a complete subject-verb unit.",
+      "marks": 5
+    },
+    {
+      "questionType": "ESSAY",
+      "questionText": "Write a letter to your friend explaining how you spent your last holiday.",
+      "answerKey": {
+        "modelAnswer": "The letter should describe activities undertaken during the holiday, places visited, people met and experiences enjoyed.",
+        "markingGuide": "Award 1 mark for the address and date, 1 mark for salutation and introduction, 2 marks for the body, and 1 mark for the closing."
+      },
+      "difficulty": "MEDIUM",
+      "topic": "Letter Writing",
+      "explanation": "An informal letter should have the appropriate format, friendly tone and relevant details.",
+      "marks": 5
+    },
+    {
+      "questionType": "SHORT_ANSWER",
+      "questionText": "What is the difference between active voice and passive voice?",
+      "difficulty": "MEDIUM",
+      "topic": "Voice",
+      "explanation": "Active voice emphasizes the doer of an action, while passive voice emphasizes the receiver.",
+      "marks": 5
+    },
+    {
+      "questionType": "ESSAY",
+      "questionText": "Discuss five causes of poor reading habits among secondary school students.",
+      "difficulty": "MEDIUM",
+      "topic": "Comprehension and Composition",
+      "explanation": "Students should identify relevant causes and briefly explain each one.",
+      "marks": 5
+    },
+    {
+      "questionType": "SHORT_ANSWER",
+      "questionText": "Explain the meaning of the idiom 'To bite off more than one can chew'.",
+      "difficulty": "MEDIUM",
+      "topic": "Idioms",
+      "explanation": "The idiom refers to accepting more responsibility than one can handle.",
+      "marks": 5
+    },
+    {
+      "questionType": "ESSAY",
+      "questionText": "Write a composition on the topic: The advantages and disadvantages of social media.",
+      "difficulty": "MEDIUM",
+      "topic": "Composition",
+      "explanation": "A balanced composition should discuss both the positive and negative effects of social media.",
+      "marks": 5
+    },
+    {
+      "questionType": "SHORT_ANSWER",
+      "questionText": "What is a conjunction? Give two examples.",
+      "difficulty": "EASY",
+      "topic": "Parts of Speech",
+      "explanation": "Conjunctions connect grammatical units in sentences.",
+      "marks": 5
+    }
+  ]
   */

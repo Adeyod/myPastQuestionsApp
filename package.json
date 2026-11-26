@@ -51,6 +51,7 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.10.0",
     "rxjs": "^7.8.1",
+    "sanitize-html": "^2.18.2",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
@@ -64,6 +65,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
     "@types/nodemailer": "^7.0.11",
+    "@types/sanitize-html": "^2.16.2",
     "@types/supertest": "^6.0.2",
     "copyfiles": "^2.4.1",
     "cpx": "^1.5.0",

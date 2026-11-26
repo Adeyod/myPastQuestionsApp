@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { isValidObjectId, Types } from 'mongoose';
-
+import sanitizeHtml from 'sanitize-html';
 import { QueryWithPaginationDto } from '../../common/dto/query-with-pagination';
 import { AcademicSessionsService } from '../academic-sessions/academic-sessions.service';
 import {
@@ -73,149 +73,6 @@ export class SchoolAssessmentAttemptsService {
       });
     }
   }
-
-  // async createAssessmentAttempt(input: CreateAssessmentAttemptInput) {
-  //   const {
-  //     schoolId,
-  //     assessmentId,
-  //     studentId,
-  //     studentMembershipId,
-  //     academicSessionId,
-  //     durationMinutes,
-  //   } = input;
-  //   this.validateObjectId(schoolId, 'school ID');
-  //   this.validateObjectId(assessmentId, 'assessment ID');
-  //   this.validateObjectId(studentId, 'student ID');
-  //   this.validateObjectId(studentMembershipId, 'student membership ID');
-  //   this.validateObjectId(academicSessionId, 'academic session ID');
-
-  //   if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
-  //     throw new BadRequestException({
-  //       message: 'Invalid assessment duration.',
-  //       success: false,
-  //       status: 400,
-  //     });
-  //   }
-
-  //   const school = new Types.ObjectId(schoolId);
-  //   const assessment = new Types.ObjectId(assessmentId);
-  //   const studentMembership = new Types.ObjectId(studentMembershipId);
-  //   const academicSession = new Types.ObjectId(academicSessionId);
-
-  //   const existingAttempt =
-  //     await this.attemptsRepository.findAttemptByAssessmentAndStudent(
-  //       school,
-  //       assessment,
-  //       studentMembership,
-  //     );
-
-  //   if (existingAttempt) {
-  //     if (
-  //       existingAttempt.status === AssessmentAttemptStatus.IN_PROGRESS &&
-  //       existingAttempt.expiresAt.getTime() <= Date.now()
-  //     ) {
-  //       await this.attemptsRepository.updateAttempt(
-  //         school,
-  //         existingAttempt._id,
-  //         studentMembership,
-  //         {
-  //           status: AssessmentAttemptStatus.EXPIRED,
-  //         },
-  //       );
-
-  //       throw new ConflictException({
-  //         message: 'Your assessment attempt has expired.',
-  //         success: false,
-  //         status: 409,
-  //       });
-  //     }
-
-  //     if (existingAttempt.status === AssessmentAttemptStatus.IN_PROGRESS) {
-  //       return this.toStudentResponse(existingAttempt);
-  //     }
-
-  //     throw new ConflictException({
-  //       message: 'You have already attempted this assessment.',
-  //       success: false,
-  //       status: 409,
-  //     });
-  //   }
-
-  //   const totalMarks = input.questions.reduce(
-  //     (total, question) => total + question.marks,
-  //     0,
-  //   );
-
-  //   const startedAt = new Date();
-  //   const expiresAt = new Date(
-  //     startedAt.getTime() + input.durationMinutes * 60 * 1000,
-  //   );
-
-  //   try {
-  //     const attempt = await this.attemptsRepository.createAssessmentAttempt({
-  //       schoolId: school,
-  //       assessmentId: assessment,
-  //       studentId: new Types.ObjectId(input.studentId),
-  //       studentMembershipId: studentMembership,
-  //       academicSessionId: academicSession,
-  //       status: AssessmentAttemptStatus.IN_PROGRESS,
-  //       markingMode: input.markingMode,
-  //       questions: input.questions.map((question) => ({
-  //         questionId: new Types.ObjectId(question.questionId),
-  //         sourceQuestionId: question.sourceQuestionId ?? null,
-  //         order: question.order,
-  //         questionType: question.questionType,
-  //         questionText: question.questionText,
-  //         questionImages: question.questionImages ?? [],
-  //         options: (question.options ?? []).map((option) => ({
-  //           key: option.key,
-  //           text: option.text,
-  //           ...(option.imageUrl != null ? { imageUrl: option.imageUrl } : {}),
-  //         })),
-  //         answerKey:
-  //           question.answerKey == null
-  //             ? undefined
-  //             : {
-  //                 ...question.answerKey,
-  //               },
-  //         explanation: question.explanation ?? '',
-  //         marks: question.marks,
-  //       })),
-  //       answers: [],
-  //       startedAt,
-  //       expiresAt,
-  //       totalMarks,
-  //       marksAwarded: 0,
-  //       score: null,
-  //     });
-
-  //     return this.toStudentResponse(attempt);
-  //   } catch (error) {
-  //     const mongoError = error as { code?: number };
-  //     if (mongoError?.code === 11000) {
-  //       const attempt =
-  //         await this.attemptsRepository.findAttemptByAssessmentAndStudent(
-  //           school,
-  //           assessment,
-  //           studentMembership,
-  //         );
-
-  //       if (attempt) {
-  //         if (attempt.status === AssessmentAttemptStatus.IN_PROGRESS) {
-  //           return this.toStudentResponse(attempt);
-  //         }
-
-  //         throw new ConflictException({
-  //           message: 'You have already attempted this assessment.',
-  //           success: false,
-  //           status: 409,
-  //         });
-  //       }
-  //     }
-
-  //     throw error;
-  //   }
-  // }
 
   async createAssessmentAttempt(input: CreateAssessmentAttemptInput) {
     const {
@@ -463,7 +320,13 @@ export class SchoolAssessmentAttemptsService {
     let finalAnswers: AssessmentAttemptAnswer[] | undefined;
 
     if (dto.answers !== undefined) {
-      finalAnswers = this.buildValidatedAnswers(attempt, dto.answers);
+      if (attempt.markingMode === AssessmentMarkingMode.AUTOMATIC) {
+        // Automatic assessment: validate submitted answers.
+        finalAnswers = this.buildValidatedAnswers(attempt, dto.answers);
+      } else if (attempt.markingMode === AssessmentMarkingMode.MANUAL) {
+        // Manual assessment: sanitize text answers only.
+        finalAnswers = this.buildSanitizedManualAnswers(attempt, dto.answers);
+      }
     }
 
     return this.finalizeAssessmentAttempt(
@@ -1034,5 +897,63 @@ export class SchoolAssessmentAttemptsService {
     }
 
     return validatedAnswers;
+  }
+
+  private buildSanitizedManualAnswers(
+    attempt: SchoolAssessmentAttemptDocument,
+    submittedAnswers: AssessmentAnswerDto[],
+  ): AssessmentAttemptAnswer[] {
+    const sanitizedAnswers: AssessmentAttemptAnswer[] = [];
+    const processedQuestionIds = new Set<string>();
+
+    for (const submittedAnswer of submittedAnswers) {
+      const questionId = submittedAnswer.questionId.toLowerCase();
+
+      if (processedQuestionIds.has(questionId)) {
+        throw new BadRequestException({
+          message: `Question ${submittedAnswer.questionId} was submitted more than once.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      processedQuestionIds.add(questionId);
+
+      const question = attempt.questions.find(
+        (item) => item.questionId.toString().toLowerCase() === questionId,
+      );
+
+      if (!question) {
+        throw new BadRequestException({
+          message: `Question ${submittedAnswer.questionId} does not belong to this assessment attempt.`,
+          success: false,
+          status: 400,
+        });
+      }
+
+      const sanitizedTextAnswer = sanitizeHtml(
+        submittedAnswer.textAnswer ?? '',
+        {
+          allowedTags: [],
+          allowedAttributes: {},
+          disallowedTagsMode: 'discard',
+        },
+      ).trim();
+
+      sanitizedAnswers.push({
+        questionId: new Types.ObjectId(submittedAnswer.questionId),
+
+        selectedOptionKeys: submittedAnswer.selectedOptionKeys ?? [],
+
+        textAnswer: sanitizedTextAnswer,
+        answeredAt: new Date(),
+
+        isCorrect: null,
+        marksAwarded: 0,
+        markingStatus: AssessmentAnswerMarkingStatus.PENDING,
+      });
+    }
+
+    return sanitizedAnswers;
   }
 }
